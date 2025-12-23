@@ -59,6 +59,7 @@ secrets.yml
 
 # Direktori data spesifik proyek
 tb_data/
+redis_data/
 
 # Log files
 *.log
