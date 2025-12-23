@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------
+  # 1. TIGERBEETLE (The Ledger)
+  # Database finansial high-performance untuk mencatat saldo & skor.
+  # ----------------------------------------------------------------
+  tigerbeetle:
+    image: ghcr.io/tigerbeetle/tigerbeetle:latest
+    container_name: pixelwar-ledger
+    restart: unless-stopped
+    # Command untuk menjalankan server:
+    # --addresses: Listen di port 3000 untuk semua IP (0.0.0.0)
+    # /data/0_0.tigerbeetle: Lokasi file data di dalam container
+    command: start --addresses=0.0.0.0:3000 /data/0_0.tigerbeetle
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "3004:3000" # Expose port 3000 ke localhost laptop
+    volumes:
+      # Mapping folder lokal 'tb_data' ke dalam container '/data'
+      # Agar data tidak hilang saat container dimatikan.
+      - ./tb_data:/data
+    networks:
+      - pixelwar-net
+    healthcheck:
+      test: ["CMD", "./tigerbeetle", "version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------
+  # 2. REDIS (The Phonebook & Cache)
+  # Menyimpan mapping Wallet Address <-> TB Account ID
+  # dan menyimpan cache gambar Grid sementara.
+  # ----------------------------------------------------------------
+  redis:
+    image: redis:alpine
+    container_name: pixelwar-redis
+    restart: unless-stopped
+    # --appendonly yes: Agar data Redis disimpan ke disk (persistence)
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379" # Expose port default Redis
+    volumes:
+      - ./redis_data:/data
+    networks:
+      - pixelwar-net
+
+  # ----------------------------------------------------------------
+  # (Opsional) GUI untuk Redis - Membantu debugging tim
+  # Akses di browser: http://localhost:8081
+  # ----------------------------------------------------------------
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: pixelwar-redis-gui
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - pixelwar-net
+
+# Definisi Network agar container bisa saling bicara
+networks:
+  pixelwar-net:
+    driver: bridge
