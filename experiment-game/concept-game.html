@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Chroma Duel - Fixed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#FF6B6B", // Vibrant Coral Red (CPU)
+                        secondary: "#4CC9F0", // Vibrant Sky Blue (Player)
+                        "surface-light": "#FFFFFF",
+                        "game-red": "#FF8888",
+                        "game-blue": "#72C4FF",
+                        "accent": "#F9C74F", // Meteor Gold
+                        "text-main": "#333340",
+                        "powerup-purple": "#9D4EDD",
+                        "powerup-green": "#4CAF50",
+                        "powerup-orange": "#FF9800",
+                    },
+                    fontFamily: {
+                        display: ['"Fredoka"', 'cursive'],
+                        sans: ['"Nunito"', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'game': '0 20px 40px -5px rgba(76, 201, 240, 0.35)',
+                        'btn': '0 6px 0 rgba(0,0,0,0.1)',
+                        'btn-active': '0 2px 0 rgba(0,0,0,0.1)',
+                        'powerup': '0 0 15px rgba(157, 78, 221, 0.6)',
+                        'meteor': '0 0 20px rgba(249, 199, 79, 0.8)',
+                        'combo': '0 0 20px rgba(255, 215, 0, 0.9)',
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                        'pulse-ring': 'pulse-ring 1.5s infinite',
+                        'meteor-fall': 'meteor-fall 0.5s ease-out forwards',
+                        'combo-pop': 'combo-pop 0.3s ease-out forwards',
+                        'powerup-bounce': 'powerup-bounce 1s infinite',
+                        'warning-flash': 'warning-flash 0.8s infinite',
+                    },
+                    keyframes: {
+                        'float': {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        },
+                        'pulse-ring': {
+                            '0%': { transform: 'scale(0.8)', opacity: '0.8' },
+                            '100%': { transform: 'scale(2)', opacity: '0' },
+                        },
+                        'meteor-fall': {
+                            '0%': { transform: 'scale(0.5) translateY(-20px)', opacity: '0' },
+                            '100%': { transform: 'scale(1) translateY(0)', opacity: '1' },
+                        },
+                        'combo-pop': {
+                            '0%': { transform: 'scale(1)', opacity: '1' },
+                            '50%': { transform: 'scale(1.3)', opacity: '0.9' },
+                            '100%': { transform: 'scale(1)', opacity: '0' },
+                        },
+                        'powerup-bounce': {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        },
+                        'warning-flash': {
+                            '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+                            '50%': { opacity: '0.8', transform: 'scale(1.1)' },
+                        }
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            touch-action: none;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        /* Canvas Styles */
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+            image-rendering: pixelated;
+        }
+
+        /* Power-up Effects */
+        .powerup-effect {
+            position: absolute;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0.9;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.7));
+        }
+
+        /* Combo Counter */
+        .combo-counter {
+            position: absolute;
+            font-family: 'Fredoka', cursive;
+            font-weight: 800;
+            color: gold;
+            text-shadow: 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.6);
+            z-index: 30;
+            animation: combo-pop 1s ease-out forwards;
+        }
+
+        /* Territory Bonus Visualization */
+        .territory-bonus {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 15;
+            opacity: 0.8;
+        }
+
+        /* Canvas overlay for post-processing effects */
+        #effectsOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-center text-text-main font-sans">
+
+    <!-- GAME CONSOLE CONTAINER -->
+    <main class="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-[36px] shadow-game border-[10px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
+        
+        <!-- HEADER (HUD) -->
+        <header class="w-full p-3 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-100 flex justify-between items-center shrink-0">
+            
+            <!-- Pause Button -->
+            <button id="btnPause" class="w-11 h-11 bg-slate-50/80 rounded-xl shadow-btn active:shadow-btn-active active:translate-y-[2px] flex items-center justify-center text-secondary hover:text-secondary/80 transition-all border border-slate-200/80 backdrop-blur-sm">
+                <span class="material-symbols-rounded text-xl">pause</span>
+            </button>
+
+            <!-- Score Board & Timer -->
+            <div class="flex flex-col items-center gap-1">
+                <div class="bg-gradient-to-r from-red-50/90 to-red-100/90 px-4 py-2 rounded-2xl border border-red-200/80 flex items-center gap-3 backdrop-blur-sm">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-3.5 h-3.5 rounded-full bg-primary/90 border border-white shadow-sm"></div>
+                        <span id="scoreRed" class="font-display font-bold text-lg text-slate-800 tabular-nums">50%</span>
+                    </div>
+                    <div class="w-[1px] h-5 bg-slate-300/60"></div>
+                    <div class="flex items-center gap-1.5">
+                        <span id="scoreBlue" class="font-display font-bold text-lg text-slate-800 tabular-nums">50%</span>
+                        <div class="w-3.5 h-3.5 rounded-full bg-secondary/90 border border-white shadow-sm"></div>
+                    </div>
+                </div>
+                <!-- Timer with Progress Ring -->
+                <div class="relative w-16 h-16 flex items-center justify-center">
+                    <svg class="absolute -rotate-90" width="64" height="64" viewBox="0 0 64 64">
+                        <circle cx="32" cy="32" r="28" fill="none" stroke="#e2e8f0" stroke-width="4"></circle>
+                        <circle id="timerRing" cx="32" cy="32" r="28" fill="none" stroke="#4CC9F0" stroke-width="4" stroke-dasharray="176" stroke-dashoffset="176" 
+                                style="transition: stroke-dashoffset 1s linear;"></circle>
+                    </svg>
+                    <div class="bg-slate-900/85 text-white w-12 h-12 rounded-full flex items-center justify-center text-[11px] font-bold tracking-wider shadow-lg backdrop-blur-sm">
+                        <span id="timerDisplay">90s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Combo Counter -->
+            <div id="comboCounter" class="hidden absolute top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400/90 text-white px-4 py-1 rounded-full font-display font-bold text-lg shadow-combo backdrop-blur-sm border border-yellow-500/50">
+                x3 COMBO!
+            </div>
+
+            <!-- Settings (Sound Toggle) -->
+            <button id="btnSound" class="w-11 h-11 bg-slate-50/80 rounded-xl shadow-btn active:shadow-btn-active active:translate-y-[2px] flex items-center justify-center text-slate-400 hover:text-accent transition-colors border border-slate-200/80 backdrop-blur-sm">
+                <span id="iconSoundOn" class="material-symbols-rounded text-xl">volume_up</span>
+                <span id="iconSoundOff" class="material-symbols-rounded text-xl hidden">volume_off</span>
+            </button>
+        </header>
+
+        <!-- GAME AREA (CLEAN CANVAS) -->
+        <div class="relative flex-grow bg-gradient-to-b from-slate-100 to-slate-200 w-full overflow-hidden">
+            <canvas id="gameCanvas"></canvas>
+            <canvas id="effectsOverlay"></canvas>
+            
+            <!-- Compact Meteor Warning Indicator (ICON ONLY) -->
+            <div id="meteorIndicator" class="hidden absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 z-10 flex-col items-center pointer-events-none">
+                <!-- Icon Only Warning - Text removed -->
+                <div class="bg-red-500/90 text-white p-3 rounded-full shadow-[0_0_20px_rgba(239,68,68,0.6)] animate-warning-flash border-2 border-white/50 backdrop-blur-sm">
+                    <span class="material-symbols-rounded text-3xl block">meteor</span>
+                </div>
+            </div>
+
+            <!-- Target Marker (On ground visual) -->
+            <div id="targetMarker" class="hidden absolute w-20 h-20 rounded-full border-4 border-dashed border-accent/40 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 bg-accent/5 backdrop-blur-sm">
+                <div class="absolute inset-0 border-2 border-dashed border-accent/20 rounded-full animate-pulse"></div>
+            </div>
+        </div>
+
+        <!-- POWER-UP CONTAINER -->
+        <div id="powerupContainer" class="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20 flex gap-3"></div>
+
+        <!-- GAME INSTRUCTIONS OVERLAY -->
+        <div id="instructionsOverlay" class="absolute inset-0 z-30 bg-slate-900/80 flex flex-col items-center justify-center backdrop-blur-[2px] text-white">
+            <div class="text-center max-w-[320px] p-6">
+                <h1 class="font-display text-4xl font-bold mb-4 text-yellow-300 animate-float">CHROMA DUEL</h1>
+                <p class="text-lg mb-6">Capture territory by shooting your color bullets! Watch out for meteors that flip territory.</p>
+                
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-white/20">
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-secondary/80"></div>
+                        <span class="font-bold">YOU</span>
+                        <span class="mx-2 text-slate-300">VS</span>
+                        <span class="font-bold">CPU</span>
+                        <div class="w-6 h-6 rounded-full bg-primary/80"></div>
+                    </div>
+                    <p class="text-sm text-slate-200">Drag to aim and shoot automatically!</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mb-8">
+                    <div class="bg-purple-900/40 rounded-xl p-3 border border-purple-500/30">
+                        <span class="material-symbols-rounded text-purple-300 text-3xl mb-1 block">star</span>
+                        <p class="text-sm font-bold">Power-ups</p>
+                        <p class="text-xs text-slate-300">Collect special abilities!</p>
+                    </div>
+                    <div class="bg-yellow-900/40 rounded-xl p-3 border border-yellow-500/30">
+                        <span class="material-symbols-rounded text-yellow-200 text-3xl mb-1 block">radioactive</span>
+                        <p class="text-sm font-bold">Meteor</p>
+                        <p class="text-xs text-slate-300">Watch the warnings!</p>
+                    </div>
+                </div>
+                
+                <button id="btnStartGame" class="bg-gradient-to-r from-secondary to-blue-400 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:from-secondary/90 hover:to-blue-400/90 transition-all active:scale-95 transform">
+                    START GAME
+                </button>
+                
+                <div class="mt-6 text-xs text-slate-400">
+                    <p>Hold & Drag to Shoot • Collect power-ups</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER (CONTROLS HINT + POWERUP NOTIFICATION) -->
+        <footer class="bg-white/95 border-t border-slate-100/80 px-4 py-2 z-10 shrink-0 backdrop-blur-sm flex justify-between items-center gap-3 relative overflow-hidden h-20">
+            <!-- Hint Text (LEFT) -->
+            <div class="flex flex-col items-start justify-center text-slate-500 font-bold tracking-wide">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-xl">touch_app</span>
+                    <span class="text-xs md:text-sm">CONTROLS</span>
+                </div>
+                <span class="text-[10px] md:text-xs text-slate-400 mt-0.5">HOLD & DRAG TO SHOOT</span>
+            </div>
+
+            <!-- Power-up Notification (RIGHT) -->
+            <div id="footerPowerupStatus" class="flex flex-col items-end justify-center">
+                <span class="text-[10px] text-slate-400 font-bold mb-0.5">STATUS</span>
+                <span class="text-xs text-slate-300 font-bold tracking-wide">NO BOOSTERS</span>
+            </div>
+        </footer>
+
+        <!-- PAUSED OVERLAY -->
+        <div id="pauseOverlay" class="hidden absolute inset-0 z-40 bg-slate-900/30 flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white/80 p-6 rounded-3xl shadow-2xl text-center transform scale-100 transition-all border-4 border-white/50 backdrop-blur-sm">
+                <div class="bg-secondary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-rounded text-4xl text-secondary/80">pause</span>
+                </div>
+                <h2 class="font-display text-3xl font-bold text-slate-700 mb-2">GAME PAUSED</h2>
+                <p class="text-slate-500 mb-6">Take a breath, territory awaits!</p>
+                <button id="btnResume" class="bg-gradient-to-r from-secondary to-blue-400 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg active:scale-95 transition-transform mt-4 w-full hover:from-secondary/90 hover:to-blue-400/90">
+                    RESUME GAME
+                </button>
+                <button id="btnRestart" class="mt-3 text-slate-500 hover:text-slate-700 font-bold transition-colors">
+                    RESTART GAME
+                </button>
+            </div>
+        </div>
+
+        <!-- GAME OVER MODAL -->
+        <div id="gameOverModal" class="hidden absolute inset-0 z-50 bg-gradient-to-b from-slate-900/70 to-blue-900/70 flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0">
+            <div class="bg-white/95 p-7 rounded-[32px] shadow-2xl text-center max-w-[320px] w-full transform scale-90 transition-transform duration-300 backdrop-blur-sm border border-white/50">
+                <div id="resultIcon" class="text-7xl mb-3 animate-bounce">🏆</div>
+                <h2 id="resultTitle" class="font-display text-4xl font-bold text-slate-800 mb-1">EPIC VICTORY!</h2>
+                <div class="bg-gradient-to-r from-blue-50 to-slate-50 rounded-xl p-4 mb-5 border border-slate-200">
+                    <p class="text-slate-400 font-bold text-sm mb-1">FINAL SCORE</p>
+                    <p class="text-2xl font-bold text-secondary">BLUE TERRITORY: <span id="finalScore" class="text-secondary">65%</span></p>
+                    <div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div id="scoreBar" class="h-full bg-gradient-to-r from-secondary to-blue-400" style="width: 65%"></div>
+                    </div>
+                </div>
+                <div class="flex gap-3 mb-6">
+                    <div class="flex-1 bg-slate-50 rounded-xl p-2 border border-slate-200">
+                        <p class="text-xs text-slate-500">MAX COMBO</p>
+                        <p class="font-bold text-lg text-yellow-500" id="maxComboDisplay">x5</p>
+                    </div>
+                    <div class="flex-1 bg-slate-50 rounded-xl p-2 border border-slate-200">
+                        <p class="text-xs text-slate-500">POWER-UPS</p>
+                        <p class="font-bold text-lg text-purple-600" id="powerupsCollected">3</p>
+                    </div>
+                </div>
+                <button onclick="startGame()" class="w-full bg-gradient-to-r from-slate-800 to-slate-700 text-white py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition-transform hover:bg-gradient-to-r hover:from-slate-700 hover:to-slate-600 flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-xl">replay</span>
+                    PLAY AGAIN
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- CONFIGURATION & CONSTANTS ---
+        const COLORS = {
+            blue: '#72C4FF',   // Player Grid
+            red: '#FF8888',    // Enemy Grid
+            bulletStrokeBlue: '#3B82F6', // Darker Blue Outline
+            bulletStrokeRed: '#EF4444', // Darker Red Outline
+            meteor: '#F9C74F',
+            meteorTrail: '#FDB813',
+            bg: '#E2E8F0', // Darker Slate for Grid Lines
+            powerup: {
+                burst: '#9D4EDD', // Purple
+                shield: '#4CAF50', // Green
+                meteor: '#FF9800' // Orange
+            }
+        };
+
+        const GRID_SIZE = 12;
+        const FIRE_RATE = 8; 
+        const GAME_DURATION = 90;
+        const POWERUP_CHANCE = 0.05; // 5% chance per territory flip
+        const MAX_POWERUPS_ON_SCREEN = 3;
+        
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const effectsCtx = document.getElementById('effectsOverlay').getContext('2d');
+        // Removed MiniMap elements
+        const timerRing = document.getElementById('timerRing');
+        const scoreBlueEl = document.getElementById('scoreBlue');
+        const scoreRedEl = document.getElementById('scoreRed');
+        const timerEl = document.getElementById('timerDisplay');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const meteorIndicator = document.getElementById('meteorIndicator');
+        const targetMarker = document.getElementById('targetMarker');
+        const comboCounter = document.getElementById('comboCounter');
+        const powerupContainer = document.getElementById('powerupContainer');
+        const instructionsOverlay = document.getElementById('instructionsOverlay');
+        const maxComboDisplay = document.getElementById('maxComboDisplay');
+        const powerupsCollected = document.getElementById('powerupsCollected');
+        const scoreBar = document.getElementById('scoreBar');
+        const btnStartGame = document.getElementById('btnStartGame');
+        const footerPowerupStatus = document.getElementById('footerPowerupStatus');
+        
+        // --- GAME STATE ---
+        let cols, rows;
+        let grid = [];
+        let projectiles = [];
+        let particles = [];
+        let meteors = [];
+        let powerups = [];
+        let territoryBatches = [];
+        let comboStreak = 0;
+        let maxCombo = 0;
+        let totalPowerupsCollected = 0;
+        
+        let timeLeft = GAME_DURATION;
+        let gameActive = false;
+        let isPaused = false;
+        let isSoundOn = true;
+        let gameStarted = false;
+        
+        let timerInterval;
+        let shakeIntensity = 0;
+        let shakeDirection = {x: 0, y: 0};
+        let screenFlash = 0;
+        let lastTerritoryFlip = 0;
+
+        // Cannon Objects
+        const player = { 
+            x: 0, 
+            y: 0, 
+            angle: -Math.PI/2, 
+            isFiring: false, 
+            cooldown: 0,
+            powerups: {
+                burstShot: 0,
+                shield: 0,
+                callMeteor: 0
+            }
+        };
+        
+        const enemy = { 
+            x: 0, 
+            y: 0, 
+            angle: Math.PI/2, 
+            targetAngle: Math.PI/2, 
+            cooldown: 0, 
+            moveTimer: 0,
+            difficulty: 0.3 // Starting difficulty
+        };
+
+        // Audio Context (Web Audio API)
+        let audioContext;
+        let sounds = {};
+
+        // --- AUDIO SETUP ---
+        function initAudio() {
+            try {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioContext = new AudioContext();
+                
+                // Create simple sounds using oscillators
+                createSound('shoot', (context) => {
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = 600;
+                    gain.gain.value = 0.1;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.1);
+                    osc.stop(context.currentTime + 0.1);
+                });
+                
+                createSound('meteor', (context) => {
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.type = 'triangle';
+                    osc.frequency.value = 200;
+                    gain.gain.value = 0.2;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.5);
+                    osc.frequency.exponentialRampToValueAtTime(100, context.currentTime + 0.5);
+                    osc.stop(context.currentTime + 0.5);
+                });
+                
+                createSound('powerup', (context) => {
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = 800;
+                    gain.gain.value = 0.15;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.2);
+                    osc.frequency.exponentialRampToValueAtTime(1200, context.currentTime + 0.2);
+                    osc.stop(context.currentTime + 0.2);
+                });
+                
+                createSound('explosion', (context) => {
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.value = 100;
+                    gain.gain.value = 0.3;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.3);
+                    osc.frequency.exponentialRampToValueAtTime(50, context.currentTime + 0.3);
+                    osc.stop(context.currentTime + 0.3);
+                });
+                
+                createSound('combo', (context) => {
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.type = 'square';
+                    osc.frequency.value = 1000;
+                    gain.gain.value = 0.1;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.15);
+                    osc.stop(context.currentTime + 0.15);
+                });
+                
+                createSound('gameOver', (context) => {
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.type = 'sine';
+                    osc.frequency.value = 400;
+                    gain.gain.value = 0.2;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.4);
+                    osc.frequency.exponentialRampToValueAtTime(300, context.currentTime + 0.4);
+                    osc.stop(context.currentTime + 0.4);
+                });
+            } catch (e) {
+                console.log("Audio not supported", e);
+            }
+        }
+
+        function createSound(name, callback) {
+            sounds[name] = callback;
+        }
+
+        function playSound(name) {
+            if (isSoundOn && audioContext && sounds[name]) {
+                // Resume audio context if suspended (needed for mobile)
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                sounds[name](audioContext);
+            }
+        }
+
+        // --- NEW: INITIALIZATION SPLIT ---
+        // Setup visual elements without starting timer
+        function preloadGame() {
+            resizeCanvas();
+            
+            // Grid Logic - NOW runs on load
+            cols = Math.ceil(canvas.width / GRID_SIZE);
+            rows = Math.ceil(canvas.height / GRID_SIZE);
+            grid = [];
+            for(let i=0; i<cols; i++) {
+                grid[i] = [];
+                for(let j=0; j<rows; j++) {
+                    grid[i][j] = (j < rows/2 + 2) ? 'red' : 'blue';
+                }
+            }
+
+            resetEntities();
+
+            // Initial Draw to show background
+            draw();
+        }
+
+        function resetEntities() {
+            projectiles = [];
+            particles = [];
+            meteors = [];
+            powerups = [];
+            territoryBatches = [];
+            comboStreak = 0;
+            maxCombo = 0;
+            totalPowerupsCollected = 0;
+            lastTerritoryFlip = 0;
+            
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 40;
+            player.angle = -Math.PI/2;
+            player.isFiring = false;
+            player.cooldown = 0;
+            player.powerups = {
+                burstShot: 0,
+                shield: 0,
+                callMeteor: 0
+            };
+            
+            enemy.x = canvas.width / 2;
+            enemy.y = 40;
+            enemy.angle = Math.PI/2;
+            enemy.targetAngle = Math.PI/2;
+            enemy.cooldown = 0;
+            enemy.moveTimer = 0;
+            enemy.difficulty = 0.3;
+
+            timeLeft = GAME_DURATION;
+            timerEl.innerText = timeLeft + 's';
+            updateTimerRing();
+            
+            // Reset Footer Status
+            footerPowerupStatus.innerHTML = `
+                <span class="text-[10px] text-slate-400 font-bold mb-0.5">STATUS</span>
+                <span class="text-xs text-slate-300 font-bold tracking-wide">NO BOOSTERS</span>
+            `;
+        }
+
+        // --- INITIALIZATION ---
+        function startGame() {
+            // Reset UI
+            gameOverModal.classList.add('hidden');
+            gameOverModal.classList.remove('opacity-100');
+            pauseOverlay.classList.add('hidden');
+            meteorIndicator.classList.add('hidden');
+            targetMarker.classList.add('hidden');
+            comboCounter.classList.add('hidden');
+            powerupContainer.innerHTML = '';
+            instructionsOverlay.classList.add('hidden');
+            
+            // Initialize audio
+            initAudio();
+            
+            // Ensure entities are reset if we are restarting
+            resetEntities();
+
+            // Activate Game Loop
+            gameActive = true;
+            isPaused = false;
+            gameStarted = true;
+            player.isFiring = false; // Ensure not firing at start
+
+            // Update UI elements
+            updatePowerupDisplay();
+            maxComboDisplay.innerText = 'x1';
+            powerupsCollected.innerText = '0';
+
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(gameTimerTick, 1000);
+
+            playSound('powerup'); // Play start sound
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            // Because of flex layout, we take dimensions from parent wrapper
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            
+            // Also resize effects canvas
+            const effectsCanvas = document.getElementById('effectsOverlay');
+            effectsCanvas.width = canvas.width;
+            effectsCanvas.height = canvas.height;
+        }
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            // Reset cannon positions to stay on screen
+            if (cols) { // Check if initialized
+                player.x = canvas.width / 2;
+                player.y = canvas.height - 40;
+                enemy.x = canvas.width / 2;
+                draw(); // Redraw on resize even if paused
+            }
+        });
+
+        // --- GAME LOOP ---
+        function gameLoop() {
+            if(!gameActive) return;
+            
+            if(!isPaused) {
+                update();
+                draw();
+                drawEffects();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // 1. Shake Decay
+            if(shakeIntensity > 0) {
+                shakeIntensity *= 0.85;
+                shakeDirection = {
+                    x: (Math.random() - 0.5) * shakeIntensity,
+                    y: (Math.random() - 0.5) * shakeIntensity
+                };
+                if(shakeIntensity < 0.5) {
+                    shakeIntensity = 0;
+                    shakeDirection = {x: 0, y: 0};
+                }
+            }
+
+            // 2. Screen Flash Decay
+            if(screenFlash > 0) {
+                screenFlash *= 0.9;
+                if(screenFlash < 0.05) screenFlash = 0;
+            }
+
+            // 3. Player Cannon - ONLY FIRE IF HOLDING
+            if(player.isFiring && player.cooldown <= 0) {
+                shoot(player, 'blue');
+                playSound('shoot');
+                player.cooldown = FIRE_RATE;
+                addScreenShake(3);
+            }
+            
+            if(player.cooldown > 0) player.cooldown--;
+
+            // 4. Enemy AI - with improving difficulty
+            enemy.moveTimer++;
+            
+            // Make enemy more aggressive as game progresses
+            enemy.difficulty = Math.min(0.3 + (GAME_DURATION - timeLeft) / GAME_DURATION * 0.5, 0.9);
+            
+            if(enemy.moveTimer > 30 - enemy.difficulty * 20) {
+                const blueTerritory = findLargestTerritory('blue');
+                if (blueTerritory && Math.random() < enemy.difficulty) {
+                    // Target player's territory clusters
+                    const tx = blueTerritory.x * GRID_SIZE + GRID_SIZE/2 + (Math.random() - 0.5) * 60;
+                    const ty = blueTerritory.y * GRID_SIZE + GRID_SIZE/2 + (Math.random() - 0.5) * 60;
+                    const dx = tx - enemy.x;
+                    const dy = ty - enemy.y;
+                    enemy.targetAngle = Math.atan2(dy, dx);
+                } else {
+                    // Random target
+                    const tx = Math.random() * canvas.width;
+                    const ty = (canvas.height/2) + Math.random() * (canvas.height/3);
+                    const dx = tx - enemy.x;
+                    const dy = ty - enemy.y;
+                    enemy.targetAngle = Math.atan2(dy, dx);
+                }
+                enemy.moveTimer = 0;
+            }
+            
+            // Smooth rotation with difficulty-based responsiveness
+            const rotationSpeed = 0.05 + enemy.difficulty * 0.1;
+            enemy.angle += (enemy.targetAngle - enemy.angle) * rotationSpeed;
+            
+            // AI Fire - more frequent with higher difficulty
+            enemy.cooldown--;
+            if(enemy.cooldown <= 0) {
+                shoot(enemy, 'red', 0.2); 
+                playSound('shoot');
+                enemy.cooldown = FIRE_RATE - Math.floor(enemy.difficulty * 3);
+            }
+
+            // 5. Projectiles
+            for(let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.lifetime++;
+
+                // Meteor Target Logic
+                if(p.isMeteor && p.target) {
+                    const dist = Math.hypot(p.x - p.target.x, p.y - p.target.y);
+                    if(dist < 15 || p.y > canvas.height) {
+                        explodeMeteor(p.x, p.y);
+                        addScreenShake(15);
+                        playSound('meteor');
+                        p.active = false;
+                    }
+                }
+                // Normal Bullet Logic
+                else {
+                    const gx = Math.floor(p.x / GRID_SIZE);
+                    const gy = Math.floor(p.y / GRID_SIZE);
+
+                    // Bounds check
+                    if(p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+                        p.active = false;
+                    } 
+                    // Grid Collision
+                    else if(gx >= 0 && gx < cols && gy >= 0 && gy < rows && p.lifetime > 5) {
+                        if(grid[gx][gy] !== p.team) {
+                            paintGrid(gx, gy, p.team, 2); // Radius 2
+                            p.active = false;
+                            
+                            // Combo tracking
+                            if(p.team === 'blue') {
+                                if(Date.now() - lastTerritoryFlip < 800) {
+                                    comboStreak++;
+                                    if(comboStreak > maxCombo) maxCombo = comboStreak;
+                                    showComboCounter(comboStreak);
+                                    if(comboStreak >= 3) {
+                                        // Chance to spawn powerup on high combo
+                                        if(Math.random() < 0.3) spawnPowerup(gx, gy);
+                                    }
+                                } else {
+                                    comboStreak = 1;
+                                }
+                                lastTerritoryFlip = Date.now();
+                            }
+                            
+                            playSound('explosion');
+                            spawnParticles(p.x, p.y, p.team, comboStreak > 2 ? 10 : 5);
+                        }
+                    }
+                }
+
+                if(!p.active) projectiles.splice(i, 1);
+            }
+
+            // 6. Particles
+            for(let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.life -= 0.05;
+                pt.size *= 0.97;
+                if(pt.life <= 0) particles.splice(i, 1);
+            }
+
+            // 7. Powerups
+            for(let i = powerups.length - 1; i >= 0; i--) {
+                const pu = powerups[i];
+                
+                if(!pu.collected) {
+                    const dx = player.x - pu.x;
+                    const dy = player.y - pu.y;
+                    const dist = Math.hypot(dx, dy);
+                    
+                    // Magnet Effect: Stronger pull
+                    // Use a blend of constant speed and proportional speed for a satisfying "woosh"
+                    const speed = 5 + (dist * 0.05); // Minimum speed 5, plus proportional
+                    const angle = Math.atan2(dy, dx);
+                    
+                    pu.x += Math.cos(angle) * speed;
+                    pu.y += Math.sin(angle) * speed;
+                    
+                    pu.rotation += 0.3;
+                    
+                    // Particle trail while moving to player
+                    if(Math.random() < 0.5) {
+                         particles.push({
+                            x: pu.x, 
+                            y: pu.y,
+                            vx: (Math.random() - 0.5),
+                            vy: (Math.random() - 0.5),
+                            life: 0.3,
+                            size: 2,
+                            color: pu.color
+                        });
+                    }
+                    
+                    // Check collision
+                    if(dist < 50) {
+                        collectPowerup(pu);
+                        pu.collected = true;
+                    }
+                } else {
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // 8. Territory batch effects
+            for(let i = territoryBatches.length - 1; i >= 0; i--) {
+                territoryBatches[i].radius += 0.8;
+                territoryBatches[i].opacity -= 0.03;
+                if(territoryBatches[i].opacity <= 0) {
+                    territoryBatches.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            // Clear canvas with slight gradient for depth
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#dbeafe');
+            gradient.addColorStop(1, '#bfdbfe');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Apply screen shake transform
+            ctx.save();
+            if(shakeIntensity > 0) {
+                ctx.translate(shakeDirection.x, shakeDirection.y);
+            }
+
+            // 1. Draw Grid Cells with border highlighting for territory clusters
+            if(cols && rows) drawGridWithBorders();
+
+            // 2. Trajectory Line (Player Only)
+            if(!isPaused && gameActive) drawTrajectory();
+
+            // 3. Draw territory batch effects
+            drawTerritoryBatches();
+
+            // 4. Power-ups
+            drawPowerups();
+
+            // 5. Projectiles
+            drawProjectiles();
+
+            // 6. Particles
+            drawParticles();
+
+            // 7. Cannons with powerup indicators
+            if (cols) { // Ensure initialized
+                drawCannon(player, COLORS.bulletStrokeBlue, true);
+                drawCannon(enemy, COLORS.bulletStrokeRed, false);
+            }
+
+            ctx.restore(); // Restore from shake
+        }
+
+        function drawEffects() {
+            // Clear effects canvas
+            effectsCtx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Screen flash effect
+            if(screenFlash > 0) {
+                effectsCtx.fillStyle = `rgba(255, 255, 255, ${screenFlash * 0.3})`;
+                effectsCtx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // Meteor warning pulse effect
+            if(!meteorIndicator.classList.contains('hidden')) {
+                effectsCtx.fillStyle = `rgba(249, 199, 79, ${0.05 + Math.sin(Date.now() / 100) * 0.03})`;
+                effectsCtx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function drawGridWithBorders() {
+            // First pass: draw all cells
+            for(let i=0; i<cols; i++) {
+                for(let j=0; j<rows; j++) {
+                    ctx.fillStyle = grid[i][j] === 'blue' ? COLORS.blue : COLORS.red;
+                    ctx.fillRect(i * GRID_SIZE, j * GRID_SIZE, GRID_SIZE-1, GRID_SIZE-1);
+                }
+            }
+            
+            // Second pass: highlight borders between territories
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 1;
+            
+            for(let i=0; i<cols; i++) {
+                for(let j=0; j<rows; j++) {
+                    const current = grid[i][j];
+                    
+                    // Check right neighbor
+                    if(i+1 < cols && grid[i+1][j] !== current) {
+                        ctx.beginPath();
+                        ctx.moveTo((i+1) * GRID_SIZE - 0.5, j * GRID_SIZE);
+                        ctx.lineTo((i+1) * GRID_SIZE - 0.5, (j+1) * GRID_SIZE);
+                        ctx.stroke();
+                    }
+                    
+                    // Check bottom neighbor
+                    if(j+1 < rows && grid[i][j+1] !== current) {
+                        ctx.beginPath();
+                        ctx.moveTo(i * GRID_SIZE, (j+1) * GRID_SIZE - 0.5);
+                        ctx.lineTo((i+1) * GRID_SIZE, (j+1) * GRID_SIZE - 0.5);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function drawTerritoryBatches() {
+            territoryBatches.forEach(tb => {
+                ctx.save();
+                ctx.translate(tb.x * GRID_SIZE + GRID_SIZE/2, tb.y * GRID_SIZE + GRID_SIZE/2);
+                
+                // Pulsing glow
+                const glowSize = tb.radius * 1.5;
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, glowSize);
+                gradient.addColorStop(0, `${tb.color}80`);
+                gradient.addColorStop(1, `${tb.color}00`);
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, glowSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Growing circle
+                ctx.strokeStyle = tb.color;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = tb.opacity;
+                ctx.beginPath();
+                ctx.arc(0, 0, tb.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        }
+
+        function drawPowerups() {
+            powerups.forEach(pu => {
+                if(pu.collected) return;
+                
+                ctx.save();
+                ctx.translate(pu.x, pu.y);
+                ctx.rotate(pu.rotation);
+                
+                // Glow effect
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
+                gradient.addColorStop(0, pu.glowColor);
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Powerup symbol based on type
+                ctx.fillStyle = pu.color;
+                ctx.font = 'bold 24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                switch(pu.type) {
+                    case 'burst':
+                        ctx.fillText('✨', 0, 0);
+                        break;
+                    case 'shield':
+                        ctx.fillText('🛡️', 0, 0);
+                        break;
+                    case 'meteor':
+                        ctx.fillText('☄️', 0, 0);
+                        break;
+                }
+                
+                // Border
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 15, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        }
+
+        function drawProjectiles() {
+            projectiles.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                
+                if(p.isMeteor) {
+                    // Meteor with trail
+                    ctx.fillStyle = COLORS.meteor;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Glowing edge
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Heat trail
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(-p.vx * 3, -p.vy * 3);
+                    ctx.strokeStyle = COLORS.meteorTrail;
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                    
+                    // Fire particles
+                    for(let i=0; i<3; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = Math.random() * 15;
+                        const size = 2 + Math.random() * 3;
+                        
+                        ctx.fillStyle = `rgba(249, 199, 79, ${0.7 - i*0.2})`;
+                        ctx.beginPath();
+                        ctx.arc(
+                            -p.vx * i * 0.5 + Math.cos(angle) * dist, 
+                            -p.vy * i * 0.5 + Math.sin(angle) * dist, 
+                            size, 0, Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+                } else {
+                    // Bullet with glow
+                    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+                    const bulletColor = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
+                    gradient.addColorStop(0, bulletColor);
+                    gradient.addColorStop(1, `${bulletColor}40`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Core
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                gradient.addColorStop(0, p.color);
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        function drawCannon(c, color, isPlayer) {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.angle);
+            
+            // Cannon shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.beginPath();
+            ctx.ellipse(0, 5, 18, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cannon base gradient
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 18);
+            gradient.addColorStop(0, '#FFFFFF');
+            gradient.addColorStop(1, '#F1F5F9');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Cannon barrel with gradient
+            const barrelGradient = ctx.createLinearGradient(0, -12, 40, -12);
+            barrelGradient.addColorStop(0, color);
+            barrelGradient.addColorStop(1, shadeColor(color, -20));
+            
+            ctx.fillStyle = barrelGradient;
+            ctx.beginPath();
+            ctx.roundRect(-5, -12, 45, 24, 8);
+            ctx.fill();
+            
+            // Cannon details
+            ctx.fillStyle = '#CBD5E1';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#94A3B8';
+            ctx.beginPath();
+            ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Player indicator
+            if(isPlayer) {
+                ctx.fillStyle = '#60A5FA';
+                ctx.beginPath();
+                ctx.arc(30, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Powerup indicators for player
+            if(isPlayer && (player.powerups.burstShot > 0 || player.powerups.shield > 0 || player.powerups.callMeteor > 0)) {
+                ctx.save();
+                ctx.rotate(-c.angle); // Unrotate for proper positioning
+                
+                let indicatorX = 25;
+                if(player.powerups.burstShot > 0) {
+                    ctx.fillStyle = COLORS.powerup.burst;
+                    ctx.beginPath();
+                    ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.font = '8px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(player.powerups.burstShot, indicatorX, -25);
+                    indicatorX += 15;
+                }
+                
+                if(player.powerups.shield > 0) {
+                    ctx.fillStyle = COLORS.powerup.shield;
+                    ctx.beginPath();
+                    ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.font = '8px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(player.powerups.shield, indicatorX, -25);
+                    indicatorX += 15;
+                }
+                
+                if(player.powerups.callMeteor > 0) {
+                    ctx.fillStyle = COLORS.powerup.meteor;
+                    ctx.beginPath();
+                    ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.font = '8px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(player.powerups.callMeteor, indicatorX, -25);
+                }
+                
+                ctx.restore();
+            }
+            
+            ctx.restore();
+        }
+
+        function drawTrajectory() {
+            if(player.cooldown > 0) return;
+            
+            const steps = 15;
+            const stepLength = 25;
+            let x = player.x;
+            let y = player.y;
+            const vx = Math.cos(player.angle) * 8;
+            const vy = Math.sin(player.angle) * 8;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            
+            // Calculate trajectory points with slight gravity
+            let gravity = 0.1;
+            let currentVx = vx;
+            let currentVy = vy;
+            
+            for(let i=0; i<steps; i++) {
+                x += currentVx;
+                y += currentVy;
+                currentVy += gravity;
+                
+                // Check for boundary collisions
+                if(x < 0 || x > canvas.width) currentVx *= -0.8;
+                if(y < 0 || y > canvas.height) currentVy *= -0.8;
+                
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Show burst shot preview if available
+            if(player.powerups.burstShot > 0) {
+                ctx.save();
+                ctx.translate(player.x, player.y);
+                
+                // Main shot
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(player.angle) * 100, Math.sin(player.angle) * 100);
+                ctx.strokeStyle = 'rgba(157, 78, 221, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Additional shots
+                const angles = [-0.3, 0.3];
+                angles.forEach(angle => {
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(Math.cos(player.angle + angle) * 80, Math.sin(player.angle + angle) * 80);
+                    ctx.strokeStyle = 'rgba(157, 78, 221, 0.6)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                });
+                
+                ctx.restore();
+            }
+        }
+
+        // --- HELPER FUNCTIONS ---
+
+        function shoot(source, team, spread = 0) {
+            // FIX: Check team first to avoid accessing undefined property on enemy
+            if(team === 'blue' && source.powerups && source.powerups.burstShot > 0) {
+                // Burst shot: 3 shots in a spread
+                source.powerups.burstShot--;
+                updatePowerupDisplay();
+                
+                const angles = [-0.2, 0, 0.2];
+                angles.forEach(angleOffset => {
+                    const angle = source.angle + angleOffset;
+                    const speed = 8;
+                    projectiles.push({
+                        x: source.x, 
+                        y: source.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        team: team,
+                        active: true,
+                        isMeteor: false,
+                        lifetime: 0
+                    });
+                });
+            } else {
+                // Regular shot
+                const angle = source.angle + (Math.random() - 0.5) * spread;
+                const speed = 8;
+                projectiles.push({
+                    x: source.x, 
+                    y: source.y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    team: team,
+                    active: true,
+                    isMeteor: false,
+                    lifetime: 0
+                });
+            }
+        }
+
+        function paintGrid(gx, gy, team, radius) {
+            let cellsChanged = 0;
+            const affectedPositions = [];
+            
+            for(let i = -radius; i <= radius; i++) {
+                for(let j = -radius; j <= radius; j++) {
+                    const nx = gx + i;
+                    const ny = gy + j;
+                    if(i*i + j*j <= radius*radius) {
+                        if(nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+                            if(grid[nx][ny] !== team) {
+                                grid[nx][ny] = team;
+                                cellsChanged++;
+                                affectedPositions.push({x: nx, y: ny});
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if(cellsChanged > 0) {
+                // Show territory expansion effect
+                territoryBatches.push({
+                    x: gx,
+                    y: gy,
+                    radius: 5,
+                    color: team === 'blue' ? COLORS.blue : COLORS.red,
+                    opacity: 1.0
+                });
+                
+                // Chance to spawn powerup for player territory captures
+                if(team === 'blue' && Math.random() < POWERUP_CHANCE && powerups.length < MAX_POWERUPS_ON_SCREEN) {
+                    // Find a random affected position to spawn at
+                    const pos = affectedPositions[Math.floor(Math.random() * affectedPositions.length)];
+                    spawnPowerup(pos.x, pos.y);
+                }
+                
+                updateScore();
+            }
+        }
+
+        function explodeMeteor(x, y) {
+            // Visual explosion effect
+            spawnParticles(x, y, 'meteor', 50);
+            
+            // Find grid position
+            const gx = Math.floor(x/GRID_SIZE);
+            const gy = Math.floor(y/GRID_SIZE);
+            const radius = 9;
+            
+            // Show territory explosion effect
+            territoryBatches.push({
+                x: gx,
+                y: gy,
+                radius: 10,
+                color: COLORS.meteor,
+                opacity: 1.0
+            });
+            
+            // Flip territory in large radius
+            for(let i = -radius; i <= radius; i++) {
+                for(let j = -radius; j <= radius; j++) {
+                    const nx = gx + i;
+                    const ny = gy + j;
+                    if(i*i + j*j <= radius*radius) {
+                        if(nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+                            // Flip Logic
+                            grid[nx][ny] = grid[nx][ny] === 'blue' ? 'red' : 'blue';
+                        }
+                    }
+                }
+            }
+            
+            // Clear marker
+            targetMarker.classList.add('hidden');
+            updateScore();
+        }
+
+        function spawnPowerup(gx, gy) {
+            const types = ['burst', 'shield', 'meteor'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            const powerup = {
+                x: gx * GRID_SIZE + GRID_SIZE/2 + (Math.random() - 0.5) * 20,
+                y: gy * GRID_SIZE + GRID_SIZE/2 - 30,
+                vy: 0.5 + Math.random() * 0.5,
+                rotation: Math.random() * Math.PI * 2,
+                type: type,
+                collected: false
+            };
+            
+            // Set colors based on type
+            switch(type) {
+                case 'burst':
+                    powerup.color = COLORS.powerup.burst;
+                    powerup.glowColor = 'rgba(157, 78, 221, 0.6)';
+                    break;
+                case 'shield':
+                    powerup.color = COLORS.powerup.shield;
+                    powerup.glowColor = 'rgba(76, 175, 80, 0.6)';
+                    break;
+                case 'meteor':
+                    powerup.color = COLORS.powerup.meteor;
+                    powerup.glowColor = 'rgba(255, 152, 0, 0.6)';
+                    break;
+            }
+            
+            powerups.push(powerup);
+        }
+
+        function collectPowerup(pu) {
+            totalPowerupsCollected++;
+            powerupsCollected.innerText = totalPowerupsCollected;
+            
+            // Footer Notification Vars
+            let puName = "";
+            let puIcon = "";
+            let puColor = "";
+
+            switch(pu.type) {
+                case 'burst':
+                    player.powerups.burstShot = Math.min(player.powerups.burstShot + 2, 5);
+                    playSound('powerup');
+                    showPowerupEffect('✨', COLORS.powerup.burst); // Removed Text
+                    puName = "BURST SHOT";
+                    puIcon = "auto_awesome";
+                    puColor = "text-purple-500";
+                    break;
+                case 'shield':
+                    player.powerups.shield = Math.min(player.powerups.shield + 1, 2);
+                    playSound('powerup');
+                    showPowerupEffect('🛡️', COLORS.powerup.shield); // Removed Text
+                    puName = "SHIELD";
+                    puIcon = "shield";
+                    puColor = "text-green-500";
+                    break;
+                case 'meteor':
+                    player.powerups.callMeteor = Math.min(player.powerups.callMeteor + 1, 3);
+                    playSound('powerup');
+                    showPowerupEffect('☄️', COLORS.powerup.meteor); // Removed Text "METEOR STRIKE"
+                    puName = "METEOR STRIKE";
+                    puIcon = "radioactive";
+                    puColor = "text-orange-500";
+                    break;
+            }
+            
+            // Update Footer
+            footerPowerupStatus.innerHTML = `
+                <span class="text-[10px] text-slate-400 font-bold mb-0.5">ACQUIRED</span>
+                <div class="flex items-center gap-1 ${puColor} animate-pulse">
+                    <span class="material-symbols-rounded text-lg">${puIcon}</span>
+                    <span class="text-xs font-bold tracking-wide">${puName}</span>
+                </div>
+            `;
+            
+            updatePowerupDisplay();
+        }
+
+        function showPowerupEffect(text, color) {
+            const effect = document.createElement('div');
+            // Changed class to make it more icon-centric (larger font)
+            effect.className = 'powerup-effect font-display font-bold text-4xl px-4 py-2 rounded-xl shadow-lg';
+            effect.style.color = color;
+            effect.style.top = `${player.y - 50}px`;
+            effect.style.left = `${player.x}px`;
+            effect.style.transform = 'translateX(-50%)';
+            effect.innerHTML = text;
+            
+            document.body.appendChild(effect);
+            
+            // Animate and remove
+            let opacity = 1;
+            let y = 0;
+            const animate = () => {
+                if(opacity <= 0) {
+                    if(document.body.contains(effect)) {
+                        document.body.removeChild(effect);
+                    }
+                    return;
+                }
+                
+                opacity -= 0.02;
+                y -= 1;
+                effect.style.opacity = opacity;
+                effect.style.transform = `translateX(-50%) translateY(${y}px)`;
+                effect.style.textShadow = `0 0 10px ${color}88`;
+                
+                requestAnimationFrame(animate);
+            };
+            
+            requestAnimationFrame(animate);
+        }
+
+        function showComboCounter(streak) {
+            if(streak < 2) return;
+            
+            comboCounter.classList.remove('hidden');
+            comboCounter.innerHTML = `<span class="material-symbols-rounded align-middle text-base mr-1">bolt</span> x${streak} COMBO!`;
+            
+            if(streak > 2) {
+                playSound('combo');
+                screenFlash = 0.4;
+            }
+            
+            // Hide after delay
+            setTimeout(() => {
+                comboCounter.classList.add('hidden');
+            }, 1500);
+            
+            maxComboDisplay.innerText = `x${Math.max(maxCombo, streak)}`;
+        }
+
+        function updatePowerupDisplay() {
+            powerupContainer.innerHTML = '';
+            
+            // Only show for player
+            ['burst', 'shield', 'meteor'].forEach(type => {
+                const count = player.powerups[type + (type === 'burst' ? 'Shot' : type === 'callMeteor' ? 'Meteor' : '')];
+                if(count > 0) {
+                    const puDiv = document.createElement('div');
+                    puDiv.className = 'bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce';
+                    
+                    const iconMap = {
+                        'burst': 'auto_awesome',
+                        'shield': 'shield',
+                        'meteor': 'radioactive'
+                    };
+                    
+                    const colorMap = {
+                        'burst': 'text-purple-600',
+                        'shield': 'text-green-600',
+                        'meteor': 'text-orange-600'
+                    };
+                    
+                    puDiv.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <span class="material-symbols-rounded text-2xl ${colorMap[type]}">${iconMap[type]}</span>
+                            <span class="font-bold text-sm mt-1">${count}</span>
+                        </div>
+                    `;
+                    
+                    powerupContainer.appendChild(puDiv);
+                }
+            });
+        }
+
+        function spawnParticles(x, y, type, count = 5) {
+            let baseColor = '#FFFFFF';
+            let glow = false;
+            
+            if(type === 'blue') baseColor = COLORS.bulletStrokeBlue;
+            else if(type === 'red') baseColor = COLORS.bulletStrokeRed;
+            else if(type === 'meteor') {
+                baseColor = COLORS.meteor;
+                glow = true;
+            }
+
+            for(let i=0; i<count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 4;
+                
+                const particle = {
+                    x: x, 
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.8 + Math.random() * 0.4,
+                    size: 3 + Math.random() * 4,
+                    color: baseColor
+                };
+                
+                if(glow) {
+                    particle.glow = true;
+                    particle.life = 1.2;
+                    particle.size = 2 + Math.random() * 3;
+                }
+                
+                particles.push(particle);
+            }
+        }
+
+        function addScreenShake(amount) {
+            shakeIntensity = Math.max(shakeIntensity, amount);
+        }
+
+        function updateScore() {
+            let blue = 0;
+            const total = cols * rows;
+            for(let i=0; i<cols; i++) {
+                for(let j=0; j<rows; j++) {
+                    if(grid[i][j] === 'blue') blue++;
+                }
+            }
+            const pct = Math.round((blue/total)*100);
+            scoreBlueEl.innerText = pct + "%";
+            scoreRedEl.innerText = (100-pct) + "%";
+        }
+
+        function findLargestTerritory(team) {
+            // Simple algorithm to find the largest contiguous territory of a given team
+            const visited = Array(cols).fill().map(() => Array(rows).fill(false));
+            let largestSize = 0;
+            let largestPosition = null;
+            
+            function dfs(x, y) {
+                if(x < 0 || x >= cols || y < 0 || y >= rows || visited[x][y] || grid[x][y] !== team) {
+                    return 0;
+                }
+                
+                visited[x][y] = true;
+                let size = 1;
+                
+                // Check all 8 directions
+                const directions = [[-1,-1], [-1,0], [-1,1], [0,-1], [0,1], [1,-1], [1,0], [1,1]];
+                for(const [dx, dy] of directions) {
+                    size += dfs(x + dx, y + dy);
+                }
+                
+                return size;
+            }
+            
+            for(let i=0; i<cols; i++) {
+                for(let j=0; j<rows; j++) {
+                    if(!visited[i][j] && grid[i][j] === team) {
+                        const size = dfs(i, j);
+                        if(size > largestSize) {
+                            largestSize = size;
+                            largestPosition = {x: i, y: j};
+                        }
+                    }
+                }
+            }
+            
+            return largestPosition;
+        }
+
+        function updateTimerRing() {
+            const percentage = timeLeft / GAME_DURATION;
+            const circumference = 2 * Math.PI * 28;
+            const offset = circumference - (percentage * circumference);
+            timerRing.style.strokeDashoffset = offset;
+            
+            // Change color based on time remaining
+            if(timeLeft < 15) {
+                timerRing.style.stroke = "#EF4444"; // Red for low time
+            } else if(timeLeft < 30) {
+                timerRing.style.stroke = "#F97316"; // Orange for medium time
+            } else {
+                timerRing.style.stroke = "#4CC9F0"; // Blue for plenty of time
+            }
+        }
+
+        function gameTimerTick() {
+            if(!gameActive || isPaused) return;
+            timeLeft--;
+            timerEl.innerText = timeLeft + 's';
+            updateTimerRing();
+
+            // Meteor Logic (at 60s, 40s, 20s)
+            if([60, 40, 20].includes(timeLeft)) {
+                triggerMeteor();
+            }
+            
+            // Random powerup drop (if not too many on screen)
+            if(timeLeft % 15 === 0 && powerups.length < MAX_POWERUPS_ON_SCREEN && Math.random() < 0.7) {
+                // Spawn at a random territory border
+                const borderPositions = [];
+                for(let i=1; i<cols-1; i++) {
+                    for(let j=1; j<rows-1; j++) {
+                        const current = grid[i][j];
+                        // Check if this cell is next to a different territory
+                        const neighbors = [
+                            grid[i-1][j], grid[i+1][j],
+                            grid[i][j-1], grid[i][j+1]
+                        ];
+                        
+                        if(neighbors.some(n => n !== current)) {
+                            borderPositions.push({x: i, y: j});
+                        }
+                    }
+                }
+                
+                if(borderPositions.length > 0) {
+                    const pos = borderPositions[Math.floor(Math.random() * borderPositions.length)];
+                    spawnPowerup(pos.x, pos.y);
+                }
+            }
+
+            if(timeLeft <= 0) endGame();
+        }
+
+        function triggerMeteor() {
+            // 1. Show Warning
+            meteorIndicator.classList.remove('hidden');
+            
+            // 2. Determine Target - aim at largest player territory
+            const largestBlue = findLargestTerritory('blue');
+            let tx, ty;
+            
+            if(largestBlue && Math.random() < 0.8) { // 80% chance to target player territory
+                tx = largestBlue.x * GRID_SIZE + GRID_SIZE/2 + (Math.random() - 0.5) * 30;
+                ty = largestBlue.y * GRID_SIZE + GRID_SIZE/2 + (Math.random() - 0.5) * 30;
+            } else {
+                // Random target
+                tx = Math.random() * canvas.width;
+                ty = canvas.height/2 + (Math.random() * (canvas.height/3));
+            }
+            
+            // 3. Show Marker UI
+            targetMarker.style.left = tx + 'px';
+            targetMarker.style.top = ty + 'px';
+            targetMarker.classList.remove('hidden');
+
+            // 4. Launch Projectile after delay
+            setTimeout(() => {
+                meteorIndicator.classList.add('hidden');
+                
+                const startX = Math.random() * canvas.width;
+                const startY = -50;
+                const angle = Math.atan2(ty - startY, tx - startX);
+                const speed = 6 + Math.random() * 2;
+                
+                projectiles.push({
+                    x: startX, 
+                    y: startY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    team: 'neutral',
+                    active: true,
+                    isMeteor: true,
+                    target: {x: tx, y: ty},
+                    lifetime: 0
+                });
+
+            }, 2500);
+        }
+
+        function callPlayerMeteor() {
+            if(player.powerups.callMeteor <= 0) return;
+            
+            player.powerups.callMeteor--;
+            updatePowerupDisplay();
+            
+            // Target largest enemy territory
+            const largestRed = findLargestTerritory('red');
+            let tx, ty;
+            
+            if(largestRed) {
+                tx = largestRed.x * GRID_SIZE + GRID_SIZE/2;
+                ty = largestRed.y * GRID_SIZE + GRID_SIZE/2;
+            } else {
+                // Fallback to random position in top half
+                tx = Math.random() * canvas.width;
+                ty = 40 + Math.random() * (canvas.height/3);
+            }
+            
+            // Visual indicator
+            targetMarker.style.left = tx + 'px';
+            targetMarker.style.top = ty + 'px';
+            targetMarker.classList.remove('hidden');
+            
+            // Launch meteor
+            setTimeout(() => {
+                targetMarker.classList.add('hidden');
+                
+                const startX = player.x;
+                const startY = player.y;
+                const angle = Math.atan2(ty - startY, tx - startX);
+                const speed = 8;
+                
+                projectiles.push({
+                    x: startX, 
+                    y: startY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    team: 'neutral',
+                    active: true,
+                    isMeteor: true,
+                    target: {x: tx, y: ty},
+                    lifetime: 0
+                });
+                
+                playSound('meteor');
+                addScreenShake(10);
+                
+                // Show effect - Removed Text
+                showPowerupEffect('☄️', COLORS.powerup.meteor);
+                
+            }, 1000);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            playSound('gameOver');
+            
+            // Calculate Result
+            const blueTxt = scoreBlueEl.innerText.replace('%','');
+            const blueScore = parseInt(blueTxt);
+            const finalEl = document.getElementById('finalScore');
+            const titleEl = document.getElementById('resultTitle');
+            const iconEl = document.getElementById('resultIcon');
+
+            finalEl.innerText = blueScore + "%";
+            scoreBar.style.width = `${blueScore}%`;
+            
+            if(blueScore > 60) {
+                titleEl.innerText = "EPIC VICTORY!";
+                titleEl.className = "font-display text-4xl font-bold text-secondary mb-1";
+                iconEl.innerText = "🏆";
+            } else if (blueScore > 50) {
+                titleEl.innerText = "GREAT WIN!";
+                titleEl.className = "font-display text-4xl font-bold text-blue-600 mb-1";
+                iconEl.innerText = "🎉";
+            } else if (blueScore > 40) {
+                titleEl.innerText = "CLOSE MATCH!";
+                titleEl.className = "font-display text-4xl font-bold text-yellow-600 mb-1";
+                iconEl.innerText = "🤝";
+            } else if (blueScore > 25) {
+                titleEl.innerText = "DEFEAT";
+                titleEl.className = "font-display text-4xl font-bold text-primary mb-1";
+                iconEl.innerText = "💔";
+            } else {
+                titleEl.innerText = "CRUSHED";
+                titleEl.className = "font-display text-4xl font-bold text-red-600 mb-1";
+                iconEl.innerText = "💀";
+            }
+
+            maxComboDisplay.innerText = `x${maxCombo}`;
+            powerupsCollected.innerText = totalPowerupsCollected;
+            
+            gameOverModal.classList.remove('hidden');
+            // Animation delay for modal
+            setTimeout(() => {
+                gameOverModal.classList.add('opacity-100');
+                document.querySelector('#gameOverModal > div').classList.remove('scale-90');
+                document.querySelector('#gameOverModal > div').classList.add('scale-100');
+            }, 10);
+        }
+
+        // --- INPUT HANDLING ---
+        function handleInput(x, y, isDown) {
+            if(!gameActive || isPaused) return;
+
+            // Calculate angle relative to player cannon
+            const rect = canvas.getBoundingClientRect();
+            const cx = x - rect.left;
+            const cy = y - rect.top;
+            
+            // Prevent shooting into UI areas
+            if(cy < 60 || cy > canvas.height - 60) return;
+            
+            const dx = cx - player.x;
+            const dy = cy - player.y;
+            
+            // Angle calc
+            let angle = Math.atan2(dy, dx);
+            
+            // Clamp angle (prevent shooting backwards)
+            // Player is at bottom, valid angles are roughly -PI to 0
+            if(angle > 0) angle = angle > Math.PI/2 ? -Math.PI + 0.2 : 0.2;
+            if(angle < -Math.PI) angle = -Math.PI + 0.2;
+            
+            player.angle = angle;
+            
+            // Handle powerup activation with special gestures
+            // REVISED LOGIC: Only fire if holding/dragging
+            if(isDown && player.isFiring === false && Date.now() - player.lastFireTime > 300) {
+                const dist = Math.hypot(dx, dy);
+                if(dist < 30) {
+                    // Quick tap on cannon - use shield if available
+                    if(player.powerups.shield > 0) {
+                        player.powerups.shield--;
+                        updatePowerupDisplay();
+                        addScreenShake(5);
+                        showPowerupEffect('🛡️', COLORS.powerup.shield); // Text removed
+                        playSound('powerup');
+                        // Create shield particles
+                        for(let i=0; i<20; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = 1 + Math.random() * 2;
+                            particles.push({
+                                x: player.x,
+                                y: player.y,
+                                vx: Math.cos(angle) * speed,
+                                vy: Math.sin(angle) * speed,
+                                life: 1.0,
+                                size: 3,
+                                color: COLORS.powerup.shield
+                            });
+                        }
+                    }
+                } else if(dist > 100) {
+                    // Long drag - save angle for potential powerup use
+                    player.longDragAngle = angle;
+                }
+            }
+            
+            player.isFiring = isDown;
+            if(isDown) player.lastFireTime = Date.now();
+        }
+
+        // Mouse
+        canvas.addEventListener('mousedown', e => {
+            // Initiate drag
+            handleInput(e.clientX, e.clientY, true);
+            e.preventDefault();
+        });
+        
+        canvas.addEventListener('mousemove', e => { 
+            // Only fire/update aim if mouse is actually down (buttons=1)
+            // NEW: Explicitly force isFiring to false if no button is pressed
+            if(e.buttons === 1 || e.which === 1) {
+                handleInput(e.clientX, e.clientY, true);
+            } else {
+                // Safety check: if we are moving but no button, ensure we aren't firing
+                if(player.isFiring) player.isFiring = false;
+            }
+            e.preventDefault();
+        });
+        
+        canvas.addEventListener('mouseup', e => {
+            // Stop firing immediately on release
+            player.isFiring = false;
+            e.preventDefault();
+        });
+        
+        // Add global mouseup listener to stop shooting if cursor leaves canvas
+        window.addEventListener('mouseup', () => {
+            if(player.isFiring) player.isFiring = false;
+        });
+        
+        canvas.addEventListener('mouseleave', e => {
+            player.isFiring = false;
+        });
+
+        // Touch
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            handleInput(e.touches[0].clientX, e.touches[0].clientY, true);
+        }, {passive: false});
+        
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            // Continuous firing and aiming on drag
+            handleInput(e.touches[0].clientX, e.touches[0].clientY, true);
+        }, {passive: false});
+        
+        canvas.addEventListener('touchend', e => {
+            e.preventDefault();
+            // Stop firing
+            player.isFiring = false;
+        });
+        
+        // Add global touchend listener as fallback
+        window.addEventListener('touchend', () => {
+            if(player.isFiring) player.isFiring = false;
+        });
+        
+        canvas.addEventListener('touchcancel', e => {
+            player.isFiring = false;
+        });
+
+        // Special powerup activation with keyboard (for testing)
+        document.addEventListener('keydown', e => {
+            if(!gameActive || isPaused) return;
+            
+            if(e.key === 'q' && player.powerups.burstShot > 0) {
+                // Toggle burst shot mode
+                e.preventDefault();
+            }
+            
+            if(e.key === 'w' && player.powerups.callMeteor > 0) {
+                e.preventDefault();
+                callPlayerMeteor();
+            }
+        });
+
+        // --- UI BUTTONS ---
+        document.getElementById('btnPause').addEventListener('click', () => {
+            if(!gameActive || !gameStarted) return;
+            togglePause();
+        });
+
+        document.getElementById('btnResume').addEventListener('click', () => {
+            togglePause();
+        });
+        
+        document.getElementById('btnRestart').addEventListener('click', () => {
+            togglePause();
+            startGame();
+        });
+
+        document.getElementById('btnSound').addEventListener('click', () => {
+            isSoundOn = !isSoundOn;
+            document.getElementById('iconSoundOn').classList.toggle('hidden');
+            document.getElementById('iconSoundOff').classList.toggle('hidden');
+        });
+
+        btnStartGame.addEventListener('click', startGame);
+
+        // Start Logic (Pre-load visual state)
+        window.onload = () => {
+            preloadGame();
+        };
+        
+        function togglePause() {
+            isPaused = !isPaused;
+            if(isPaused) {
+                pauseOverlay.classList.remove('hidden');
+            } else {
+                pauseOverlay.classList.add('hidden');
+            }
+        }
+        
+        // Utility function to shade colors
+        function shadeColor(color, percent) {
+            // Convert hex to RGB
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+            
+            // Adjust brightness
+            R = Math.max(0, Math.min(255, R + percent));
+            G = Math.max(0, Math.min(255, G + percent));
+            B = Math.max(0, Math.min(255, B + percent));
+            
+            // Convert back to hex
+            return "#" + ((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1);
+        }
+    </script>
+</body>
+</html>
