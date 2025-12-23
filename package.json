@@ -7,16 +7,14 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    
     "db:init": "mkdir -p tb_data && docker run --rm --security-opt seccomp=unconfined -v $(pwd)/tb_data:/data ghcr.io/tigerbeetle/tigerbeetle:latest format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle",
-    
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
-    
     "db:reset": "rm -rf tb_data redis_data && pnpm db:init"
   },
   "devDependencies": {
     "prettier": "^3.0.0",
+    "tsx": "^4.7.0",
     "turbo": "^2.0.0",
     "typescript": "^5.0.0"
   },

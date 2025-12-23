@@ -1,135 +1,106 @@
-# Turborepo starter
+# BasePixelWar
 
-This Turborepo starter is maintained by the Turborepo core team.
+BasePixelWar is a real-time multiplayer pixel painting game built on the Base blockchain. Players can purchase pixels on a shared grid and paint them in their faction's color (Bull or Bear).
 
-## Using this example
+## Project Structure
 
-Run the following command:
-
-```sh
-npx create-turbo@latest
-```
-
-## What's inside?
-
-This Turborepo includes the following packages/apps:
+This is a Turborepo monorepo with the following packages/apps:
 
 ### Apps and Packages
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- `web`: [Next.js](https://nextjs.org/) frontend application running on port 3000
+- `server`: Node.js API server
+- `tigerbeetle`: High-performance financial ledger for tracking balances and scores
+- `redis`: Cache and mapping service for wallet addresses to account IDs
+- `@repo/shared`: Shared TypeScript types and utilities
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Prerequisites
 
-### Utilities
+- Node.js >= 18
+- pnpm (v9.0.0 or higher)
+- Docker and Docker Compose
+- Git
 
-This Turborepo has some additional tools already setup for you:
+## Installation
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd basepixelwar
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+2. Install dependencies:
+```bash
+pnpm install
 ```
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+3. Install tsx for TypeScript execution:
+```bash
+pnpm add -D -w tsx
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+## Setup & Running
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+### 1. Initialize the Database
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+First, initialize the TigerBeetle data directory:
+```bash
+pnpm db:init
 ```
 
-### Remote Caching
+### 2. Start Database Services
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+Start TigerBeetle and Redis using Docker Compose:
+```bash
+pnpm db:up
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+### 3. Run the Development Server
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+To run both the web and server apps simultaneously:
+```bash
+pnpm dev
 ```
 
-## Useful Links
+To run individual apps:
+- Web app only: `pnpm --filter web dev`
+- Server only: `pnpm --filter server dev`
 
-Learn more about the power of Turborepo:
+### 4. Other Useful Commands
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+- Build all packages: `pnpm build`
+- Lint code: `pnpm lint`
+- Check types: `pnpm check-types`
+- Stop database services: `pnpm db:down`
+- Reset database: `pnpm db:reset`
+
+## Database Services
+
+The project uses two main database services managed by Docker Compose:
+
+- **TigerBeetle** (financial ledger): Runs on port 3004
+- **Redis** (cache and mapping): Runs on port 6379
+- **Redis Commander** (GUI): Available at http://localhost:8081
+
+## Troubleshooting
+
+### Server TypeScript Error
+
+If you encounter the error `SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]: TypeScript enum is not supported in strip-only mode`, we've already fixed this by using `tsx` to run TypeScript files directly in development mode.
+
+### Docker Issues
+
+If Docker containers fail to start:
+1. Make sure Docker is running
+2. Check that ports 3004, 6379, and 8081 are available
+3. Run `pnpm db:down` to stop containers and try `pnpm db:up` again
+
+## Technologies Used
+
+- [Turborepo](https://turbo.build/repo) - Build system and monorepo manager
+- [Next.js](https://nextjs.org/) - React framework for the frontend
+- [TigerBeetle](https://www.tigerbeetle.com/) - High-performance financial ledger
+- [Redis](https://redis.io/) - In-memory data structure store
+- [TypeScript](https://www.typescriptlang.org/) - Typed JavaScript
+- [Docker](https://www.docker.com/) - Container platform
+- [pnpm](https://pnpm.io/) - Fast, disk space efficient package manager
