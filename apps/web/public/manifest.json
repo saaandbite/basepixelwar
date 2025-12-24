@@ -1,0 +1,23 @@
+{
+    "name": "Chroma Duel - Territory Conquest",
+    "short_name": "Chroma Duel",
+    "description": "Fast-paced territory conquest game",
+    "start_url": "/game",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#3B82F6",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "games",
+        "entertainment"
+    ],
+    "screenshots": []
+}
