@@ -27,8 +27,8 @@ export function GameHUD({
 }: GameHUDProps) {
     // Calculate timer ring
     const percentage = timeLeft / GAME_DURATION;
-    const circumference = 2 * Math.PI * 28;
-    const offset = circumference - percentage * circumference;
+    // const circumference = 2 * Math.PI * 28;
+    // const offset = circumference - percentage * circumference;
 
     // Timer color based on time remaining
     const timerColor =

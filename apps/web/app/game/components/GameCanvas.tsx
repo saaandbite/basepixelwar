@@ -4,7 +4,7 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { useGameLoop } from '../hooks/useGameLoop';
-import { COLORS, GRID_SIZE } from '../lib/constants';
+import { COLORS } from '../lib/constants';
 import {
     drawBackground,
     drawGrid,
@@ -167,7 +167,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
 
             onPlayerInput(angle, isDown, isDown);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.isFiring, state.player.powerups?.shield, onPlayerInput]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.isFiring, state.player.powerups?.shield, onPlayerInput, onShieldActivation]
     );
 
     // Mouse events

@@ -5,8 +5,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useAudio } from './hooks/useAudio';
-import { GRID_SIZE, GAME_DURATION } from './lib/constants';
-import { calculateScore, findLargestTerritory } from './lib/gameLogic';
+import { GRID_SIZE } from './lib/constants';
+import { calculateScore } from './lib/gameLogic';
 import { GameCanvas } from './components/GameCanvas';
 import { GameHUD } from './components/GameHUD';
 import { GameInstructions } from './components/GameInstructions';
@@ -30,10 +30,8 @@ export default function GamePage() {
         updateGame,
         timerTick,
         showMeteorWarning,
-        hideMeteorWarning,
         launchMeteor,
-        callPlayerMeteor,
-        useShield,
+        activateShield,
     } = useGameState();
 
     const { initAudio, playSound, setSoundOn } = useAudio();
@@ -56,6 +54,38 @@ export default function GamePage() {
         setSoundOn(state.isSoundOn);
     }, [state.isSoundOn, setSoundOn]);
 
+    const showFooterStatus = useCallback((name: string, icon: string, color: string) => {
+        if (footerTimeout) clearTimeout(footerTimeout);
+        setFooterStatus({ name, icon, color });
+        const timeout = setTimeout(() => setFooterStatus(null), 3000);
+        setFooterTimeout(timeout);
+    }, [footerTimeout]);
+
+    // Meteor trigger
+    const triggerMeteor = useCallback(() => {
+        const { cols, rows } = state;
+
+        // Randomly target either player area or enemy area
+        const isTargetingEnemy = Math.random() < 0.5;
+        let tx: number, ty: number;
+
+        if (isTargetingEnemy) {
+            // Target enemy area (top half)
+            tx = Math.random() * (cols * GRID_SIZE);
+            ty = Math.random() * (rows * GRID_SIZE * 0.4); // Top 40%
+        } else {
+            // Target player area (bottom half)
+            tx = Math.random() * (cols * GRID_SIZE);
+            ty = (rows * GRID_SIZE) - Math.random() * (rows * GRID_SIZE * 0.4); // Bottom 40%
+        }
+
+        showMeteorWarning(tx, ty);
+
+        setTimeout(() => {
+            launchMeteor(tx, ty);
+        }, 2500);
+    }, [state, showMeteorWarning, launchMeteor]);
+
     // Timer
     useEffect(() => {
         if (state.gameActive && !state.isPaused) {
@@ -76,7 +106,7 @@ export default function GamePage() {
                 timerRef.current = null;
             }
         };
-    }, [state.gameActive, state.isPaused, state.timeLeft, timerTick, playSound]);
+    }, [state.gameActive, state.isPaused, state.timeLeft, timerTick, playSound, triggerMeteor]);
 
     // Combo display
     useEffect(() => {
@@ -111,39 +141,7 @@ export default function GamePage() {
         }
 
         prevPowerupsRef.current = curr;
-    }, [state.player.powerups, state.player.x, state.player.y]);
-
-    const showFooterStatus = (name: string, icon: string, color: string) => {
-        if (footerTimeout) clearTimeout(footerTimeout);
-        setFooterStatus({ name, icon, color });
-        const timeout = setTimeout(() => setFooterStatus(null), 3000);
-        setFooterTimeout(timeout);
-    };
-
-    // Meteor trigger
-    const triggerMeteor = useCallback(() => {
-        const { cols, rows } = state;
-
-        // Randomly target either player area or enemy area
-        const isTargetingEnemy = Math.random() < 0.5;
-        let tx: number, ty: number;
-
-        if (isTargetingEnemy) {
-            // Target enemy area (top half)
-            tx = Math.random() * (cols * GRID_SIZE);
-            ty = Math.random() * (rows * GRID_SIZE * 0.4); // Top 40%
-        } else {
-            // Target player area (bottom half)
-            tx = Math.random() * (cols * GRID_SIZE);
-            ty = (rows * GRID_SIZE) - Math.random() * (rows * GRID_SIZE * 0.4); // Bottom 40%
-        }
-
-        showMeteorWarning(tx, ty);
-
-        setTimeout(() => {
-            launchMeteor(tx, ty);
-        }, 2500);
-    }, [state.cols, state.rows, showMeteorWarning, launchMeteor]);
+    }, [state.player.powerups, state.player.x, state.player.y, showFooterStatus]);
 
     // Handlers
     const handleStart = useCallback(() => {
@@ -177,7 +175,7 @@ export default function GamePage() {
     );
 
     const handlePlayerInput = useCallback(
-        (angle: number, isFiring: boolean, isDown: boolean) => {
+        (angle: number, isFiring: boolean) => {
             setPlayerAngle(angle);
             setPlayerFiring(isFiring);
         },
@@ -187,9 +185,9 @@ export default function GamePage() {
     // Special handler for shield activation
     const handleShieldActivation = useCallback(() => {
         if (state.player.powerups?.shield && state.player.powerups.shield > 0) {
-            useShield(playSound);
+            activateShield(playSound);
         }
-    }, [state.player.powerups?.shield, useShield, playSound]);
+    }, [state.player.powerups?.shield, activateShield, playSound]);
 
     const handleUpdate = useCallback(() => {
         updateGame(playSound);
@@ -210,7 +208,6 @@ export default function GamePage() {
         // Keyboard shortcuts - currently none for special actions
     }, []);
 
-    // Calculate score (memoized for performance)
     const score = useMemo(
         () => calculateScore(state.grid, state.cols, state.rows),
         [state.grid, state.cols, state.rows]
@@ -263,7 +260,6 @@ export default function GamePage() {
                             burstShot={state.player.powerups?.burstShot || 0}
                             shield={state.player.powerups?.shield || 0}
                             showMeteorWarning={state.showMeteorIndicator}
-                            meteorTarget={state.meteorTarget}
                             footerStatus={footerStatus}
                         />
 

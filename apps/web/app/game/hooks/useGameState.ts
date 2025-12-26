@@ -1,12 +1,11 @@
 // Game State Hook
 
-import { useReducer, useCallback, useRef, useEffect } from 'react';
-import type { GameState, Projectile, Particle, Powerup, TerritoryBatch, Cannon } from '../types';
+import { useReducer, useCallback } from 'react';
+import type { GameState, Projectile, Particle } from '../types';
 import {
     GRID_SIZE,
     FIRE_RATE,
     GAME_DURATION,
-    POWERUP_CHANCE,
     MAX_POWERUPS_ON_SCREEN,
     COLORS,
 } from '../lib/constants';
@@ -16,7 +15,6 @@ import {
     createMeteor,
     paintGrid,
     explodeMeteor,
-    calculateScore,
     findLargestTerritory,
     createParticles,
     createPowerup,
@@ -193,7 +191,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         case 'GAME_UPDATE': {
             if (!state.gameActive || state.isPaused) return state;
 
-            let newState = { ...state };
+            const newState = { ...state };
 
             // Shake disabled for performance
 
@@ -322,7 +320,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             let comboStreak = newState.comboStreak;
             let maxCombo = newState.maxCombo;
             let lastTerritoryFlip = newState.lastTerritoryFlip;
-            let screenFlash = newState.screenFlash;
+            const screenFlash = newState.screenFlash;
 
             for (const p of newState.projectiles) {
                 // Update projectile position without gravity
@@ -423,9 +421,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 .filter((pt) => pt.life > 0);
 
             // Update powerups
-            const playerX = newState.player.x;
-            const playerY = newState.player.y;
-            let playerPowerups = { ...newState.player.powerups! };
+            const playerPowerups = { ...newState.player.powerups! };
             let totalPowerupsCollected = newState.totalPowerupsCollected;
 
             const updatedPowerups = newPowerups
@@ -703,11 +699,11 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         dispatch({ type: 'LAUNCH_METEOR', targetX, targetY });
     }, []);
 
-    const callPlayerMeteor = useCallback((playSound: (name: string) => void) => {
+    const callPlayerMeteor = useCallback(() => {
         // Disabled
     }, []);
 
-    const useShield = useCallback((playSound: (name: string) => void) => {
+    const activateShield = useCallback((playSound: (name: string) => void) => {
         dispatch({ type: 'USE_SHIELD', playSound });
     }, []);
 
@@ -726,6 +722,6 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         hideMeteorWarning,
         launchMeteor,
         callPlayerMeteor,
-        useShield,
+        activateShield,
     };
 }

@@ -2,13 +2,12 @@
 
 // Powerup Indicator Component
 
-import { COLORS } from '../lib/constants';
+
 
 interface PowerupIndicatorProps {
     burstShot: number;
     shield: number;
     showMeteorWarning: boolean;
-    meteorTarget: { x: number; y: number } | null;
     footerStatus: { name: string; icon: string; color: string } | null;
 }
 
@@ -16,10 +15,9 @@ export function PowerupIndicator({
     burstShot,
     shield,
     showMeteorWarning,
-    meteorTarget,
     footerStatus,
 }: PowerupIndicatorProps) {
-    const hasPowerups = burstShot > 0 || shield > 0;
+
 
     const renderFooterIcon = (iconName: string) => {
         switch (iconName) {
