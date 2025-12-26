@@ -55,32 +55,32 @@ export function PowerupIndicator({
         <>
             {/* Powerup Indicators - Symmetrical Left and Right Sides */}
             {burstShot > 0 && (
-                <div className="absolute left-4 bottom-32 z-20">
-                    <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
+                <div className="absolute left-3 bottom-24 z-20">
+                    <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
                                 <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
                             </svg>
-                            <span className="font-bold text-sm mt-1">{burstShot}</span>
+                            <span className="font-bold text-xs">{burstShot}</span>
                         </div>
                     </div>
                 </div>
             )}
             {shield > 0 && (
-                <div className="absolute left-16 bottom-32 z-20">
-                    <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
+                <div className="absolute left-[72px] bottom-24 z-20">
+                    <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
                                 <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
                             </svg>
-                            <span className="font-bold text-sm mt-1">{shield}</span>
+                            <span className="font-bold text-xs">{shield}</span>
                         </div>
                     </div>
                 </div>
             )}
             {callMeteor > 0 && (
-                <div className="absolute right-4 bottom-32 z-20">
-                    <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
+                <div className="absolute right-3 bottom-24 z-20">
+                    <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600">
                                 <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-3M15.5 14.5A2.5 2.5 0 0 1 13 12c0-1.38.5-2 1-3 1.072-2.143 2.072-2.143 3-3" />
@@ -88,7 +88,7 @@ export function PowerupIndicator({
                                 <path d="M12 2a10 10 0 1 0 10 10" />
                                 <path d="M22 12h-2" />
                             </svg>
-                            <span className="font-bold text-sm mt-1">{callMeteor}</span>
+                            <span className="font-bold text-xs">{callMeteor}</span>
                         </div>
                     </div>
                 </div>
@@ -118,7 +118,7 @@ export function PowerupIndicator({
 
 
             {/* Footer */}
-            <footer className="bg-white/95 border-t border-slate-100/80 px-4 py-2 z-10 shrink-0 backdrop-blur-sm flex justify-between items-center gap-3 relative overflow-hidden h-20">
+            <footer className="bg-white/95 border-t border-slate-100/80 px-4 py-2 z-10 shrink-0 backdrop-blur-sm flex justify-between items-center gap-3 relative overflow-hidden h-14">
                 {/* Hint Text (LEFT) */}
                 <div className="flex flex-col items-start justify-center text-slate-500 font-bold tracking-wide">
                     <div className="flex items-center gap-2">

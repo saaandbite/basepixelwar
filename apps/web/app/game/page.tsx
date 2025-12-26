@@ -223,7 +223,7 @@ export default function GamePage() {
 
     return (
         <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans">
-            <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-[36px] shadow-game border-[10px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
+            <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-2xl shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
                 {/* HUD */}
                 <GameHUD
                     scoreBlue={score.blue}

@@ -47,49 +47,50 @@ export function GameHUD({
                 </svg>
             </button>
 
-            {/* Score Board & Timer */}
-            <div className="flex flex-col items-center gap-1">
-                <div className="bg-gradient-to-r from-red-50/90 to-red-100/90 px-4 py-2 rounded-2xl border border-red-200/80 flex items-center gap-3 backdrop-blur-sm">
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-3.5 h-3.5 rounded-full bg-primary/90 border border-white shadow-sm"></div>
-                        <span className="font-display font-bold text-lg text-slate-800 tabular-nums">
-                            {scoreRed}%
-                        </span>
-                    </div>
-                    <div className="w-[1px] h-5 bg-slate-300/60"></div>
-                    <div className="flex items-center gap-1.5">
-                        <span className="font-display font-bold text-lg text-slate-800 tabular-nums">
-                            {scoreBlue}%
-                        </span>
-                        <div className="w-3.5 h-3.5 rounded-full bg-secondary/90 border border-white shadow-sm"></div>
-                    </div>
-                </div>
-
-                {/* Timer with Progress Ring */}
-                <div className="relative w-16 h-16 flex items-center justify-center">
-                    <svg className="absolute -rotate-90" width="64" height="64" viewBox="0 0 64 64">
+            {/* Score Board & Timer - Horizontal Layout */}
+            <div className="flex items-center gap-3">
+                {/* Timer Ring - Compact */}
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                    <svg className="absolute -rotate-90" width="48" height="48" viewBox="0 0 48 48">
                         <circle
-                            cx="32"
-                            cy="32"
-                            r="28"
+                            cx="24"
+                            cy="24"
+                            r="20"
                             fill="none"
                             stroke="#e2e8f0"
-                            strokeWidth="4"
+                            strokeWidth="3"
                         ></circle>
                         <circle
-                            cx="32"
-                            cy="32"
-                            r="28"
+                            cx="24"
+                            cy="24"
+                            r="20"
                             fill="none"
                             stroke={timerColor}
-                            strokeWidth="4"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={offset}
+                            strokeWidth="3"
+                            strokeDasharray={2 * Math.PI * 20}
+                            strokeDashoffset={(2 * Math.PI * 20) - percentage * (2 * Math.PI * 20)}
                             className="timer-ring"
                         ></circle>
                     </svg>
-                    <div className="bg-slate-900/85 text-white w-12 h-12 rounded-full flex items-center justify-center text-[11px] font-bold tracking-wider shadow-lg backdrop-blur-sm">
+                    <div className="bg-slate-900/85 text-white w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold tracking-wider shadow-md">
                         {timeLeft}s
+                    </div>
+                </div>
+
+                {/* Score Board */}
+                <div className="bg-gradient-to-r from-red-50/90 to-blue-50/90 px-3 py-1.5 rounded-xl border border-slate-200/80 flex items-center gap-2 backdrop-blur-sm">
+                    <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded-full bg-primary/90 border border-white shadow-sm"></div>
+                        <span className="font-display font-bold text-base text-slate-800 tabular-nums">
+                            {scoreRed}%
+                        </span>
+                    </div>
+                    <div className="w-[1px] h-4 bg-slate-300/60"></div>
+                    <div className="flex items-center gap-1">
+                        <span className="font-display font-bold text-base text-slate-800 tabular-nums">
+                            {scoreBlue}%
+                        </span>
+                        <div className="w-3 h-3 rounded-full bg-secondary/90 border border-white shadow-sm"></div>
                     </div>
                 </div>
             </div>
