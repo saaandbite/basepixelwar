@@ -97,7 +97,7 @@ export function GameHUD({
 
             {/* Combo Counter */}
             {showCombo && comboStreak >= 2 && (
-                <div className="absolute top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400/90 text-white px-4 py-1 rounded-full font-display font-bold text-lg shadow-combo backdrop-blur-sm border border-yellow-500/50 animate-combo-pop">
+                <div className="absolute top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400/90 text-white px-4 py-1 rounded-full font-display font-bold text-lg shadow-combo backdrop-blur-sm border border-yellow-500/50 animate-combo-pop pointer-events-none">
                     <div className="inline-block align-middle mr-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />

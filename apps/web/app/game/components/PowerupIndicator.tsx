@@ -55,7 +55,7 @@ export function PowerupIndicator({
         <>
             {/* Powerup Indicators - Symmetrical Left and Right Sides */}
             {burstShot > 0 && (
-                <div className="absolute left-3 bottom-24 z-20">
+                <div className="absolute left-3 bottom-24 z-20 pointer-events-none">
                     <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
@@ -67,7 +67,7 @@ export function PowerupIndicator({
                 </div>
             )}
             {shield > 0 && (
-                <div className="absolute left-[72px] bottom-24 z-20">
+                <div className="absolute left-[72px] bottom-24 z-20 pointer-events-none">
                     <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
@@ -79,7 +79,7 @@ export function PowerupIndicator({
                 </div>
             )}
             {callMeteor > 0 && (
-                <div className="absolute right-3 bottom-24 z-20">
+                <div className="absolute right-3 bottom-24 z-20 pointer-events-none">
                     <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600">
