@@ -262,23 +262,6 @@ export function drawPowerups(ctx: CanvasRenderingContext2D, powerups: Powerup[])
                 ctx.fillStyle = pu.color + '40';
                 ctx.fill();
                 break;
-            case 'meteor':
-                // Comet/meteor shape
-                ctx.beginPath();
-                ctx.arc(0, 0, 6, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.fillStyle = pu.color + '40';
-                ctx.fill();
-                // Tail
-                ctx.beginPath();
-                ctx.moveTo(-6, 0);
-                ctx.lineTo(-12, -4);
-                ctx.lineTo(-12, 4);
-                ctx.closePath();
-                ctx.stroke();
-                ctx.fillStyle = pu.color + '20';
-                ctx.fill();
-                break;
         }
 
         // Border
@@ -447,8 +430,8 @@ export function drawCannon(
 
     // Powerup indicators for player
     if (isPlayer && cannon.powerups) {
-        const { burstShot, shield, callMeteor } = cannon.powerups;
-        if (burstShot > 0 || shield > 0 || callMeteor > 0) {
+        const { burstShot, shield } = cannon.powerups;
+        if (burstShot > 0 || shield > 0) {
             ctx.save();
             ctx.rotate(-cannon.angle); // Unrotate for proper positioning
 
@@ -476,19 +459,6 @@ export function drawCannon(
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(String(shield), indicatorX, -25);
-                indicatorX += 15;
-            }
-
-            if (callMeteor > 0) {
-                ctx.fillStyle = COLORS.powerup.meteor;
-                ctx.beginPath();
-                ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'white';
-                ctx.font = '8px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(callMeteor), indicatorX, -25);
             }
 
             ctx.restore();

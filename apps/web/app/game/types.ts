@@ -28,7 +28,7 @@ export interface Powerup {
     y: number;
     vy: number;
     rotation: number;
-    type: 'burst' | 'shield' | 'meteor';
+    type: 'burst' | 'shield';
     collected: boolean;
     color: string;
     glowColor: string;
@@ -54,7 +54,6 @@ export interface Cannon {
     powerups?: {
         burstShot: number;
         shield: number;
-        callMeteor: number;
     };
     lastFireTime?: number;
     longDragAngle?: number;
@@ -102,7 +101,6 @@ export type GameAction =
     | { type: 'UPDATE_POWERUPS' }
     | { type: 'UPDATE_ENEMY_AI' }
     | { type: 'TRIGGER_METEOR' }
-    | { type: 'CALL_PLAYER_METEOR' }
     | { type: 'COLLECT_POWERUP'; powerup: Powerup }
     | { type: 'END_GAME' }
     | { type: 'SET_CANVAS_SIZE'; width: number; height: number }

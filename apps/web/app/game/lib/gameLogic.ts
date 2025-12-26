@@ -284,14 +284,13 @@ export function createParticles(
 
 // Create powerup at position
 export function createPowerup(gx: number, gy: number): Powerup {
-    const types: ('burst' | 'shield' | 'meteor')[] = ['burst', 'shield', 'meteor'];
+    const types: ('burst' | 'shield')[] = ['burst', 'shield'];
     const randomIndex = Math.floor(Math.random() * types.length);
     const type = types[randomIndex] ?? 'burst';
 
     const colorMap = {
         burst: { color: COLORS.powerup.burst, glowColor: 'rgba(157, 78, 221, 0.6)' },
         shield: { color: COLORS.powerup.shield, glowColor: 'rgba(76, 175, 80, 0.6)' },
-        meteor: { color: COLORS.powerup.meteor, glowColor: 'rgba(255, 152, 0, 0.6)' },
     };
 
     return {

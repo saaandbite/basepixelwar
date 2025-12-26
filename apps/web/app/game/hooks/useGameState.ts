@@ -46,7 +46,6 @@ function createInitialState(width: number, height: number): GameState {
             powerups: {
                 burstShot: 0,
                 shield: 0,
-                callMeteor: 0,
             },
             lastFireTime: 0,
         },
@@ -61,7 +60,6 @@ function createInitialState(width: number, height: number): GameState {
             powerups: {
                 burstShot: 0,
                 shield: 0,
-                callMeteor: 0,
             },
         },
         timeLeft: GAME_DURATION,
@@ -92,7 +90,6 @@ type GameAction =
     | { type: 'GAME_UPDATE'; playSound: (name: string) => void }
     | { type: 'TIMER_TICK'; playSound: (name: string) => void }
     | { type: 'END_GAME' }
-    | { type: 'CALL_PLAYER_METEOR'; playSound: (name: string) => void }
     | { type: 'USE_SHIELD'; playSound: (name: string) => void }
     | { type: 'SHOW_METEOR_WARNING'; targetX: number; targetY: number }
     | { type: 'LAUNCH_METEOR'; targetX: number; targetY: number }
@@ -285,27 +282,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             // Enemy Special Powerup Usage AI
             const enemyPowerups = newState.enemy.powerups!;
 
-            // 1. Use Meteor if available and random chance (or based on target)
-            if (enemyPowerups.callMeteor > 0 && Math.random() < 0.005) {
-                const largestBlue = findLargestTerritory(newState.grid, 'blue', newState.cols, newState.rows);
-                let tx: number, ty: number;
-                if (largestBlue) {
-                    tx = largestBlue.x * GRID_SIZE + GRID_SIZE / 2;
-                    ty = largestBlue.y * GRID_SIZE + GRID_SIZE / 2;
-                } else {
-                    tx = Math.random() * (newState.cols * GRID_SIZE);
-                    ty = (newState.rows * GRID_SIZE) - 100;
-                }
-
-                newState.projectiles = [
-                    ...newState.projectiles,
-                    createMeteor(newState.enemy.x, newState.enemy.y, tx, ty, 8),
-                ];
-                newState.enemy.powerups!.callMeteor--;
-                action.playSound('meteor');
-            }
-
-            // 2. Use Shield if projectile is close
+            // Use Shield if projectile is close
             if (enemyPowerups.shield > 0) {
                 const incomingBullet = newState.projectiles.find(p =>
                     p.team === 'blue' && Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y) < 100
@@ -487,9 +464,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                             case 'shield':
                                 targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
                                 break;
-                            case 'meteor':
-                                targetPowerups.callMeteor = Math.min(targetPowerups.callMeteor + 1, 3);
-                                break;
                         }
 
                         if (isPlayerTarget) {
@@ -637,40 +611,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             };
         }
 
-        case 'CALL_PLAYER_METEOR': {
-            if (!state.player.powerups || state.player.powerups.callMeteor <= 0) return state;
-
-            const largestRed = findLargestTerritory(state.grid, 'red', state.cols, state.rows);
-            let tx: number, ty: number;
-
-            if (largestRed) {
-                tx = largestRed.x * GRID_SIZE + GRID_SIZE / 2;
-                ty = largestRed.y * GRID_SIZE + GRID_SIZE / 2;
-            } else {
-                tx = Math.random() * (state.cols * GRID_SIZE);
-                ty = 40 + Math.random() * ((state.rows * GRID_SIZE) / 3);
-            }
-
-            action.playSound('meteor');
-
-            return {
-                ...state,
-                player: {
-                    ...state.player,
-                    powerups: {
-                        ...state.player.powerups,
-                        callMeteor: state.player.powerups.callMeteor - 1,
-                    },
-                },
-                projectiles: [
-                    ...state.projectiles,
-                    createMeteor(state.player.x, state.player.y, tx, ty, 8),
-                ],
-                // shakeIntensity: 10, // Disabled
-                meteorTarget: { x: tx, y: ty },
-            };
-        }
-
         case 'USE_SHIELD': {
             if (!state.player.powerups || state.player.powerups.shield <= 0) return state;
 
@@ -764,7 +704,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
     }, []);
 
     const callPlayerMeteor = useCallback((playSound: (name: string) => void) => {
-        dispatch({ type: 'CALL_PLAYER_METEOR', playSound });
+        // Disabled
     }, []);
 
     const useShield = useCallback((playSound: (name: string) => void) => {

@@ -107,11 +107,6 @@ export default function GamePage() {
                 // Show powerup effect
                 setPowerupEffect({ show: true, type: 'shield', x: state.player.x, y: state.player.y });
                 setTimeout(() => setPowerupEffect(null), 1000);
-            } else if (curr.callMeteor > (prev.callMeteor || 0)) {
-                showFooterStatus('METEOR STRIKE', 'radioactive', 'text-orange-500');
-                // Show powerup effect
-                setPowerupEffect({ show: true, type: 'meteor', x: state.player.x, y: state.player.y });
-                setTimeout(() => setPowerupEffect(null), 1000);
             }
         }
 
@@ -127,16 +122,20 @@ export default function GamePage() {
 
     // Meteor trigger
     const triggerMeteor = useCallback(() => {
-        const { grid, cols, rows } = state;
-        const largestBlue = findLargestTerritory(grid, 'blue', cols, rows);
+        const { cols, rows } = state;
+
+        // Randomly target either player area or enemy area
+        const isTargetingEnemy = Math.random() < 0.5;
         let tx: number, ty: number;
 
-        if (largestBlue && Math.random() < 0.8) {
-            tx = largestBlue.x * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 30;
-            ty = largestBlue.y * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 30;
+        if (isTargetingEnemy) {
+            // Target enemy area (top half)
+            tx = Math.random() * (cols * GRID_SIZE);
+            ty = Math.random() * (rows * GRID_SIZE * 0.4); // Top 40%
         } else {
-            tx = Math.random() * canvasSizeRef.current.width;
-            ty = canvasSizeRef.current.height / 2 + Math.random() * (canvasSizeRef.current.height / 3);
+            // Target player area (bottom half)
+            tx = Math.random() * (cols * GRID_SIZE);
+            ty = (rows * GRID_SIZE) - Math.random() * (rows * GRID_SIZE * 0.4); // Bottom 40%
         }
 
         showMeteorWarning(tx, ty);
@@ -144,7 +143,7 @@ export default function GamePage() {
         setTimeout(() => {
             launchMeteor(tx, ty);
         }, 2500);
-    }, [state, showMeteorWarning, launchMeteor]);
+    }, [state.cols, state.rows, showMeteorWarning, launchMeteor]);
 
     // Handlers
     const handleStart = useCallback(() => {
@@ -208,18 +207,8 @@ export default function GamePage() {
 
     // Keyboard shortcuts
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (!state.gameActive || state.isPaused) return;
-
-            if (e.key === 'w' && state.player.powerups?.callMeteor && state.player.powerups.callMeteor > 0) {
-                e.preventDefault();
-                callPlayerMeteor(playSound);
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [state.gameActive, state.isPaused, state.player.powerups, callPlayerMeteor, playSound]);
+        // Keyboard shortcuts - currently none for special actions
+    }, []);
 
     // Calculate score (memoized for performance)
     const score = useMemo(
@@ -273,7 +262,6 @@ export default function GamePage() {
                         <PowerupIndicator
                             burstShot={state.player.powerups?.burstShot || 0}
                             shield={state.player.powerups?.shield || 0}
-                            callMeteor={state.player.powerups?.callMeteor || 0}
                             showMeteorWarning={state.showMeteorIndicator}
                             meteorTarget={state.meteorTarget}
                             footerStatus={footerStatus}
