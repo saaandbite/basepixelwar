@@ -10,19 +10,18 @@ export function GameInstructions({ onStart }: GameInstructionsProps) {
     return (
         <div className="absolute inset-0 z-30 bg-slate-900/80 flex flex-col items-center justify-center backdrop-blur-[2px] text-white">
             <div className="text-center max-w-[320px] p-6">
-                <h1 className="font-display text-4xl font-bold mb-3 text-yellow-300 animate-float">
+                <h1 className="font-display text-4xl font-bold mb-3 text-yellow-300 drop-shadow-md">
                     CHROMA DUEL
                 </h1>
                 <p className="text-base mb-4">
                     Capture territory by shooting your color bullets! Watch out for meteors that
                     flip territory.
                 </p>
-                <br />
 
                 {/* Cards Container with consistent spacing */}
                 <div className="flex flex-col gap-3">
                     {/* VS Card */}
-                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20" style={{ padding: '24px 32px' }}>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 will-change-transform" style={{ padding: '24px 32px' }}>
                         <div className="flex items-center justify-center gap-3 mb-1">
                             <div className="w-5 h-5 rounded-full bg-secondary/80"></div>
                             <span className="font-bold text-sm">YOU</span>
@@ -69,8 +68,7 @@ export function GameInstructions({ onStart }: GameInstructionsProps) {
                 </div>
 
                 <div className="mt-4 text-xs text-slate-400">
-                    <br />
-                    <p>Hold & Drag to Shoot • Collect power-ups</p>
+                    <p>Hold & Drag to Shoot</p>
                 </div>
             </div>
         </div>

@@ -1,7 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 @import "tailwindcss";
-
-
 
 /* Custom Tailwind config via CSS */
 @theme {
@@ -16,8 +13,8 @@
   --color-powerup-green: #4CAF50;
   --color-powerup-orange: #FF9800;
 
-  --font-display: 'Fredoka', cursive;
-  --font-sans: 'Nunito', sans-serif;
+  --font-display: var(--font-fredoka), "Fredoka", cursive;
+  --font-sans: var(--font-nunito), "Nunito", sans-serif;
 
   --shadow-game: 0 20px 40px -5px rgba(76, 201, 240, 0.35);
   --shadow-btn: 0 6px 0 rgba(0, 0, 0, 0.1);
@@ -101,11 +98,11 @@ a {
 
   0%,
   100% {
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 
   50% {
-    transform: translateY(-8px);
+    transform: translate3d(0, -8px, 0);
   }
 }
 

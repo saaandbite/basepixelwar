@@ -40,10 +40,16 @@ export default function GamePage() {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const canvasSizeRef = useRef({ width: 400, height: 700 });
 
+    const [isMounted, setIsMounted] = useState(false);
     const [showCombo, setShowCombo] = useState(false);
     const [footerStatus, setFooterStatus] = useState<{ name: string; icon: string; color: string } | null>(null);
     const [footerTimeout, setFooterTimeout] = useState<NodeJS.Timeout | null>(null);
     const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'burst' | 'shield' | 'meteor'; x: number; y: number } | null>(null);
+
+    // Initial mount hydration safety
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Audio sync
     useEffect(() => {
@@ -162,6 +168,9 @@ export default function GamePage() {
 
     const handleResize = useCallback(
         (width: number, height: number) => {
+            // Avoid extreme sensitivity
+            if (Math.abs(canvasSizeRef.current.width - width) < 2 && Math.abs(canvasSizeRef.current.height - height) < 2) return;
+
             canvasSizeRef.current = { width, height };
             setCanvasSize(width, height);
         },
@@ -224,66 +233,83 @@ export default function GamePage() {
     return (
         <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans">
             <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-2xl shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
-                {/* HUD */}
-                <GameHUD
-                    scoreBlue={score.blue}
-                    scoreRed={score.red}
-                    timeLeft={state.timeLeft}
-                    isSoundOn={state.isSoundOn}
-                    onPause={handlePause}
-                    onToggleSound={handleToggleSound}
-                    comboStreak={state.comboStreak}
-                    showCombo={showCombo}
-                />
+                {isMounted ? (
+                    <>
+                        {/* HUD */}
+                        <GameHUD
+                            scoreBlue={score.blue}
+                            scoreRed={score.red}
+                            timeLeft={state.timeLeft}
+                            isSoundOn={state.isSoundOn}
+                            onPause={handlePause}
+                            onToggleSound={handleToggleSound}
+                            comboStreak={state.comboStreak}
+                            showCombo={showCombo}
+                        />
 
-                {/* Game Canvas */}
-                <GameCanvas
-                    state={state}
-                    onResize={handleResize}
-                    onPlayerInput={handlePlayerInput}
-                    onShieldActivation={handleShieldActivation}
-                    onUpdate={handleUpdate}
-                />
+                        {/* Game Canvas */}
+                        <GameCanvas
+                            state={state}
+                            onResize={handleResize}
+                            onPlayerInput={handlePlayerInput}
+                            onShieldActivation={handleShieldActivation}
+                            onUpdate={handleUpdate}
+                        />
 
-                {/* Combo Effect */}
-                <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
+                        {/* Combo Effect */}
+                        <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
 
-                {/* Powerup Effect */}
-                {powerupEffect && (
-                    <PowerupEffect
-                        show={powerupEffect.show}
-                        type={powerupEffect.type}
-                        x={powerupEffect.x}
-                        y={powerupEffect.y}
-                    />
-                )}
+                        {/* Powerup Effect */}
+                        {powerupEffect && (
+                            <PowerupEffect
+                                show={powerupEffect.show}
+                                type={powerupEffect.type}
+                                x={powerupEffect.x}
+                                y={powerupEffect.y}
+                            />
+                        )}
 
-                {/* Powerup Indicator & Footer */}
-                <PowerupIndicator
-                    burstShot={state.player.powerups?.burstShot || 0}
-                    shield={state.player.powerups?.shield || 0}
-                    callMeteor={state.player.powerups?.callMeteor || 0}
-                    showMeteorWarning={state.showMeteorIndicator}
-                    meteorTarget={state.meteorTarget}
-                    footerStatus={footerStatus}
-                />
+                        {/* Powerup Indicator & Footer */}
+                        <PowerupIndicator
+                            burstShot={state.player.powerups?.burstShot || 0}
+                            shield={state.player.powerups?.shield || 0}
+                            callMeteor={state.player.powerups?.callMeteor || 0}
+                            showMeteorWarning={state.showMeteorIndicator}
+                            meteorTarget={state.meteorTarget}
+                            footerStatus={footerStatus}
+                        />
 
-                {/* Instructions Overlay */}
-                {!state.gameStarted && <GameInstructions onStart={handleStart} />}
+                        {/* Overlays */}
+                        {!state.gameStarted && <GameInstructions onStart={handleStart} />}
 
-                {/* Pause Overlay */}
-                {state.isPaused && (
-                    <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
-                )}
+                        {state.isPaused && (
+                            <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
+                        )}
 
-                {/* Game Over Modal */}
-                {isGameOver && (
-                    <GameOverModal
-                        blueScore={score.blue}
-                        maxCombo={state.maxCombo}
-                        powerupsCollected={state.totalPowerupsCollected}
-                        onPlayAgain={handlePlayAgain}
-                    />
+                        {isGameOver && (
+                            <GameOverModal
+                                blueScore={score.blue}
+                                maxCombo={state.maxCombo}
+                                powerupsCollected={state.totalPowerupsCollected}
+                                onPlayAgain={handlePlayAgain}
+                            />
+                        )}
+                    </>
+                ) : (
+                    <>
+                        {/* Static Skeleton for LCP & FCP */}
+                        <div className="w-full h-16 p-3 bg-white/95 border-b border-slate-100 flex justify-between items-center shrink-0">
+                            <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
+                            <div className="flex-1 max-w-24 h-8 bg-slate-100/50 rounded-lg mx-auto"></div>
+                            <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
+                        </div>
+                        <div className="flex-grow bg-slate-100/30"></div>
+                        {/* SSR the instructions since they are the LCP candidate */}
+                        <div className="absolute inset-0 z-50 overflow-hidden pointer-events-none">
+                            <GameInstructions onStart={handleStart} />
+                        </div>
+                        <footer className="h-14 bg-white/95 border-t border-slate-100/80"></footer>
+                    </>
                 )}
             </main>
         </div>
