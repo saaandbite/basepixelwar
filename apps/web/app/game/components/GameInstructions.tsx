@@ -30,17 +30,24 @@ export function GameInstructions({ onStart }: GameInstructionsProps) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-8">
-                    <div className="bg-purple-900/40 rounded-xl p-3 border border-purple-500/30">
-                        <span className="material-symbols-rounded text-purple-300 text-3xl mb-1 block">
-                            star
-                        </span>
+                    <div className="bg-purple-900/40 rounded-xl p-3 border border-purple-500/30 flex flex-col items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-purple-300 mb-1">
+                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                            <path d="M5 3v4" />
+                            <path d="M19 17v4" />
+                            <path d="M3 5h4" />
+                            <path d="M17 19h4" />
+                        </svg>
                         <p className="text-sm font-bold">Power-ups</p>
                         <p className="text-xs text-slate-300">Collect special abilities!</p>
                     </div>
-                    <div className="bg-yellow-900/40 rounded-xl p-3 border border-yellow-500/30">
-                        <span className="material-symbols-rounded text-yellow-200 text-3xl mb-1 block">
-                            radioactive
-                        </span>
+                    <div className="bg-yellow-900/40 rounded-xl p-3 border border-yellow-500/30 flex flex-col items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-200 mb-1">
+                            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-3M15.5 14.5A2.5 2.5 0 0 1 13 12c0-1.38.5-2 1-3 1.072-2.143 2.072-2.143 3-3" />
+                            <path d="M12 12h.01" />
+                            <path d="M12 2a10 10 0 1 0 10 10" />
+                            <path d="M22 12h-2" />
+                        </svg>
                         <p className="text-sm font-bold">Meteor</p>
                         <p className="text-xs text-slate-300">Watch the warnings!</p>
                     </div>

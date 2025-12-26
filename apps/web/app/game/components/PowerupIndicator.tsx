@@ -23,6 +23,34 @@ export function PowerupIndicator({
 }: PowerupIndicatorProps) {
     const hasPowerups = burstShot > 0 || shield > 0 || callMeteor > 0;
 
+    const renderFooterIcon = (iconName: string) => {
+        switch (iconName) {
+            case 'auto_awesome':
+                return (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                    </svg>
+                );
+            case 'shield':
+                return (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+                    </svg>
+                );
+            case 'radioactive':
+                return (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-3M15.5 14.5A2.5 2.5 0 0 1 13 12c0-1.38.5-2 1-3 1.072-2.143 2.072-2.143 3-3" />
+                        <path d="M12 12h.01" />
+                        <path d="M12 2a10 10 0 1 0 10 10" />
+                        <path d="M22 12h-2" />
+                    </svg>
+                );
+            default:
+                return null;
+        }
+    };
+
     return (
         <>
             {/* Powerup Container */}
@@ -31,9 +59,9 @@ export function PowerupIndicator({
                     {burstShot > 0 && (
                         <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
                             <div className="flex flex-col items-center">
-                                <span className="material-symbols-rounded text-2xl text-purple-600">
-                                    auto_awesome
-                                </span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
+                                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                                </svg>
                                 <span className="font-bold text-sm mt-1">{burstShot}</span>
                             </div>
                         </div>
@@ -41,9 +69,9 @@ export function PowerupIndicator({
                     {shield > 0 && (
                         <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
                             <div className="flex flex-col items-center">
-                                <span className="material-symbols-rounded text-2xl text-green-600">
-                                    shield
-                                </span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                                    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+                                </svg>
                                 <span className="font-bold text-sm mt-1">{shield}</span>
                             </div>
                         </div>
@@ -51,9 +79,12 @@ export function PowerupIndicator({
                     {callMeteor > 0 && (
                         <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
                             <div className="flex flex-col items-center">
-                                <span className="material-symbols-rounded text-2xl text-orange-600">
-                                    radioactive
-                                </span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600">
+                                    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-2.072-2.143-3-3M15.5 14.5A2.5 2.5 0 0 1 13 12c0-1.38.5-2 1-3 1.072-2.143 2.072-2.143 3-3" />
+                                    <path d="M12 12h.01" />
+                                    <path d="M12 2a10 10 0 1 0 10 10" />
+                                    <path d="M22 12h-2" />
+                                </svg>
                                 <span className="font-bold text-sm mt-1">{callMeteor}</span>
                             </div>
                         </div>
@@ -65,7 +96,9 @@ export function PowerupIndicator({
             {showMeteorWarning && (
                 <div className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center pointer-events-none">
                     <div className="bg-red-500/90 text-white p-3 rounded-full shadow-[0_0_20px_rgba(239,68,68,0.6)] animate-warning-flash border-2 border-white/50 backdrop-blur-sm">
-                        <span className="material-symbols-rounded text-3xl block">meteor</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m13 2 9 6.265L12 22 2 8.265 11 2Z" />
+                        </svg>
                     </div>
                 </div>
             )}
@@ -85,7 +118,9 @@ export function PowerupIndicator({
                 {/* Hint Text (LEFT) */}
                 <div className="flex flex-col items-start justify-center text-slate-500 font-bold tracking-wide">
                     <div className="flex items-center gap-2">
-                        <span className="material-symbols-rounded text-xl">touch_app</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2c0 .667-1 2-1 3.5s2 1.833 2 2.5c0 1.667-1.333 2-2 2H8.5c-.667 0-1.333-.333-2-1-.667-.667-1.5-3-2.5-3S3 6.5 3 7.5s1.333 5.5 3 6 1.333.5 2 1.5 2 2 3.5 2 2-.333 3.5-1.5 1-2.5 1-4-.5-4-1-5S14 1.333 14 2Z" />
+                        </svg>
                         <span className="text-xs md:text-sm">CONTROLS</span>
                     </div>
                     <span className="text-[10px] md:text-xs text-slate-400 mt-0.5">
@@ -99,7 +134,7 @@ export function PowerupIndicator({
                         <>
                             <span className="text-[10px] text-slate-400 font-bold mb-0.5">ACQUIRED</span>
                             <div className={`flex items-center gap-1 ${footerStatus.color} animate-pulse`}>
-                                <span className="material-symbols-rounded text-lg">{footerStatus.icon}</span>
+                                {renderFooterIcon(footerStatus.icon)}
                                 <span className="text-xs font-bold tracking-wide">{footerStatus.name}</span>
                             </div>
                         </>

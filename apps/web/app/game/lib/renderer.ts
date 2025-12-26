@@ -224,21 +224,60 @@ export function drawPowerups(ctx: CanvasRenderingContext2D, powerups: Powerup[])
         ctx.arc(0, 0, 20, 0, Math.PI * 2);
         ctx.fill();
 
-        // Powerup symbol based on type
-        ctx.fillStyle = pu.color;
-        ctx.font = 'bold 24px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        // Powerup symbol based on type - using simple shapes instead of emojis
+        ctx.strokeStyle = pu.color;
+        ctx.lineWidth = 2.5;
 
         switch (pu.type) {
             case 'burst':
-                ctx.fillText('✨', 0, 0);
+                // Sparkle/star shape
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i * Math.PI) / 4;
+                    const radius = i % 2 === 0 ? 8 : 4;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.fillStyle = pu.color + '40';
+                ctx.fill();
                 break;
             case 'shield':
-                ctx.fillText('🛡️', 0, 0);
+                // Shield shape
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.lineTo(8, -6);
+                ctx.lineTo(8, 4);
+                ctx.quadraticCurveTo(8, 10, 0, 12);
+                ctx.quadraticCurveTo(-8, 10, -8, 4);
+                ctx.lineTo(-8, -6);
+                ctx.closePath();
+                ctx.stroke();
+                ctx.fillStyle = pu.color + '40';
+                ctx.fill();
                 break;
             case 'meteor':
-                ctx.fillText('☄️', 0, 0);
+                // Comet/meteor shape
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.fillStyle = pu.color + '40';
+                ctx.fill();
+                // Tail
+                ctx.beginPath();
+                ctx.moveTo(-6, 0);
+                ctx.lineTo(-12, -4);
+                ctx.lineTo(-12, 4);
+                ctx.closePath();
+                ctx.stroke();
+                ctx.fillStyle = pu.color + '20';
+                ctx.fill();
                 break;
         }
 

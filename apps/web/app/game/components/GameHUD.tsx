@@ -41,7 +41,10 @@ export function GameHUD({
                 onClick={onPause}
                 className="w-11 h-11 bg-slate-50/80 rounded-xl shadow-btn active:shadow-btn-active active:translate-y-[2px] flex items-center justify-center text-secondary hover:text-secondary/80 transition-all border border-slate-200/80 backdrop-blur-sm"
             >
-                <span className="material-symbols-rounded text-xl">pause</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="4" height="16" x="6" y="4" rx="1" />
+                    <rect width="4" height="16" x="14" y="4" rx="1" />
+                </svg>
             </button>
 
             {/* Score Board & Timer */}
@@ -94,7 +97,11 @@ export function GameHUD({
             {/* Combo Counter */}
             {showCombo && comboStreak >= 2 && (
                 <div className="absolute top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400/90 text-white px-4 py-1 rounded-full font-display font-bold text-lg shadow-combo backdrop-blur-sm border border-yellow-500/50 animate-combo-pop">
-                    <span className="material-symbols-rounded align-middle text-base mr-1">bolt</span>
+                    <div className="inline-block align-middle mr-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                        </svg>
+                    </div>
                     x{comboStreak} COMBO!
                 </div>
             )}
@@ -104,9 +111,19 @@ export function GameHUD({
                 onClick={onToggleSound}
                 className="w-11 h-11 bg-slate-50/80 rounded-xl shadow-btn active:shadow-btn-active active:translate-y-[2px] flex items-center justify-center text-slate-400 hover:text-accent transition-colors border border-slate-200/80 backdrop-blur-sm"
             >
-                <span className="material-symbols-rounded text-xl">
-                    {isSoundOn ? 'volume_up' : 'volume_off'}
-                </span>
+                {isSoundOn ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <line x1="23" y1="9" x2="17" y2="15" />
+                        <line x1="17" y1="9" x2="23" y2="15" />
+                    </svg>
+                )}
             </button>
         </header>
     );

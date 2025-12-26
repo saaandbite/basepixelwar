@@ -12,7 +12,10 @@ export function PauseOverlay({ onResume, onRestart }: PauseOverlayProps) {
         <div className="absolute inset-0 z-40 bg-slate-900/30 flex items-center justify-center backdrop-blur-sm">
             <div className="bg-white/80 p-6 rounded-3xl shadow-2xl text-center transform scale-100 transition-all border-4 border-white/50 backdrop-blur-sm">
                 <div className="bg-secondary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="material-symbols-rounded text-4xl text-secondary/80">pause</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-secondary/80">
+                        <rect width="4" height="16" x="6" y="4" rx="1" />
+                        <rect width="4" height="16" x="14" y="4" rx="1" />
+                    </svg>
                 </div>
                 <h2 className="font-display text-3xl font-bold text-slate-700 mb-2">GAME PAUSED</h2>
                 <p className="text-slate-500 mb-6">Take a breath, territory awaits!</p>
