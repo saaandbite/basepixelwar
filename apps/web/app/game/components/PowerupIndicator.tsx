@@ -53,7 +53,7 @@ export function PowerupIndicator({
 
     return (
         <>
-            {/* Powerup Indicators - Left and Right Sides */}
+            {/* Powerup Indicators - Symmetrical Left and Right Sides */}
             {burstShot > 0 && (
                 <div className="absolute left-4 bottom-32 z-20">
                     <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
@@ -67,7 +67,7 @@ export function PowerupIndicator({
                 </div>
             )}
             {shield > 0 && (
-                <div className="absolute left-4 bottom-20 z-20">
+                <div className="absolute left-16 bottom-32 z-20">
                     <div className="bg-white rounded-xl p-2 shadow-md border border-slate-200 animate-powerup-bounce">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
@@ -105,15 +105,17 @@ export function PowerupIndicator({
                 </div>
             )}
 
-            {/* Target Marker */}
-            {meteorTarget && (
+
+            {/* Target Marker - Disabled: Canvas already renders this */}
+            {/* {meteorTarget && (
                 <div
-                    className="absolute w-20 h-20 rounded-full border-4 border-dashed border-accent/40 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 bg-accent/5 backdrop-blur-sm"
+                    className="absolute w-20 h-20 rounded-full border-4 border-dashed border-accent/40 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 bg-accent/5"
                     style={{ left: meteorTarget.x, top: meteorTarget.y }}
                 >
                     <div className="absolute inset-0 border-2 border-dashed border-accent/20 rounded-full animate-pulse"></div>
                 </div>
-            )}
+            )} */}
+
 
             {/* Footer */}
             <footer className="bg-white/95 border-t border-slate-100/80 px-4 py-2 z-10 shrink-0 backdrop-blur-sm flex justify-between items-center gap-3 relative overflow-hidden h-20">

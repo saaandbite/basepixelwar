@@ -51,7 +51,8 @@ body {
   font-family: 'Nunito', sans-serif;
 }
 
-body.game-body {
+body.game-body,
+.game-layout {
   background: linear-gradient(135deg, #1a2a6c, #2c3e50) !important;
   color: #333340 !important;
   touch-action: none;

@@ -36,16 +36,6 @@ export default function GamePage() {
         useShield,
     } = useGameState();
 
-    // Add game body class when component mounts
-    useEffect(() => {
-        document.body.classList.add('game-body');
-
-        // Cleanup: remove class when component unmounts
-        return () => {
-            document.body.classList.remove('game-body');
-        };
-    }, []);
-
     const { initAudio, playSound, setSoundOn } = useAudio();
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const canvasSizeRef = useRef({ width: 400, height: 700 });
@@ -234,68 +224,68 @@ export default function GamePage() {
     return (
         <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans">
             <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-[36px] shadow-game border-[10px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
-            {/* HUD */}
-            <GameHUD
-                scoreBlue={score.blue}
-                scoreRed={score.red}
-                timeLeft={state.timeLeft}
-                isSoundOn={state.isSoundOn}
-                onPause={handlePause}
-                onToggleSound={handleToggleSound}
-                comboStreak={state.comboStreak}
-                showCombo={showCombo}
-            />
-
-            {/* Game Canvas */}
-            <GameCanvas
-                state={state}
-                onResize={handleResize}
-                onPlayerInput={handlePlayerInput}
-                onShieldActivation={handleShieldActivation}
-                onUpdate={handleUpdate}
-            />
-
-            {/* Combo Effect */}
-            <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
-
-            {/* Powerup Effect */}
-            {powerupEffect && (
-                <PowerupEffect
-                    show={powerupEffect.show}
-                    type={powerupEffect.type}
-                    x={powerupEffect.x}
-                    y={powerupEffect.y}
+                {/* HUD */}
+                <GameHUD
+                    scoreBlue={score.blue}
+                    scoreRed={score.red}
+                    timeLeft={state.timeLeft}
+                    isSoundOn={state.isSoundOn}
+                    onPause={handlePause}
+                    onToggleSound={handleToggleSound}
+                    comboStreak={state.comboStreak}
+                    showCombo={showCombo}
                 />
-            )}
 
-            {/* Powerup Indicator & Footer */}
-            <PowerupIndicator
-                burstShot={state.player.powerups?.burstShot || 0}
-                shield={state.player.powerups?.shield || 0}
-                callMeteor={state.player.powerups?.callMeteor || 0}
-                showMeteorWarning={state.showMeteorIndicator}
-                meteorTarget={state.meteorTarget}
-                footerStatus={footerStatus}
-            />
-
-            {/* Instructions Overlay */}
-            {!state.gameStarted && <GameInstructions onStart={handleStart} />}
-
-            {/* Pause Overlay */}
-            {state.isPaused && (
-                <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
-            )}
-
-            {/* Game Over Modal */}
-            {isGameOver && (
-                <GameOverModal
-                    blueScore={score.blue}
-                    maxCombo={state.maxCombo}
-                    powerupsCollected={state.totalPowerupsCollected}
-                    onPlayAgain={handlePlayAgain}
+                {/* Game Canvas */}
+                <GameCanvas
+                    state={state}
+                    onResize={handleResize}
+                    onPlayerInput={handlePlayerInput}
+                    onShieldActivation={handleShieldActivation}
+                    onUpdate={handleUpdate}
                 />
-            )}
-        </main>
+
+                {/* Combo Effect */}
+                <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
+
+                {/* Powerup Effect */}
+                {powerupEffect && (
+                    <PowerupEffect
+                        show={powerupEffect.show}
+                        type={powerupEffect.type}
+                        x={powerupEffect.x}
+                        y={powerupEffect.y}
+                    />
+                )}
+
+                {/* Powerup Indicator & Footer */}
+                <PowerupIndicator
+                    burstShot={state.player.powerups?.burstShot || 0}
+                    shield={state.player.powerups?.shield || 0}
+                    callMeteor={state.player.powerups?.callMeteor || 0}
+                    showMeteorWarning={state.showMeteorIndicator}
+                    meteorTarget={state.meteorTarget}
+                    footerStatus={footerStatus}
+                />
+
+                {/* Instructions Overlay */}
+                {!state.gameStarted && <GameInstructions onStart={handleStart} />}
+
+                {/* Pause Overlay */}
+                {state.isPaused && (
+                    <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
+                )}
+
+                {/* Game Over Modal */}
+                {isGameOver && (
+                    <GameOverModal
+                        blueScore={score.blue}
+                        maxCombo={state.maxCombo}
+                        powerupsCollected={state.totalPowerupsCollected}
+                        onPlayAgain={handlePlayAgain}
+                    />
+                )}
+            </main>
         </div>
     );
 }
