@@ -24,8 +24,8 @@ export function createBullet(
 ): Projectile[] {
     const bullets: Projectile[] = [];
 
-    // Check for burst shot powerup (player only)
-    if (team === 'blue' && source.powerups && source.powerups.burstShot > 0) {
+    // Check for burst shot powerup
+    if (source.powerups && source.powerups.burstShot > 0) {
         const angles = [-0.2, 0, 0.2];
         angles.forEach((angleOffset) => {
             const angle = source.angle + angleOffset;

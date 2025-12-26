@@ -58,6 +58,11 @@ function createInitialState(width: number, height: number): GameState {
             cooldown: 0,
             moveTimer: 0,
             difficulty: 0.3,
+            powerups: {
+                burstShot: 0,
+                shield: 0,
+                callMeteor: 0,
+            },
         },
         timeLeft: GAME_DURATION,
         gameActive: false,
@@ -260,10 +265,73 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             // Enemy fire
             newState.enemy.cooldown--;
             if (newState.enemy.cooldown <= 0) {
-                const bullets = createBullet({ ...newState.enemy, powerups: undefined }, 'red', 0.2);
+                const bullets = createBullet(newState.enemy, 'red', 0.2);
                 newState.projectiles = [...newState.projectiles, ...bullets];
-                newState.enemy.cooldown = FIRE_RATE - Math.floor(newState.enemy.difficulty! * 3);
+
+                // If burst shot was used, decrement it
+                const enemyPowerups = { ...newState.enemy.powerups! };
+                if (bullets.length > 1) {
+                    enemyPowerups.burstShot = Math.max(0, enemyPowerups.burstShot - 1);
+                }
+
+                newState.enemy = {
+                    ...newState.enemy,
+                    cooldown: FIRE_RATE - Math.floor(newState.enemy.difficulty! * 3),
+                    powerups: enemyPowerups
+                };
                 action.playSound('shoot');
+            }
+
+            // Enemy Special Powerup Usage AI
+            const enemyPowerups = newState.enemy.powerups!;
+
+            // 1. Use Meteor if available and random chance (or based on target)
+            if (enemyPowerups.callMeteor > 0 && Math.random() < 0.005) {
+                const largestBlue = findLargestTerritory(newState.grid, 'blue', newState.cols, newState.rows);
+                let tx: number, ty: number;
+                if (largestBlue) {
+                    tx = largestBlue.x * GRID_SIZE + GRID_SIZE / 2;
+                    ty = largestBlue.y * GRID_SIZE + GRID_SIZE / 2;
+                } else {
+                    tx = Math.random() * (newState.cols * GRID_SIZE);
+                    ty = (newState.rows * GRID_SIZE) - 100;
+                }
+
+                newState.projectiles = [
+                    ...newState.projectiles,
+                    createMeteor(newState.enemy.x, newState.enemy.y, tx, ty, 8),
+                ];
+                newState.enemy.powerups!.callMeteor--;
+                action.playSound('meteor');
+            }
+
+            // 2. Use Shield if projectile is close
+            if (enemyPowerups.shield > 0) {
+                const incomingBullet = newState.projectiles.find(p =>
+                    p.team === 'blue' && Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y) < 100
+                );
+
+                if (incomingBullet) {
+                    newState.enemy.powerups!.shield--;
+                    action.playSound('powerup');
+
+                    // Create enemy shield particles
+                    const shieldParticles: Particle[] = [];
+                    for (let i = 0; i < 20; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 1 + Math.random() * 2;
+                        shieldParticles.push({
+                            x: newState.enemy.x,
+                            y: newState.enemy.y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 1.0,
+                            size: 3,
+                            color: COLORS.powerup.shield,
+                        });
+                    }
+                    newState.particles = [...newState.particles, ...shieldParticles];
+                }
             }
 
             // Update projectiles
@@ -387,13 +455,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 .map((pu) => {
                     if (pu.collected) return pu;
 
-                    const dx = playerX - pu.x;
-                    const dy = playerY - pu.y;
-                    const dist = Math.hypot(dx, dy);
+                    // Check which cannon is closer (magnet effect)
+                    const distToPlayer = Math.hypot(newState.player.x - pu.x, newState.player.y - pu.y);
+                    const distToEnemy = Math.hypot(newState.enemy.x - pu.x, newState.enemy.y - pu.y);
+
+                    const targetX = distToPlayer < distToEnemy ? newState.player.x : newState.enemy.x;
+                    const targetY = distToPlayer < distToEnemy ? newState.player.y : newState.enemy.y;
+                    const isPlayerTarget = distToPlayer < distToEnemy;
+                    const dist = isPlayerTarget ? distToPlayer : distToEnemy;
 
                     // Magnet effect
                     const speed = 5 + dist * 0.05;
-                    const angle = Math.atan2(dy, dx);
+                    const angle = Math.atan2(targetY - pu.y, targetX - pu.x);
 
                     const newPu = {
                         ...pu,
@@ -403,20 +476,26 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     };
 
                     // Check collision
-                    if (Math.hypot(playerX - newPu.x, playerY - newPu.y) < 50) {
+                    if (dist < 50) {
                         // Collect powerup
+                        const targetPowerups = isPlayerTarget ? playerPowerups : newState.enemy.powerups!;
+
                         switch (pu.type) {
                             case 'burst':
-                                playerPowerups.burstShot = Math.min(playerPowerups.burstShot + 2, 5);
+                                targetPowerups.burstShot = Math.min(targetPowerups.burstShot + 2, 5);
                                 break;
                             case 'shield':
-                                playerPowerups.shield = Math.min(playerPowerups.shield + 1, 2);
+                                targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
                                 break;
                             case 'meteor':
-                                playerPowerups.callMeteor = Math.min(playerPowerups.callMeteor + 1, 3);
+                                targetPowerups.callMeteor = Math.min(targetPowerups.callMeteor + 1, 3);
                                 break;
                         }
-                        totalPowerupsCollected++;
+
+                        if (isPlayerTarget) {
+                            totalPowerupsCollected++;
+                        }
+
                         action.playSound('powerup');
                         return { ...newPu, collected: true };
                     }
