@@ -16,6 +16,7 @@ import {
     drawTrajectory,
     drawScreenFlash,
     drawMeteorWarning,
+    drawTargetMarker,
 } from '../lib/renderer';
 import type { GameState } from '../types';
 
@@ -23,10 +24,11 @@ interface GameCanvasProps {
     state: GameState;
     onResize: (width: number, height: number) => void;
     onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean) => void;
+    onShieldActivation: () => void;
     onUpdate: () => void;
 }
 
-export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCanvasProps) {
+export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation, onUpdate }: GameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -65,10 +67,11 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
         // Clear and draw background
         drawBackground(ctx, width, height);
 
-        // Screen shake disabled for performance
-        // if (state.shakeIntensity > 0) {
-        //     ctx.translate(state.shakeDirection.x, state.shakeDirection.y);
-        // }
+        // Apply screen shake transform
+        ctx.save();
+        if (state.shakeIntensity > 0) {
+            ctx.translate(state.shakeDirection.x, state.shakeDirection.y);
+        }
 
         // Draw grid
         if (state.cols && state.rows) {
@@ -98,11 +101,18 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
             drawCannon(ctx, state.enemy, COLORS.bulletStrokeRed, false);
         }
 
+        // Restore from shake
+        ctx.restore();
+
         // Draw effects overlay
         effectsCtx.clearRect(0, 0, width, height);
         drawScreenFlash(effectsCtx, state.screenFlash, width, height);
         if (state.showMeteorIndicator) {
             drawMeteorWarning(effectsCtx, width, height);
+        }
+        // Draw target marker if active
+        if (state.meteorTarget) {
+            drawTargetMarker(effectsCtx, state.meteorTarget.x, state.meteorTarget.y);
         }
     }, [state]);
 
@@ -139,6 +149,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
 
             const dx = cx - state.player.x;
             const dy = cy - state.player.y;
+            const dist = Math.hypot(dx, dy);
 
             // Calculate angle
             let angle = Math.atan2(dy, dx);
@@ -147,9 +158,16 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
             if (angle > 0) angle = angle > Math.PI / 2 ? -Math.PI + 0.2 : 0.2;
             if (angle < -Math.PI) angle = -Math.PI + 0.2;
 
+            // Check for special tap on cannon to activate shield
+            if (isDown && !state.player.isFiring && dist < 30 && state.player.powerups?.shield && state.player.powerups.shield > 0) {
+                // This is a tap on the cannon, activate shield
+                onShieldActivation();
+                return;
+            }
+
             onPlayerInput(angle, isDown, isDown);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, onPlayerInput]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.isFiring, state.player.powerups?.shield, onPlayerInput]
     );
 
     // Mouse events

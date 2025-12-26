@@ -15,7 +15,7 @@ canvas {
   pointer-events: none;
   z-index: 20;
   opacity: 0.9;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7));
+  filter: drop-shadow(0 0 5px rgba(255,255,255,0.7));
 }
 
 /* Combo Counter */
@@ -24,8 +24,9 @@ canvas {
   font-family: 'Fredoka', cursive;
   font-weight: 800;
   color: gold;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.6);
+  text-shadow: 0 0 10px rgba(255,215,0,0.8), 0 0 20px rgba(255,215,0,0.6);
   z-index: 30;
+  animation: combo-pop 1s ease-out forwards;
 }
 
 /* Territory Bonus Visualization */

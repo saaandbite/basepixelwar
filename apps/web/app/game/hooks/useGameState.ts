@@ -280,6 +280,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             let screenFlash = newState.screenFlash;
 
             for (const p of newState.projectiles) {
+                // Update projectile position without gravity
                 const updatedP = {
                     ...p,
                     x: p.x + p.vx,

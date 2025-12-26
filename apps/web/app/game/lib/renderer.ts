@@ -477,14 +477,12 @@ export function drawTrajectory(
     ctx.beginPath();
     ctx.moveTo(x, y);
 
-    let gravity = 0.1;
     let currentVx = vx;
     let currentVy = vy;
 
     for (let i = 0; i < steps; i++) {
         x += currentVx;
         y += currentVy;
-        currentVy += gravity;
 
         // Check for boundary collisions
         if (x < 0 || x > canvasWidth) currentVx *= -0.8;
@@ -538,6 +536,34 @@ export function drawScreenFlash(
         ctx.fillStyle = `rgba(255, 255, 255, ${flash * 0.3})`;
         ctx.fillRect(0, 0, width, height);
     }
+}
+
+// Draw target marker for meteor
+export function drawTargetMarker(
+    ctx: CanvasRenderingContext2D,
+    targetX: number,
+    targetY: number
+): void {
+    ctx.save();
+
+    // Outer dashed circle
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, 40, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(249, 199, 79, 0.4)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([8, 6]);
+    ctx.stroke();
+
+    // Inner pulsating circle
+    const pulse = 0.5 + 0.3 * Math.sin(Date.now() / 200);
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, 20, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(249, 199, 79, ${0.2 * pulse})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+
+    ctx.restore();
 }
 
 // Draw meteor warning pulse

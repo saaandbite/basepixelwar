@@ -13,6 +13,8 @@ import { GameInstructions } from './components/GameInstructions';
 import { PauseOverlay } from './components/PauseOverlay';
 import { GameOverModal } from './components/GameOverModal';
 import { PowerupIndicator } from './components/PowerupIndicator';
+import { PowerupEffect } from './components/PowerupEffect';
+import { ComboEffect } from './components/ComboEffect';
 import './game.css';
 
 export default function GamePage() {
@@ -34,6 +36,16 @@ export default function GamePage() {
         useShield,
     } = useGameState();
 
+    // Add game body class when component mounts
+    useEffect(() => {
+        document.body.classList.add('game-body');
+
+        // Cleanup: remove class when component unmounts
+        return () => {
+            document.body.classList.remove('game-body');
+        };
+    }, []);
+
     const { initAudio, playSound, setSoundOn } = useAudio();
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const canvasSizeRef = useRef({ width: 400, height: 700 });
@@ -41,6 +53,7 @@ export default function GamePage() {
     const [showCombo, setShowCombo] = useState(false);
     const [footerStatus, setFooterStatus] = useState<{ name: string; icon: string; color: string } | null>(null);
     const [footerTimeout, setFooterTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'burst' | 'shield' | 'meteor'; x: number; y: number } | null>(null);
 
     // Audio sync
     useEffect(() => {
@@ -90,15 +103,24 @@ export default function GamePage() {
         if (curr && prev) {
             if (curr.burstShot > (prev.burstShot || 0)) {
                 showFooterStatus('BURST SHOT', 'auto_awesome', 'text-purple-500');
+                // Show powerup effect
+                setPowerupEffect({ show: true, type: 'burst', x: state.player.x, y: state.player.y });
+                setTimeout(() => setPowerupEffect(null), 1000);
             } else if (curr.shield > (prev.shield || 0)) {
                 showFooterStatus('SHIELD', 'shield', 'text-green-500');
+                // Show powerup effect
+                setPowerupEffect({ show: true, type: 'shield', x: state.player.x, y: state.player.y });
+                setTimeout(() => setPowerupEffect(null), 1000);
             } else if (curr.callMeteor > (prev.callMeteor || 0)) {
                 showFooterStatus('METEOR STRIKE', 'radioactive', 'text-orange-500');
+                // Show powerup effect
+                setPowerupEffect({ show: true, type: 'meteor', x: state.player.x, y: state.player.y });
+                setTimeout(() => setPowerupEffect(null), 1000);
             }
         }
 
         prevPowerupsRef.current = curr;
-    }, [state.player.powerups]);
+    }, [state.player.powerups, state.player.x, state.player.y]);
 
     const showFooterStatus = (name: string, icon: string, color: string) => {
         if (footerTimeout) clearTimeout(footerTimeout);
@@ -164,6 +186,13 @@ export default function GamePage() {
         [setPlayerAngle, setPlayerFiring]
     );
 
+    // Special handler for shield activation
+    const handleShieldActivation = useCallback(() => {
+        if (state.player.powerups?.shield && state.player.powerups.shield > 0) {
+            useShield(playSound);
+        }
+    }, [state.player.powerups?.shield, useShield, playSound]);
+
     const handleUpdate = useCallback(() => {
         updateGame(playSound);
     }, [updateGame, playSound]);
@@ -203,7 +232,8 @@ export default function GamePage() {
     const isGameOver = state.gameStarted && !state.gameActive && state.timeLeft <= 0;
 
     return (
-        <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-[36px] shadow-game border-[10px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80 mx-auto">
+        <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans">
+            <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-[36px] shadow-game border-[10px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
             {/* HUD */}
             <GameHUD
                 scoreBlue={score.blue}
@@ -221,8 +251,22 @@ export default function GamePage() {
                 state={state}
                 onResize={handleResize}
                 onPlayerInput={handlePlayerInput}
+                onShieldActivation={handleShieldActivation}
                 onUpdate={handleUpdate}
             />
+
+            {/* Combo Effect */}
+            <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
+
+            {/* Powerup Effect */}
+            {powerupEffect && (
+                <PowerupEffect
+                    show={powerupEffect.show}
+                    type={powerupEffect.type}
+                    x={powerupEffect.x}
+                    y={powerupEffect.y}
+                />
+            )}
 
             {/* Powerup Indicator & Footer */}
             <PowerupIndicator
@@ -252,5 +296,6 @@ export default function GamePage() {
                 />
             )}
         </main>
+        </div>
     );
 }
