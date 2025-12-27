@@ -44,6 +44,9 @@ export default function GamePage() {
     const [footerTimeout, setFooterTimeout] = useState<NodeJS.Timeout | null>(null);
     const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'burst' | 'shield' | 'meteor'; x: number; y: number } | null>(null);
 
+    // Refs to track meteor triggers to prevent duplicates
+    const triggeredMeteorsRef = useRef<Set<number>>(new Set());
+
     // Initial mount hydration safety
     useEffect(() => {
         setIsMounted(true);
@@ -84,19 +87,13 @@ export default function GamePage() {
         setTimeout(() => {
             launchMeteor(tx, ty);
         }, 2500);
-    }, [state, showMeteorWarning, launchMeteor]);
+    }, [showMeteorWarning, launchMeteor]); // Removed state from dependency to prevent infinite loop
 
     // Timer
     useEffect(() => {
         if (state.gameActive && !state.isPaused) {
             timerRef.current = setInterval(() => {
                 timerTick(playSound);
-
-                // Check for meteor triggers
-                const newTimeLeft = state.timeLeft - 1;
-                if ([60, 40, 20].includes(newTimeLeft)) {
-                    triggerMeteor();
-                }
             }, 1000);
         }
 
@@ -106,7 +103,19 @@ export default function GamePage() {
                 timerRef.current = null;
             }
         };
-    }, [state.gameActive, state.isPaused, state.timeLeft, timerTick, playSound, triggerMeteor]);
+    }, [state.gameActive, state.isPaused, timerTick, playSound]);
+
+    // Separate effect for meteor triggers to avoid timer recreation
+    useEffect(() => {
+        // Check for meteor triggers based on current timeLeft
+        if (state.gameActive && !state.isPaused && [60, 40, 20].includes(state.timeLeft)) {
+            // Only trigger if we haven't already triggered for this time
+            if (!triggeredMeteorsRef.current.has(state.timeLeft)) {
+                triggeredMeteorsRef.current.add(state.timeLeft);
+                triggerMeteor();
+            }
+        }
+    }, [state.timeLeft, state.gameActive, state.isPaused, triggerMeteor]);
 
     // Combo display
     useEffect(() => {
@@ -146,6 +155,8 @@ export default function GamePage() {
     // Handlers
     const handleStart = useCallback(() => {
         initAudio();
+        // Reset the triggered meteors when starting a new game
+        triggeredMeteorsRef.current.clear();
         resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
         startGame(playSound);
     }, [initAudio, resetGame, startGame, playSound]);
@@ -153,12 +164,16 @@ export default function GamePage() {
     const handleRestart = useCallback(() => {
         togglePause();
         setTimeout(() => {
+            // Reset the triggered meteors when restarting the game
+            triggeredMeteorsRef.current.clear();
             resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
             startGame(playSound);
         }, 100);
     }, [togglePause, resetGame, startGame, playSound]);
 
     const handlePlayAgain = useCallback(() => {
+        // Reset the triggered meteors when playing again
+        triggeredMeteorsRef.current.clear();
         resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
         startGame(playSound);
     }, [resetGame, startGame, playSound]);
