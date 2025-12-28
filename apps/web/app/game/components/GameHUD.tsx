@@ -2,6 +2,7 @@
 
 // Game HUD Component
 
+import { memo } from 'react';
 import { GAME_DURATION } from '../lib/constants';
 
 interface GameHUDProps {
@@ -15,7 +16,11 @@ interface GameHUDProps {
     showCombo: boolean;
 }
 
-export function GameHUD({
+const GameHUDMemo = memo(GameHUDComponent);
+
+export const GameHUD = GameHUDMemo;
+
+function GameHUDComponent({
     scoreBlue,
     scoreRed,
     timeLeft,

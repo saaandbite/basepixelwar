@@ -2,6 +2,7 @@
 
 // Weapon Selector Component - Lets player switch between weapon modes
 
+import { memo } from 'react';
 import { COLORS, WEAPON_MODES, type WeaponModeType } from '../lib/constants';
 import type { WeaponMode } from '../types';
 
@@ -18,7 +19,11 @@ const WEAPON_LIST: { mode: WeaponModeType; key: string }[] = [
     { mode: 'inkBomb', key: '3' },
 ];
 
-export function WeaponSelector({ currentMode, ink, isFrenzy, onSelectMode }: WeaponSelectorProps) {
+const WeaponSelectorMemo = memo(WeaponSelectorComponent);
+
+export const WeaponSelector = WeaponSelectorMemo;
+
+function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode }: WeaponSelectorProps) {
     return (
         <div className="weapon-selector">
             {WEAPON_LIST.map(({ mode, key }) => {

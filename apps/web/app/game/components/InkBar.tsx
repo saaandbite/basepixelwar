@@ -2,6 +2,7 @@
 
 // Ink Bar Component - Shows player's ink level
 
+import { memo } from 'react';
 import { COLORS, INK_MAX, WEAPON_MODES } from '../lib/constants';
 
 interface InkBarProps {
@@ -11,7 +12,11 @@ interface InkBarProps {
     frenzyEndTime: number;
 }
 
-export function InkBar({ ink, maxInk, isFrenzy, frenzyEndTime }: InkBarProps) {
+const InkBarMemo = memo(InkBarComponent);
+
+export const InkBar = InkBarMemo;
+
+function InkBarComponent({ ink, maxInk, isFrenzy, frenzyEndTime }: InkBarProps) {
     const percentage = (ink / maxInk) * 100;
     const frenzyTimeLeft = isFrenzy ? Math.max(0, (frenzyEndTime - Date.now()) / 1000) : 0;
 
