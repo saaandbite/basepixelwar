@@ -1,5 +1,9 @@
 // Game Types
 
+import type { WeaponModeType } from './lib/constants';
+
+export type WeaponMode = WeaponModeType;
+
 export interface Projectile {
     x: number;
     y: number;
@@ -8,8 +12,12 @@ export interface Projectile {
     team: 'blue' | 'red' | 'neutral';
     active: boolean;
     isMeteor: boolean;
+    isInkBomb?: boolean;
     target?: { x: number; y: number };
     lifetime: number;
+    maxLifetime?: number; // For shotgun short range
+    paintRadius?: number; // Paint radius on impact
+    gravity?: number; // For ink bomb arc
 }
 
 export interface Particle {
@@ -42,6 +50,14 @@ export interface TerritoryBatch {
     opacity: number;
 }
 
+export interface GoldenPixel {
+    x: number; // Grid x position
+    y: number; // Grid y position
+    active: boolean;
+    spawnTime: number;
+    pulsePhase: number;
+}
+
 export interface Cannon {
     x: number;
     y: number;
@@ -57,6 +73,12 @@ export interface Cannon {
     };
     lastFireTime?: number;
     longDragAngle?: number;
+    // Ink Economy
+    ink: number;
+    maxInk: number;
+    weaponMode: WeaponMode;
+    isFrenzy: boolean;
+    frenzyEndTime: number;
 }
 
 export interface GameState {
@@ -84,6 +106,9 @@ export interface GameState {
     screenFlash: number;
     showMeteorIndicator: boolean;
     meteorTarget: { x: number; y: number } | null;
+    // Golden Pixel
+    goldenPixel: GoldenPixel | null;
+    lastGoldenPixelSpawn: number;
 }
 
 export type GameAction =
@@ -94,6 +119,7 @@ export type GameAction =
     | { type: 'TICK' }
     | { type: 'UPDATE_PLAYER_ANGLE'; angle: number }
     | { type: 'SET_PLAYER_FIRING'; firing: boolean }
+    | { type: 'SET_WEAPON_MODE'; mode: WeaponMode }
     | { type: 'FIRE_PLAYER' }
     | { type: 'FIRE_ENEMY' }
     | { type: 'UPDATE_PROJECTILES' }
@@ -102,6 +128,8 @@ export type GameAction =
     | { type: 'UPDATE_ENEMY_AI' }
     | { type: 'TRIGGER_METEOR' }
     | { type: 'COLLECT_POWERUP'; powerup: Powerup }
+    | { type: 'ACTIVATE_FRENZY' }
     | { type: 'END_GAME' }
     | { type: 'SET_CANVAS_SIZE'; width: number; height: number }
     | { type: 'GAME_LOOP_UPDATE'; deltaTime: number };
+

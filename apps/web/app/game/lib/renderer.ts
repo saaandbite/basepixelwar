@@ -1,7 +1,7 @@
 // Canvas Rendering Functions
 
-import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon } from '../types';
-import { GRID_SIZE, COLORS } from './constants';
+import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon, GoldenPixel } from '../types';
+import { GRID_SIZE, COLORS, GOLDEN_PIXEL_SIZE } from './constants';
 import { shadeColor } from './gameLogic';
 
 // Grid cache for performance optimization
@@ -584,4 +584,103 @@ export function drawMeteorWarning(
     const pulse = 0.05 + Math.sin(Date.now() / 100) * 0.03;
     ctx.fillStyle = `rgba(249, 199, 79, ${pulse})`;
     ctx.fillRect(0, 0, width, height);
+}
+
+// Draw Golden Pixel (secondary objective)
+export function drawGoldenPixel(
+    ctx: CanvasRenderingContext2D,
+    goldenPixel: GoldenPixel
+): void {
+    if (!goldenPixel || !goldenPixel.active) return;
+
+    const x = goldenPixel.x * GRID_SIZE + GRID_SIZE / 2;
+    const y = goldenPixel.y * GRID_SIZE + GRID_SIZE / 2;
+    const baseRadius = GOLDEN_PIXEL_SIZE * GRID_SIZE;
+
+    // Pulsing effect
+    const time = Date.now();
+    const pulse = 1 + Math.sin(time / 200) * 0.15;
+    const glowPulse = 0.4 + Math.sin(time / 150) * 0.2;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // Outer glow rings
+    for (let i = 3; i >= 1; i--) {
+        const ringRadius = baseRadius * (1 + i * 0.3) * pulse;
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, ringRadius);
+        gradient.addColorStop(0, `rgba(255, 215, 0, ${0.1 / i})`);
+        gradient.addColorStop(0.7, `rgba(255, 215, 0, ${0.05 / i})`);
+        gradient.addColorStop(1, 'transparent');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Main golden circle
+    const mainGradient = ctx.createRadialGradient(0, -5, 2, 0, 5, baseRadius * pulse);
+    mainGradient.addColorStop(0, '#fff7cc');
+    mainGradient.addColorStop(0.3, COLORS.golden);
+    mainGradient.addColorStop(0.7, '#cc9900');
+    mainGradient.addColorStop(1, '#996600');
+
+    ctx.fillStyle = mainGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, baseRadius * pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner shine
+    ctx.fillStyle = `rgba(255, 255, 255, ${glowPulse})`;
+    ctx.beginPath();
+    ctx.arc(-baseRadius * 0.3, -baseRadius * 0.3, baseRadius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Coin symbol
+    ctx.fillStyle = 'rgba(153, 102, 0, 0.6)';
+    ctx.font = `bold ${baseRadius}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', 0, 2);
+
+    // Sparkle particles
+    const sparkleCount = 4;
+    for (let i = 0; i < sparkleCount; i++) {
+        const angle = (time / 500 + i * Math.PI / 2) % (Math.PI * 2);
+        const dist = baseRadius * 1.5 + Math.sin(time / 100 + i) * 5;
+        const sparkleX = Math.cos(angle) * dist;
+        const sparkleY = Math.sin(angle) * dist;
+        const sparkleSize = 2 + Math.sin(time / 50 + i) * 1;
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.8 - i * 0.15})`;
+        ctx.beginPath();
+        ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+// Draw Frenzy Mode overlay
+export function drawFrenzyOverlay(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    intensity: number
+): void {
+    if (intensity <= 0) return;
+
+    const time = Date.now();
+    const pulse = 0.1 + Math.sin(time / 100) * 0.05;
+
+    // Orange tint overlay
+    ctx.fillStyle = `rgba(255, 107, 53, ${pulse * intensity})`;
+    ctx.fillRect(0, 0, width, height);
+
+    // Border glow
+    const borderWidth = 8 + Math.sin(time / 80) * 4;
+    ctx.strokeStyle = `rgba(255, 107, 53, ${0.4 * intensity})`;
+    ctx.lineWidth = borderWidth;
+    ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
 }

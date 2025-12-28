@@ -17,6 +17,8 @@ import {
     drawScreenFlash,
     drawMeteorWarning,
     drawTargetMarker,
+    drawGoldenPixel,
+    drawFrenzyOverlay,
 } from '../lib/renderer';
 import type { GameState } from '../types';
 
@@ -86,6 +88,11 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
         // Draw territory batches
         drawTerritoryBatches(ctx, state.territoryBatches);
 
+        // Draw Golden Pixel (secondary objective)
+        if (state.goldenPixel && state.goldenPixel.active) {
+            drawGoldenPixel(ctx, state.goldenPixel);
+        }
+
         // Draw powerups
         drawPowerups(ctx, state.powerups);
 
@@ -113,6 +120,10 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
         // Draw target marker if active
         if (state.meteorTarget) {
             drawTargetMarker(effectsCtx, state.meteorTarget.x, state.meteorTarget.y);
+        }
+        // Draw frenzy mode overlay
+        if (state.player.isFrenzy) {
+            drawFrenzyOverlay(effectsCtx, width, height, 1);
         }
     }, [state]);
 

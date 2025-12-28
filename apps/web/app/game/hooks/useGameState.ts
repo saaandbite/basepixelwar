@@ -1,17 +1,24 @@
 // Game State Hook
 
 import { useReducer, useCallback } from 'react';
-import type { GameState, Projectile, Particle } from '../types';
+import type { GameState, Projectile, Particle, WeaponMode } from '../types';
 import {
     GRID_SIZE,
     FIRE_RATE,
     GAME_DURATION,
     MAX_POWERUPS_ON_SCREEN,
     COLORS,
+    INK_MAX,
+    INK_REFILL_PER_FRAME,
+    WEAPON_MODES,
+    FRENZY_DURATION,
+    GOLDEN_PIXEL_SPAWN_INTERVAL,
+    GOLDEN_PIXEL_CAPTURE_RADIUS,
 } from '../lib/constants';
 import {
     initializeGrid,
     createBullet,
+    createWeaponBullet,
     createMeteor,
     paintGrid,
     explodeMeteor,
@@ -19,6 +26,7 @@ import {
     createParticles,
     createPowerup,
     createTerritoryBatch,
+    createGoldenPixel,
 } from '../lib/gameLogic';
 import { clearGridCache } from '../lib/renderer';
 
@@ -46,6 +54,12 @@ function createInitialState(width: number, height: number): GameState {
                 shield: 0,
             },
             lastFireTime: 0,
+            // Ink Economy
+            ink: INK_MAX,
+            maxInk: INK_MAX,
+            weaponMode: 'machineGun' as WeaponMode,
+            isFrenzy: false,
+            frenzyEndTime: 0,
         },
         enemy: {
             x: width / 2 || 200,
@@ -59,6 +73,12 @@ function createInitialState(width: number, height: number): GameState {
                 burstShot: 0,
                 shield: 0,
             },
+            // Ink Economy for enemy (for fairness)
+            ink: INK_MAX,
+            maxInk: INK_MAX,
+            weaponMode: 'machineGun' as WeaponMode,
+            isFrenzy: false,
+            frenzyEndTime: 0,
         },
         timeLeft: GAME_DURATION,
         gameActive: false,
@@ -74,6 +94,9 @@ function createInitialState(width: number, height: number): GameState {
         screenFlash: 0,
         showMeteorIndicator: false,
         meteorTarget: null,
+        // Golden Pixel
+        goldenPixel: null,
+        lastGoldenPixelSpawn: 0,
     };
 }
 
@@ -84,6 +107,7 @@ type GameAction =
     | { type: 'TOGGLE_SOUND' }
     | { type: 'SET_PLAYER_ANGLE'; angle: number }
     | { type: 'SET_PLAYER_FIRING'; firing: boolean }
+    | { type: 'SET_WEAPON_MODE'; mode: WeaponMode }
     | { type: 'SET_CANVAS_SIZE'; width: number; height: number }
     | { type: 'GAME_UPDATE'; playSound: (name: string) => void }
     | { type: 'TIMER_TICK'; playSound: (name: string) => void }
@@ -91,7 +115,8 @@ type GameAction =
     | { type: 'USE_SHIELD'; playSound: (name: string) => void }
     | { type: 'SHOW_METEOR_WARNING'; targetX: number; targetY: number }
     | { type: 'LAUNCH_METEOR'; targetX: number; targetY: number }
-    | { type: 'HIDE_METEOR_WARNING' };
+    | { type: 'HIDE_METEOR_WARNING' }
+    | { type: 'ACTIVATE_FRENZY'; team: 'blue' | 'red'; playSound: (name: string) => void };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
     switch (action.type) {
@@ -151,6 +176,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             };
         }
 
+        case 'SET_WEAPON_MODE': {
+            return {
+                ...state,
+                player: {
+                    ...state.player,
+                    weaponMode: action.mode,
+                    cooldown: 0, // Reset cooldown when switching weapons
+                },
+            };
+        }
+
         case 'SET_CANVAS_SIZE': {
             const cols = Math.ceil(action.width / GRID_SIZE);
             const rows = Math.ceil(action.height / GRID_SIZE);
@@ -192,6 +228,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             if (!state.gameActive || state.isPaused) return state;
 
             const newState = { ...state };
+            const now = Date.now();
 
             // Shake disabled for performance
 
@@ -201,21 +238,47 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             //     if (newState.screenFlash < 0.05) newState.screenFlash = 0;
             // }
 
-            // Player shooting
-            if (newState.player.isFiring && newState.player.cooldown <= 0) {
-                const bullets = createBullet(newState.player, 'blue');
+            // Check and end frenzy mode
+            if (newState.player.isFrenzy && now > newState.player.frenzyEndTime) {
+                newState.player = { ...newState.player, isFrenzy: false };
+            }
+            if (newState.enemy.isFrenzy && now > newState.enemy.frenzyEndTime) {
+                newState.enemy = { ...newState.enemy, isFrenzy: false };
+            }
+
+            // Ink refill (both player and enemy)
+            if (newState.player.ink < newState.player.maxInk && !newState.player.isFrenzy) {
+                newState.player = {
+                    ...newState.player,
+                    ink: Math.min(newState.player.maxInk, newState.player.ink + INK_REFILL_PER_FRAME),
+                };
+            }
+            if (newState.enemy.ink < newState.enemy.maxInk && !newState.enemy.isFrenzy) {
+                newState.enemy = {
+                    ...newState.enemy,
+                    ink: Math.min(newState.enemy.maxInk, newState.enemy.ink + INK_REFILL_PER_FRAME),
+                };
+            }
+
+            // Player shooting with INK ECONOMY
+            const weaponConfig = WEAPON_MODES[newState.player.weaponMode];
+            const inkCost = newState.player.isFrenzy ? 0 : weaponConfig.cost;
+            const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
+
+            if (newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk) {
+                const bullets = createWeaponBullet(newState.player, 'blue', newState.player.weaponMode);
                 newState.projectiles = [...newState.projectiles, ...bullets];
                 newState.player = {
                     ...newState.player,
-                    cooldown: FIRE_RATE,
+                    cooldown: weaponConfig.fireRate,
+                    ink: newState.player.ink - inkCost,
                     powerups: {
                         ...newState.player.powerups!,
-                        burstShot: bullets.length > 1
+                        burstShot: bullets.length > 1 && !newState.player.isFrenzy
                             ? newState.player.powerups!.burstShot - 1
                             : newState.player.powerups!.burstShot,
                     },
                 };
-                // Shake disabled
                 action.playSound('shoot');
             }
 
@@ -321,15 +384,41 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             let maxCombo = newState.maxCombo;
             let lastTerritoryFlip = newState.lastTerritoryFlip;
             const screenFlash = newState.screenFlash;
+            let goldenPixel = newState.goldenPixel;
+            let activateFrenzyFor: 'blue' | 'red' | null = null;
 
             for (const p of newState.projectiles) {
-                // Update projectile position without gravity
+                // Apply gravity for ink bombs
+                const gravity = p.gravity || 0;
+                const newVy = p.vy + gravity;
+
+                // Update projectile position
                 const updatedP = {
                     ...p,
                     x: p.x + p.vx,
-                    y: p.y + p.vy,
+                    y: p.y + newVy,
+                    vy: newVy,
                     lifetime: p.lifetime + 1,
                 };
+
+                // Check max lifetime (for shotgun short range)
+                if (updatedP.maxLifetime && updatedP.lifetime >= updatedP.maxLifetime) {
+                    // Shotgun bullet expires - paint where it is
+                    const gx = Math.floor(updatedP.x / GRID_SIZE);
+                    const gy = Math.floor(updatedP.y / GRID_SIZE);
+                    if (gx >= 0 && gx < newState.cols && gy >= 0 && gy < newState.rows) {
+                        const result = paintGrid(
+                            newGrid, gx, gy,
+                            updatedP.team as 'blue' | 'red',
+                            updatedP.paintRadius || 1,
+                            newState.cols, newState.rows
+                        );
+                        newGrid = result.grid;
+                        newParticles.push(...createParticles(updatedP.x, updatedP.y, updatedP.team as 'blue' | 'red', 3));
+                        newTerritoryBatches.push(createTerritoryBatch(gx, gy, updatedP.team as 'blue' | 'red'));
+                    }
+                    continue;
+                }
 
                 if (p.isMeteor && p.target) {
                     const dist = Math.hypot(updatedP.x - p.target.x, updatedP.y - p.target.y);
@@ -344,9 +433,47 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                             color: COLORS.meteor,
                             opacity: 1.0,
                         });
-                        // Shake disabled for performance
                         action.playSound('meteor');
                     } else {
+                        newProjectiles.push(updatedP);
+                    }
+                } else if (p.isInkBomb) {
+                    // Ink bomb - mortar-style arc projectile
+                    const gx = Math.floor(updatedP.x / GRID_SIZE);
+                    const gy = Math.floor(updatedP.y / GRID_SIZE);
+
+                    // Ink bomb explodes when:
+                    // 1. Falling (vy > 0) AND on valid grid position, OR
+                    // 2. Near/past bottom of screen, OR
+                    // 3. Max lifetime reached (failsafe)
+                    const isFalling = newVy > 0;  // y increases downward, so vy > 0 = falling
+                    const isOnGrid = gx >= 0 && gx < newState.cols && gy >= 0 && gy < newState.rows;
+                    const maxLifetimeReached = updatedP.lifetime > 60;
+
+                    const shouldExplode = (isFalling && isOnGrid && updatedP.lifetime > 10) ||
+                        updatedP.y > canvasHeight - 30 ||
+                        maxLifetimeReached;
+
+                    if (shouldExplode && gx >= 0 && gx < newState.cols && gy >= 0 && gy < newState.rows) {
+                        // Large explosion!
+                        const result = paintGrid(
+                            newGrid, gx, gy,
+                            updatedP.team as 'blue' | 'red',
+                            updatedP.paintRadius || 4,
+                            newState.cols, newState.rows
+                        );
+                        newGrid = result.grid;
+                        newParticles.push(...createParticles(updatedP.x, updatedP.y, updatedP.team as 'blue' | 'red', 20));
+                        newTerritoryBatches.push({
+                            x: gx,
+                            y: gy,
+                            radius: 8,
+                            color: updatedP.team === 'blue' ? COLORS.blue : COLORS.red,
+                            opacity: 1.0,
+                        });
+                        action.playSound('explosion');
+                    } else if (updatedP.x >= 0 && updatedP.x <= canvasWidth && !maxLifetimeReached) {
+                        // Keep flying
                         newProjectiles.push(updatedP);
                     }
                 } else {
@@ -357,12 +484,23 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         const gx = Math.floor(updatedP.x / GRID_SIZE);
                         const gy = Math.floor(updatedP.y / GRID_SIZE);
 
+                        // Check golden pixel capture
+                        if (goldenPixel && goldenPixel.active) {
+                            const gpDist = Math.hypot(gx - goldenPixel.x, gy - goldenPixel.y);
+                            if (gpDist <= GOLDEN_PIXEL_CAPTURE_RADIUS) {
+                                // Captured! Activate frenzy for the team that hit it
+                                activateFrenzyFor = updatedP.team as 'blue' | 'red';
+                                goldenPixel = { ...goldenPixel, active: false };
+                                action.playSound('powerup');
+                            }
+                        }
+
                         if (
                             gx >= 0 &&
                             gx < newState.cols &&
                             gy >= 0 &&
                             gy < newState.rows &&
-                            updatedP.lifetime > 5 &&
+                            updatedP.lifetime > 2 &&
                             newGrid[gx] !== undefined
                         ) {
                             const gridCell = newGrid[gx][gy];
@@ -372,7 +510,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                                     gx,
                                     gy,
                                     updatedP.team as 'blue' | 'red',
-                                    2,
+                                    updatedP.paintRadius || 2,
                                     newState.cols,
                                     newState.rows
                                 );
@@ -405,6 +543,23 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         }
                     }
                 }
+            }
+
+            // Activate frenzy if golden pixel was captured
+            if (activateFrenzyFor === 'blue') {
+                newState.player = {
+                    ...newState.player,
+                    isFrenzy: true,
+                    frenzyEndTime: Date.now() + FRENZY_DURATION,
+                    ink: INK_MAX,
+                };
+            } else if (activateFrenzyFor === 'red') {
+                newState.enemy = {
+                    ...newState.enemy,
+                    isFrenzy: true,
+                    frenzyEndTime: Date.now() + FRENZY_DURATION,
+                    ink: INK_MAX,
+                };
             }
 
             // Update particles (optimized - faster decay, limited count)
@@ -497,6 +652,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 lastTerritoryFlip,
                 screenFlash,
                 totalPowerupsCollected,
+                goldenPixel,
                 player: {
                     ...newState.player,
                     powerups: playerPowerups,
@@ -508,10 +664,20 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             if (!state.gameActive || state.isPaused) return state;
 
             const newTimeLeft = state.timeLeft - 1;
+            let newGoldenPixel = state.goldenPixel;
+            let lastGoldenPixelSpawn = state.lastGoldenPixelSpawn;
 
             // Check for meteor spawn
             if ([60, 40, 20].includes(newTimeLeft)) {
                 // Will be handled by component
+            }
+
+            // Golden Pixel spawn every 30 seconds
+            const timeSinceLastSpawn = GAME_DURATION - newTimeLeft - lastGoldenPixelSpawn;
+            if (timeSinceLastSpawn >= GOLDEN_PIXEL_SPAWN_INTERVAL && (!newGoldenPixel || !newGoldenPixel.active)) {
+                newGoldenPixel = createGoldenPixel(state.cols, state.rows);
+                lastGoldenPixelSpawn = GAME_DURATION - newTimeLeft;
+                action.playSound('powerup');
             }
 
             // Random powerup drop
@@ -550,6 +716,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                             ...state,
                             timeLeft: newTimeLeft,
                             powerups: [...state.powerups, createPowerup(pos.x, pos.y)],
+                            goldenPixel: newGoldenPixel,
+                            lastGoldenPixelSpawn,
                         };
                     }
                 }
@@ -567,6 +735,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             return {
                 ...state,
                 timeLeft: newTimeLeft,
+                goldenPixel: newGoldenPixel,
+                lastGoldenPixelSpawn,
             };
         }
 
@@ -707,6 +877,10 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         dispatch({ type: 'USE_SHIELD', playSound });
     }, []);
 
+    const setWeaponMode = useCallback((mode: WeaponMode) => {
+        dispatch({ type: 'SET_WEAPON_MODE', mode });
+    }, []);
+
     return {
         state,
         startGame,
@@ -716,6 +890,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         toggleSound,
         setPlayerAngle,
         setPlayerFiring,
+        setWeaponMode,
         updateGame,
         timerTick,
         showMeteorWarning,

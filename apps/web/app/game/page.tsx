@@ -15,6 +15,10 @@ import { GameOverModal } from './components/GameOverModal';
 import { PowerupIndicator } from './components/PowerupIndicator';
 import { PowerupEffect } from './components/PowerupEffect';
 import { ComboEffect } from './components/ComboEffect';
+import { InkBar } from './components/InkBar';
+import { WeaponSelector } from './components/WeaponSelector';
+import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
+import type { WeaponMode } from './types';
 import './game.css';
 
 export default function GamePage() {
@@ -27,6 +31,7 @@ export default function GamePage() {
         toggleSound,
         setPlayerAngle,
         setPlayerFiring,
+        setWeaponMode,
         updateGame,
         timerTick,
         showMeteorWarning,
@@ -220,8 +225,30 @@ export default function GamePage() {
 
     // Keyboard shortcuts
     useEffect(() => {
-        // Keyboard shortcuts - currently none for special actions
-    }, []);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!state.gameActive || state.isPaused) return;
+
+            // Weapon switching with number keys
+            switch (e.key) {
+                case '1':
+                    setWeaponMode('machineGun');
+                    break;
+                case '2':
+                    if (state.player.isFrenzy || state.player.ink >= 5) {
+                        setWeaponMode('shotgun');
+                    }
+                    break;
+                case '3':
+                    if (state.player.isFrenzy || state.player.ink >= 20) {
+                        setWeaponMode('inkBomb');
+                    }
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [state.gameActive, state.isPaused, state.player.ink, state.player.isFrenzy, setWeaponMode]);
 
     const score = useMemo(
         () => calculateScore(state.grid, state.cols, state.rows),
@@ -256,6 +283,42 @@ export default function GamePage() {
                             onShieldActivation={handleShieldActivation}
                             onUpdate={handleUpdate}
                         />
+
+                        {/* Ink Economy UI - Only show when game is active */}
+                        {state.gameStarted && state.gameActive && (
+                            <>
+                                {/* Ink Bar */}
+                                <div className="absolute bottom-24 left-0 right-0 px-3 z-20 pointer-events-none">
+                                    <InkBar
+                                        ink={state.player.ink}
+                                        maxInk={state.player.maxInk}
+                                        isFrenzy={state.player.isFrenzy}
+                                        frenzyEndTime={state.player.frenzyEndTime}
+                                    />
+                                </div>
+
+                                {/* Weapon Selector */}
+                                <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-20">
+                                    <WeaponSelector
+                                        currentMode={state.player.weaponMode}
+                                        ink={state.player.ink}
+                                        isFrenzy={state.player.isFrenzy}
+                                        onSelectMode={setWeaponMode}
+                                    />
+                                </div>
+
+                                {/* Golden Pixel Indicator */}
+                                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20">
+                                    <GoldenPixelIndicator
+                                        goldenPixel={state.goldenPixel}
+                                        timeLeft={state.timeLeft}
+                                        lastGoldenPixelSpawn={state.lastGoldenPixelSpawn}
+                                        isFrenzy={state.player.isFrenzy}
+                                        frenzyEndTime={state.player.frenzyEndTime}
+                                    />
+                                </div>
+                            </>
+                        )}
 
                         {/* Combo Effect */}
                         <ComboEffect show={showCombo} comboStreak={state.comboStreak} />

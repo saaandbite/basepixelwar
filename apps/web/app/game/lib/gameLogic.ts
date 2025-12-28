@@ -1,7 +1,7 @@
 // Game Logic Functions
 
-import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon } from '../types';
-import { GRID_SIZE, COLORS, BULLET_SPEED } from './constants';
+import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon, GoldenPixel, WeaponMode } from '../types';
+import { GRID_SIZE, COLORS, BULLET_SPEED, WEAPON_MODES, GOLDEN_PIXEL_SIZE } from './constants';
 
 // Initialize grid with half red (top) and half blue (bottom)
 export function initializeGrid(cols: number, rows: number): ('blue' | 'red')[][] {
@@ -16,7 +16,7 @@ export function initializeGrid(cols: number, rows: number): ('blue' | 'red')[][]
     return grid;
 }
 
-// Create a new bullet
+// Create a new bullet (legacy - used by enemy AI)
 export function createBullet(
     source: Cannon,
     team: 'blue' | 'red',
@@ -38,6 +38,7 @@ export function createBullet(
                 active: true,
                 isMeteor: false,
                 lifetime: 0,
+                paintRadius: 2,
             });
         });
     } else {
@@ -52,10 +53,103 @@ export function createBullet(
             active: true,
             isMeteor: false,
             lifetime: 0,
+            paintRadius: 2,
         });
     }
 
     return bullets;
+}
+
+// Create bullets based on weapon mode (INK ECONOMY)
+export function createWeaponBullet(
+    source: Cannon,
+    team: 'blue' | 'red',
+    mode: WeaponMode
+): Projectile[] {
+    const bullets: Projectile[] = [];
+    const modeConfig = WEAPON_MODES[mode];
+
+    switch (mode) {
+        case 'machineGun': {
+            // Single fast bullet, small paint area
+            bullets.push({
+                x: source.x,
+                y: source.y,
+                vx: Math.cos(source.angle) * modeConfig.speed,
+                vy: Math.sin(source.angle) * modeConfig.speed,
+                team,
+                active: true,
+                isMeteor: false,
+                isInkBomb: false,
+                lifetime: 0,
+                paintRadius: modeConfig.paintRadius,
+            });
+            break;
+        }
+
+        case 'shotgun': {
+            // 3-way spread with limited range
+            const shotgunConfig = WEAPON_MODES.shotgun;
+            shotgunConfig.spreadAngles.forEach((offset) => {
+                bullets.push({
+                    x: source.x,
+                    y: source.y,
+                    vx: Math.cos(source.angle + offset) * modeConfig.speed,
+                    vy: Math.sin(source.angle + offset) * modeConfig.speed,
+                    team,
+                    active: true,
+                    isMeteor: false,
+                    isInkBomb: false,
+                    lifetime: 0,
+                    maxLifetime: shotgunConfig.maxLifetime,
+                    paintRadius: modeConfig.paintRadius,
+                });
+            });
+            break;
+        }
+
+        case 'inkBomb': {
+            // Arc trajectory bomb - starts with upward velocity for lobbing effect
+            const inkBombConfig = WEAPON_MODES.inkBomb;
+            const baseVx = Math.cos(source.angle) * modeConfig.speed;
+            const baseVy = Math.sin(source.angle) * modeConfig.speed;
+
+            bullets.push({
+                x: source.x,
+                y: source.y,
+                vx: baseVx,
+                vy: baseVy - 4, // Strong upward arc boost for lobbing effect
+                team,
+                active: true,
+                isMeteor: false,
+                isInkBomb: true,
+                lifetime: 0,
+                paintRadius: inkBombConfig.paintRadius,
+                gravity: inkBombConfig.gravity,
+            });
+            break;
+        }
+    }
+
+    return bullets;
+}
+
+// Create a Golden Pixel at random center position
+export function createGoldenPixel(cols: number, rows: number): GoldenPixel {
+    // Spawn in center-ish area (middle 50% of map)
+    const marginX = Math.floor(cols * 0.25);
+    const marginY = Math.floor(rows * 0.25);
+
+    const x = marginX + Math.floor(Math.random() * (cols - 2 * marginX));
+    const y = marginY + Math.floor(Math.random() * (rows - 2 * marginY));
+
+    return {
+        x,
+        y,
+        active: true,
+        spawnTime: Date.now(),
+        pulsePhase: 0,
+    };
 }
 
 // Create a meteor projectile
