@@ -248,55 +248,35 @@ export default function GamePage() {
     const isGameOver = state.gameStarted && !state.gameActive && state.timeLeft <= 0;
 
     return (
-        <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans">
-            <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-2xl shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
-                {isMounted ? (
-                    <>
-                        {/* HUD */}
-                        <GameHUD
-                            scoreBlue={score.blue}
-                            scoreRed={score.red}
-                            timeLeft={state.timeLeft}
-                            isSoundOn={state.isSoundOn}
-                            onPause={handlePause}
-                            onToggleSound={handleToggleSound}
-                            comboStreak={state.comboStreak}
-                            showCombo={showCombo}
-                        />
+        <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans bg-slate-100 overflow-hidden">
+            {/* Game Container - Takes available space but respects max height */}
+            <div className="flex-1 w-full max-w-[420px] max-h-[75vh] min-h-0 shrink-0 p-2 pb-0">
+                <main className="relative w-full h-full bg-gradient-to-b from-white/95 to-blue-50 rounded-t-2xl shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
+                    {isMounted ? (
+                        <>
+                            {/* HUD */}
+                            <GameHUD
+                                scoreBlue={score.blue}
+                                scoreRed={score.red}
+                                timeLeft={state.timeLeft}
+                                isSoundOn={state.isSoundOn}
+                                onPause={handlePause}
+                                onToggleSound={handleToggleSound}
+                                comboStreak={state.comboStreak}
+                                showCombo={showCombo}
+                            />
 
-                        {/* Game Canvas */}
-                        <GameCanvas
-                            state={state}
-                            onResize={handleResize}
-                            onPlayerInput={handlePlayerInput}
-                            onUpdate={handleUpdate}
-                        />
+                            {/* Game Canvas */}
+                            <GameCanvas
+                                state={state}
+                                onResize={handleResize}
+                                onPlayerInput={handlePlayerInput}
+                                onUpdate={handleUpdate}
+                            />
 
-                        {/* Ink Economy UI - Only show when game is active */}
-                        {state.gameStarted && state.gameActive && (
-                            <>
-                                {/* Ink Bar */}
-                                <div className="absolute bottom-24 left-0 right-0 px-3 z-20 pointer-events-none">
-                                    <InkBar
-                                        ink={state.player.ink}
-                                        maxInk={state.player.maxInk}
-                                        isFrenzy={state.player.isFrenzy}
-                                        frenzyEndTime={state.player.frenzyEndTime}
-                                    />
-                                </div>
-
-                                {/* Weapon Selector */}
-                                <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-20">
-                                    <WeaponSelector
-                                        currentMode={state.player.weaponMode}
-                                        ink={state.player.ink}
-                                        isFrenzy={state.player.isFrenzy}
-                                        onSelectMode={setWeaponMode}
-                                    />
-                                </div>
-
-                                {/* Golden Pixel Indicator */}
-                                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20">
+                            {/* In-Game Indicators (Must stay on canvas) */}
+                            {state.gameStarted && state.gameActive && (
+                                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                                     <GoldenPixelIndicator
                                         goldenPixel={state.goldenPixel}
                                         timeLeft={state.timeLeft}
@@ -305,62 +285,93 @@ export default function GamePage() {
                                         frenzyEndTime={state.player.frenzyEndTime}
                                     />
                                 </div>
-                            </>
-                        )}
+                            )}
 
-                        {/* Combo Effect */}
-                        <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
+                            {/* Effects */}
+                            <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
 
-                        {/* Powerup Effect */}
-                        {powerupEffect && (
-                            <PowerupEffect
-                                show={powerupEffect.show}
-                                type={powerupEffect.type}
-                                x={powerupEffect.x}
-                                y={powerupEffect.y}
+                            {powerupEffect && (
+                                <PowerupEffect
+                                    show={powerupEffect.show}
+                                    type={powerupEffect.type}
+                                    x={powerupEffect.x}
+                                    y={powerupEffect.y}
+                                />
+                            )}
+
+                            <PowerupIndicator
+                                shield={state.player.powerups?.shield || 0}
+                                showMeteorWarning={state.showMeteorIndicator}
+                                footerStatus={footerStatus}
                             />
-                        )}
 
-                        {/* Powerup Indicator & Footer */}
-                        <PowerupIndicator
-                            shield={state.player.powerups?.shield || 0}
-                            showMeteorWarning={state.showMeteorIndicator}
-                            footerStatus={footerStatus}
-                        />
+                            {/* Overlays */}
+                            {!state.gameStarted && <GameInstructions onStart={handleStart} />}
 
-                        {/* Overlays */}
-                        {!state.gameStarted && <GameInstructions onStart={handleStart} />}
+                            {state.isPaused && (
+                                <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
+                            )}
 
-                        {state.isPaused && (
-                            <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
-                        )}
+                            {isGameOver && (
+                                <GameOverModal
+                                    blueScore={score.blue}
+                                    maxCombo={state.maxCombo}
+                                    powerupsCollected={state.totalPowerupsCollected}
+                                    onPlayAgain={handlePlayAgain}
+                                />
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            {/* Static Skeleton for LCP & FCP */}
+                            <div className="w-full h-16 p-3 bg-white/95 border-b border-slate-100 flex justify-between items-center shrink-0">
+                                <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
+                                <div className="flex-1 max-w-24 h-8 bg-slate-100/50 rounded-lg mx-auto"></div>
+                                <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
+                            </div>
+                            <div className="flex-grow bg-slate-100/30"></div>
+                            {/* SSR the instructions since they are the LCP candidate */}
+                            <div className="absolute inset-0 z-50 overflow-hidden pointer-events-none">
+                                <GameInstructions onStart={handleStart} />
+                            </div>
+                            <footer className="h-14 bg-white/95 border-t border-slate-100/80"></footer>
+                        </>
+                    )}
+                </main>
+            </div>
 
-                        {isGameOver && (
-                            <GameOverModal
-                                blueScore={score.blue}
-                                maxCombo={state.maxCombo}
-                                powerupsCollected={state.totalPowerupsCollected}
-                                onPlayAgain={handlePlayAgain}
-                            />
-                        )}
-                    </>
-                ) : (
-                    <>
-                        {/* Static Skeleton for LCP & FCP */}
-                        <div className="w-full h-16 p-3 bg-white/95 border-b border-slate-100 flex justify-between items-center shrink-0">
-                            <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
-                            <div className="flex-1 max-w-24 h-8 bg-slate-100/50 rounded-lg mx-auto"></div>
-                            <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
+            {/* Dashboard / Controls Panel - Outside Game Canvas */}
+            <div className="w-full max-w-[420px] p-2 pt-0 shrink-0 z-20">
+                <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 p-4 flex flex-col gap-4 ring-1 ring-slate-200/80">
+                    {state.gameStarted && state.gameActive ? (
+                        <>
+                            {/* Ink Bar */}
+                            <div className="w-full">
+                                <InkBar
+                                    ink={state.player.ink}
+                                    maxInk={state.player.maxInk}
+                                    isFrenzy={state.player.isFrenzy}
+                                    frenzyEndTime={state.player.frenzyEndTime}
+                                />
+                            </div>
+
+                            {/* Weapon Selector */}
+                            <div className="w-full flex justify-center">
+                                <WeaponSelector
+                                    currentMode={state.player.weaponMode}
+                                    ink={state.player.ink}
+                                    isFrenzy={state.player.isFrenzy}
+                                    onSelectMode={setWeaponMode}
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="h-24 flex items-center justify-center text-slate-400 text-sm font-medium italic">
+                            Controls will appear here when game starts
                         </div>
-                        <div className="flex-grow bg-slate-100/30"></div>
-                        {/* SSR the instructions since they are the LCP candidate */}
-                        <div className="absolute inset-0 z-50 overflow-hidden pointer-events-none">
-                            <GameInstructions onStart={handleStart} />
-                        </div>
-                        <footer className="h-14 bg-white/95 border-t border-slate-100/80"></footer>
-                    </>
-                )}
-            </main>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

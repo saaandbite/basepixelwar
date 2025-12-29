@@ -71,8 +71,7 @@ export interface Cannon {
         shield: number;
         shieldTimer?: number; // Timestamp when shield was collected
     };
-    shieldActive?: boolean; // Whether shield is currently active
-    shieldEndTime?: number; // When the active shield will end
+
     lastFireTime?: number;
     longDragAngle?: number;
     // Ink Economy
@@ -111,6 +110,14 @@ export interface GameState {
     // Golden Pixel
     goldenPixel: GoldenPixel | null;
     lastGoldenPixelSpawn: number;
+    // Territory Shields
+    territoryShields: Array<{
+        x: number; // Grid x position
+        y: number; // Grid y position
+        radius: number; // Radius in grid cells
+        endTime: number; // When shield expires
+        team: 'blue' | 'red'; // Which team's territory is protected
+    }>;
 }
 
 export type GameAction =

@@ -52,8 +52,7 @@ function createInitialState(width: number, height: number): GameState {
             powerups: {
                 shield: 0,
             },
-            shieldActive: false,
-            shieldEndTime: 0,
+
             lastFireTime: 0,
             // Ink Economy
             ink: INK_MAX,
@@ -73,8 +72,7 @@ function createInitialState(width: number, height: number): GameState {
             powerups: {
                 shield: 0,
             },
-            shieldActive: false,
-            shieldEndTime: 0,
+
             // Ink Economy for enemy (for fairness)
             ink: INK_MAX,
             maxInk: INK_MAX,
@@ -99,6 +97,8 @@ function createInitialState(width: number, height: number): GameState {
         // Golden Pixel
         goldenPixel: null,
         lastGoldenPixelSpawn: 0,
+        // Territory Shields
+        territoryShields: [],
     };
 }
 
@@ -282,14 +282,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 newState.player = { ...newState.player, cooldown: newState.player.cooldown - 1 };
             }
 
-            // Check for shield expiration
-            if (newState.player.shieldActive && Date.now() >= newState.player.shieldEndTime!) {
-                newState.player = {
-                    ...newState.player,
-                    shieldActive: false,
-                    shieldEndTime: 0,
-                };
-            }
+
 
             // Enemy AI
             newState.enemy = { ...newState.enemy, moveTimer: (newState.enemy.moveTimer || 0) + 1 };
@@ -350,6 +343,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 if (incomingBullet) {
                     newState.enemy.powerups!.shield--;
                     action.playSound('powerup');
+
+                    // Create territory shield for enemy
+                    const gridX = Math.floor(newState.enemy.x / GRID_SIZE);
+                    const gridY = Math.floor(newState.enemy.y / GRID_SIZE);
+
+                    newState.territoryShields.push({
+                        x: gridX,
+                        y: gridY,
+                        radius: 5,
+                        endTime: Date.now() + 3000,
+                        team: 'red',
+                    });
 
                     // Create enemy shield particles
                     const shieldParticles: Particle[] = [];
@@ -502,37 +507,64 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                             newGrid[gx] !== undefined
                         ) {
                             const gridCell = newGrid[gx][gy];
+                            // Check if this grid position is protected by a territory shield
+                            const isProtected = newState.territoryShields.some(shield => {
+                                const distance = Math.hypot(gx - shield.x, gy - shield.y);
+                                return distance <= shield.radius &&
+                                    shield.endTime > Date.now() &&
+                                    shield.team !== updatedP.team; // Only protect against enemy team
+                            });
+
                             if (gridCell !== updatedP.team) {
-                                const result = paintGrid(
-                                    newGrid,
-                                    gx,
-                                    gy,
-                                    updatedP.team as 'blue' | 'red',
-                                    updatedP.paintRadius || 2,
-                                    newState.cols,
-                                    newState.rows
-                                );
-                                newGrid = result.grid;
-
-                                // Combo tracking
-                                if (updatedP.team === 'blue') {
-                                    if (Date.now() - lastTerritoryFlip < 800) {
-                                        comboStreak++;
-                                        if (comboStreak > maxCombo) maxCombo = comboStreak;
-                                        if (comboStreak >= 3 && Math.random() < 0.3 && newPowerups.length < MAX_POWERUPS_ON_SCREEN) {
-                                            newPowerups.push(createPowerup(gx, gy));
-                                        }
-                                    } else {
-                                        comboStreak = 1;
+                                if (isProtected) {
+                                    // Blocked by shield - destroy projectile and show effect
+                                    action.playSound('powerup'); // Use powerup sound for shield hit
+                                    for (let i = 0; i < 8; i++) {
+                                        const angle = Math.random() * Math.PI * 2;
+                                        const speed = 1 + Math.random() * 3;
+                                        newParticles.push({
+                                            x: updatedP.x,
+                                            y: updatedP.y,
+                                            vx: Math.cos(angle) * speed,
+                                            vy: Math.sin(angle) * speed,
+                                            life: 0.6,
+                                            size: 3,
+                                            color: COLORS.powerup.shield,
+                                        });
                                     }
-                                    lastTerritoryFlip = Date.now();
-                                }
+                                    // Projectile destroyed (not added to newProjectiles)
+                                } else {
+                                    const result = paintGrid(
+                                        newGrid,
+                                        gx,
+                                        gy,
+                                        updatedP.team as 'blue' | 'red',
+                                        updatedP.paintRadius || 2,
+                                        newState.cols,
+                                        newState.rows
+                                    );
+                                    newGrid = result.grid;
 
-                                newParticles.push(
-                                    ...createParticles(updatedP.x, updatedP.y, updatedP.team as 'blue' | 'red', comboStreak > 2 ? 10 : 5)
-                                );
-                                newTerritoryBatches.push(createTerritoryBatch(gx, gy, updatedP.team as 'blue' | 'red'));
-                                action.playSound('explosion');
+                                    // Combo tracking
+                                    if (updatedP.team === 'blue') {
+                                        if (Date.now() - lastTerritoryFlip < 800) {
+                                            comboStreak++;
+                                            if (comboStreak > maxCombo) maxCombo = comboStreak;
+                                            if (comboStreak >= 3 && Math.random() < 0.3 && newPowerups.length < MAX_POWERUPS_ON_SCREEN) {
+                                                newPowerups.push(createPowerup(gx, gy));
+                                            }
+                                        } else {
+                                            comboStreak = 1;
+                                        }
+                                        lastTerritoryFlip = Date.now();
+                                    }
+
+                                    newParticles.push(
+                                        ...createParticles(updatedP.x, updatedP.y, updatedP.team as 'blue' | 'red', comboStreak > 2 ? 10 : 5)
+                                    );
+                                    newTerritoryBatches.push(createTerritoryBatch(gx, gy, updatedP.team as 'blue' | 'red'));
+                                    action.playSound('explosion');
+                                }
                             } else {
                                 newProjectiles.push(updatedP);
                             }
@@ -545,74 +577,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
             // Check for shield blocking of projectiles
             // Player shield blocks enemy projectiles
-            if (newState.player.shieldActive) {
-                const projectilesToKeep: Projectile[] = [];
 
-                for (const p of newProjectiles) {
-                    // Check if enemy projectile is close to player
-                    const distToPlayer = Math.hypot(p.x - newState.player.x, p.y - newState.player.y);
-                    if (p.team === 'red' && distToPlayer < 40) { // 40 pixel radius around player
-                        // Projectile is blocked by shield
-
-                        // Create shield impact particles
-                        for (let i = 0; i < 5; i++) {
-                            const angle = Math.random() * Math.PI * 2;
-                            const speed = 1 + Math.random() * 2;
-                            newParticles.push({
-                                x: p.x,
-                                y: p.y,
-                                vx: Math.cos(angle) * speed,
-                                vy: Math.sin(angle) * speed,
-                                life: 0.8,
-                                size: 2,
-                                color: COLORS.powerup.shield,
-                            });
-                        }
-                        // Don't add this projectile to the keep list (effectively removing it)
-                    } else {
-                        // Keep this projectile
-                        projectilesToKeep.push(p);
-                    }
-                }
-
-                // Update projectiles with the ones that weren't blocked
-                newProjectiles = projectilesToKeep;
-            }
 
             // Enemy shield blocks player projectiles
-            if (newState.enemy.shieldActive) {
-                const projectilesToKeep: Projectile[] = [];
 
-                for (const p of newProjectiles) {
-                    // Check if player projectile is close to enemy
-                    const distToEnemy = Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y);
-                    if (p.team === 'blue' && distToEnemy < 40) { // 40 pixel radius around enemy
-                        // Projectile is blocked by shield
-
-                        // Create shield impact particles
-                        for (let i = 0; i < 5; i++) {
-                            const angle = Math.random() * Math.PI * 2;
-                            const speed = 1 + Math.random() * 2;
-                            newParticles.push({
-                                x: p.x,
-                                y: p.y,
-                                vx: Math.cos(angle) * speed,
-                                vy: Math.sin(angle) * speed,
-                                life: 0.8,
-                                size: 2,
-                                color: COLORS.powerup.shield,
-                            });
-                        }
-                        // Don't add this projectile to the keep list (effectively removing it)
-                    } else {
-                        // Keep this projectile
-                        projectilesToKeep.push(p);
-                    }
-                }
-
-                // Update projectiles with the ones that weren't blocked
-                newProjectiles = projectilesToKeep;
-            }
 
             // Activate frenzy if golden pixel was captured
             if (activateFrenzyFor === 'blue') {
@@ -630,6 +598,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     ink: INK_MAX,
                 };
             }
+
+            // Remove expired territory shields
+
+            newState.territoryShields = newState.territoryShields.filter(shield =>
+                shield.endTime > now
+            );
 
             // Update particles (optimized - faster decay, limited count)
             const MAX_PARTICLES = 30;
@@ -679,25 +653,31 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
                         switch (pu.type) {
                             case 'shield':
-                                targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
-                                // Immediately activate shield when collected by player
+                                // Create territory shield at the location where powerup was collected
                                 if (isPlayerTarget) {
-                                    // Activate shield immediately
-                                    const now = Date.now();
-                                    newState.player = {
-                                        ...newState.player,
-                                        shieldActive: true,
-                                        shieldEndTime: now + 1000, // 1 second duration
+                                    // Convert canvas coordinates to grid coordinates
+                                    const gridX = Math.floor(pu.x / GRID_SIZE);
+                                    const gridY = Math.floor(pu.y / GRID_SIZE);
+
+                                    // Create a territory shield that protects area around the collection point
+                                    const territoryShield = {
+                                        x: gridX,
+                                        y: gridY,
+                                        radius: 5, // 5 grid cells radius
+                                        endTime: Date.now() + 3000, // 3 seconds duration
+                                        team: 'blue' as const, // Player's team
                                     };
 
-                                    // Create shield particles
+                                    newState.territoryShields = [...newState.territoryShields, territoryShield];
+
+                                    // Create shield particles at the collection location
                                     const shieldParticles: Particle[] = [];
-                                    for (let i = 0; i < 20; i++) {
+                                    for (let i = 0; i < 30; i++) {
                                         const angle = Math.random() * Math.PI * 2;
-                                        const speed = 1 + Math.random() * 2;
+                                        const speed = 1 + Math.random() * 3;
                                         shieldParticles.push({
-                                            x: newState.player.x,
-                                            y: newState.player.y,
+                                            x: pu.x,
+                                            y: pu.y,
                                             vx: Math.cos(angle) * speed,
                                             vy: Math.sin(angle) * speed,
                                             life: 1.0,
@@ -709,6 +689,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
                                     // Play sound effect
                                     action.playSound('powerup');
+                                } else {
+                                    // For enemy, just add to their inventory
+                                    targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
                                 }
                                 break;
                         }

@@ -433,24 +433,6 @@ export function drawCannon(
         }
     }
 
-    // Draw active shield if present
-    if (cannon.shieldActive) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(0, 0, 30, 0, Math.PI * 2); // 30 pixel radius around cannon
-        const gradient = ctx.createRadialGradient(0, 0, 20, 0, 0, 30);
-        gradient.addColorStop(0, 'rgba(76, 175, 80, 0.2)'); // Green with transparency
-        gradient.addColorStop(1, 'rgba(76, 175, 80, 0.0)');
-        ctx.fillStyle = gradient;
-        ctx.fill();
-
-        // Shield border
-        ctx.strokeStyle = COLORS.powerup.shield;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.restore();
-    }
-
     ctx.restore();
 }
 
@@ -642,4 +624,71 @@ export function drawFrenzyOverlay(
     ctx.strokeStyle = `rgba(255, 107, 53, ${0.4 * intensity})`;
     ctx.lineWidth = borderWidth;
     ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
+}
+
+// Draw territory shields
+export function drawTerritoryShields(
+    ctx: CanvasRenderingContext2D,
+    shields: Array<{
+        x: number;
+        y: number;
+        radius: number;
+        endTime: number;
+        team: 'blue' | 'red';
+    }>,
+    time: number
+): void {
+    const now = Date.now();
+
+    shields.forEach(shield => {
+        if (shield.endTime <= now) return; // Skip expired shields
+
+        const centerX = shield.x * GRID_SIZE + GRID_SIZE / 2;
+        const centerY = shield.y * GRID_SIZE + GRID_SIZE / 2;
+        const radius = shield.radius * GRID_SIZE;
+
+        // Create pulsing effect
+        const pulse = 0.8 + 0.2 * Math.sin(time / 200);
+
+        // Draw shield area with transparency
+        ctx.save();
+        ctx.globalAlpha = 0.3 * pulse;
+        const gradient = ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, radius
+        );
+        gradient.addColorStop(0, shield.team === 'blue' ? '#4CAF50' : '#4CAF50'); // Green for both teams
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw shield border
+        ctx.globalAlpha = 0.6 * pulse;
+        ctx.strokeStyle = '#4CAF50'; // Green border
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw shield pattern
+        ctx.globalAlpha = 0.4 * pulse;
+        ctx.strokeStyle = '#4CAF50';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const startX = centerX + Math.cos(angle) * radius * 0.3;
+            const startY = centerY + Math.sin(angle) * radius * 0.3;
+            const endX = centerX + Math.cos(angle) * radius * 0.8;
+            const endY = centerY + Math.sin(angle) * radius * 0.8;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    });
 }

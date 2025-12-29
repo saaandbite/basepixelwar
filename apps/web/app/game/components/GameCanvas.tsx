@@ -19,6 +19,7 @@ import {
     drawTargetMarker,
     drawGoldenPixel,
     drawFrenzyOverlay,
+    drawTerritoryShields,
 } from '../lib/renderer';
 import type { GameState } from '../types';
 
@@ -86,6 +87,9 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
 
         // Draw territory batches
         drawTerritoryBatches(ctx, state.territoryBatches);
+
+        // Draw territory shields
+        drawTerritoryShields(ctx, state.territoryShields, Date.now());
 
         // Draw Golden Pixel (secondary objective)
         if (state.goldenPixel && state.goldenPixel.active) {
