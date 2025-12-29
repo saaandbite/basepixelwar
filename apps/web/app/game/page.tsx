@@ -206,11 +206,14 @@ export default function GamePage() {
     // Is game over?
     const isGameOver = state.gameStarted && !state.gameActive && state.timeLeft <= 0;
 
+    // Should show control panel? Only during active gameplay (not paused, not game over, not before start)
+    const showControlPanel = state.gameStarted && state.gameActive && !state.isPaused;
+
     return (
         <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans bg-slate-100 overflow-hidden">
-            {/* Game Container - Takes available space but respects max height */}
-            <div className="flex-1 w-full max-w-[420px] max-h-[75vh] min-h-0 shrink-0 p-2 pb-0">
-                <main className="relative w-full h-full bg-gradient-to-b from-white/95 to-blue-50 rounded-t-2xl shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
+            {/* Game Container - Full height when no control panel, shorter when control panel visible */}
+            <div className={`flex-1 w-full max-w-[420px] min-h-0 shrink-0 p-2 ${showControlPanel ? 'pb-0 max-h-[75vh]' : 'pb-2'}`}>
+                <main className={`relative w-full h-full bg-gradient-to-b from-white/95 to-blue-50 shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80 ${showControlPanel ? 'rounded-t-2xl' : 'rounded-2xl'}`}>
                     {isMounted ? (
                         <>
                             {/* HUD */}
@@ -297,45 +300,39 @@ export default function GamePage() {
                 </main>
             </div>
 
-            {/* Dashboard / Controls Panel - Outside Game Canvas */}
-            <div className="w-full max-w-[420px] p-2 pt-0 shrink-0 z-20">
-                <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 p-3 flex flex-col gap-3 ring-1 ring-slate-200/80">
-                    {state.gameStarted && state.gameActive ? (
-                        <>
-                            {/* 1. Ink Bar (Top) */}
-                            <div className="w-full">
-                                <InkBar
-                                    ink={state.player.ink}
-                                    maxInk={state.player.maxInk}
-                                    isFrenzy={state.player.isFrenzy}
-                                    frenzyEndTime={state.player.frenzyEndTime}
-                                />
-                            </div>
-
-                            {/* 2. Weapon Selector (Middle) */}
-                            <div className="w-full flex justify-center">
-                                <WeaponSelector
-                                    currentMode={state.player.weaponMode}
-                                    ink={state.player.ink}
-                                    isFrenzy={state.player.isFrenzy}
-                                    onSelectMode={setWeaponMode}
-                                />
-                            </div>
-
-                            {/* 3. Controls & Status (Bottom) */}
-                            <ControlsStatus
-                                shield={state.player.powerups?.shield || 0}
-                                globalShield={state.globalShield}
-                                footerStatus={footerStatus}
+            {/* Dashboard / Controls Panel - Only visible during active gameplay */}
+            {showControlPanel && (
+                <div className="w-full max-w-[420px] p-2 pt-0 shrink-0 z-20">
+                    <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 p-3 flex flex-col gap-3 ring-1 ring-slate-200/80">
+                        {/* 1. Ink Bar (Top) */}
+                        <div className="w-full">
+                            <InkBar
+                                ink={state.player.ink}
+                                maxInk={state.player.maxInk}
+                                isFrenzy={state.player.isFrenzy}
+                                frenzyEndTime={state.player.frenzyEndTime}
                             />
-                        </>
-                    ) : (
-                        <div className="h-24 flex items-center justify-center text-slate-400 text-sm font-medium italic">
-                            Controls will appear here when game starts
                         </div>
-                    )}
+
+                        {/* 2. Weapon Selector (Middle) */}
+                        <div className="w-full flex justify-center">
+                            <WeaponSelector
+                                currentMode={state.player.weaponMode}
+                                ink={state.player.ink}
+                                isFrenzy={state.player.isFrenzy}
+                                onSelectMode={setWeaponMode}
+                            />
+                        </div>
+
+                        {/* 3. Controls & Status (Bottom) */}
+                        <ControlsStatus
+                            shield={state.player.powerups?.shield || 0}
+                            globalShield={state.globalShield}
+                            footerStatus={footerStatus}
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
