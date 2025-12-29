@@ -197,12 +197,6 @@ export default function GamePage() {
         [setPlayerAngle, setPlayerFiring]
     );
 
-    // Special handler for shield activation
-    const handleShieldActivation = useCallback(() => {
-        if (state.player.powerups?.shield && state.player.powerups.shield > 0) {
-            activateShield(playSound);
-        }
-    }, [state.player.powerups?.shield, activateShield, playSound]);
 
     const handleUpdate = useCallback(() => {
         updateGame(playSound);
@@ -275,7 +269,6 @@ export default function GamePage() {
                             state={state}
                             onResize={handleResize}
                             onPlayerInput={handlePlayerInput}
-                            onShieldActivation={handleShieldActivation}
                             onUpdate={handleUpdate}
                         />
 

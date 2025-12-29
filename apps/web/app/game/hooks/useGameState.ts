@@ -278,6 +278,41 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 newState.player = { ...newState.player, cooldown: newState.player.cooldown - 1 };
             }
 
+            // Check for automatic shield activation (2 seconds after collecting shield)
+            if (newState.player.powerups?.shieldTimer &&
+                newState.player.powerups.shield > 0 &&
+                Date.now() - newState.player.powerups.shieldTimer >= 2000) {
+                // Automatically activate shield after 2 seconds
+                const playerPowerups = { ...newState.player.powerups };
+                playerPowerups.shield = Math.max(0, playerPowerups.shield - 1);
+                playerPowerups.shieldTimer = undefined; // Reset timer
+
+                // Create shield particles
+                const shieldParticles: Particle[] = [];
+                for (let i = 0; i < 20; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 2;
+                    shieldParticles.push({
+                        x: newState.player.x,
+                        y: newState.player.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 1.0,
+                        size: 3,
+                        color: COLORS.powerup.shield,
+                    });
+                }
+
+                newState.player = {
+                    ...newState.player,
+                    powerups: playerPowerups
+                };
+                newState.particles = [...newState.particles, ...shieldParticles];
+
+                // Play sound effect
+                action.playSound('powerup');
+            }
+
             // Enemy AI
             newState.enemy = { ...newState.enemy, moveTimer: (newState.enemy.moveTimer || 0) + 1 };
             newState.enemy.difficulty = Math.min(
@@ -596,6 +631,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         switch (pu.type) {
                             case 'shield':
                                 targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
+                                // Set timer when shield is collected by player
+                                if (isPlayerTarget) {
+                                    targetPowerups.shieldTimer = Date.now(); // Record when shield was collected
+                                }
                                 break;
                         }
 

@@ -69,6 +69,7 @@ export interface Cannon {
     difficulty?: number;
     powerups?: {
         shield: number;
+        shieldTimer?: number; // Timestamp when shield was collected
     };
     lastFireTime?: number;
     longDragAngle?: number;

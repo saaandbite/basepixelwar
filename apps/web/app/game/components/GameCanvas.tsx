@@ -26,11 +26,10 @@ interface GameCanvasProps {
     state: GameState;
     onResize: (width: number, height: number) => void;
     onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean) => void;
-    onShieldActivation: () => void;
     onUpdate: () => void;
 }
 
-export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation, onUpdate }: GameCanvasProps) {
+export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -169,16 +168,10 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
             if (angle > 0) angle = angle > Math.PI / 2 ? -Math.PI + 0.2 : 0.2;
             if (angle < -Math.PI) angle = -Math.PI + 0.2;
 
-            // Check for special tap on cannon to activate shield
-            if (isDown && !state.player.isFiring && dist < 30 && state.player.powerups?.shield && state.player.powerups.shield > 0) {
-                // This is a tap on the cannon, activate shield
-                onShieldActivation();
-                return;
-            }
 
             onPlayerInput(angle, isDown, isDown);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.isFiring, state.player.powerups?.shield, onPlayerInput, onShieldActivation]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.isFiring, state.player.powerups?.shield, onPlayerInput]
     );
 
     // Mouse events
