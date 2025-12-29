@@ -5,14 +5,12 @@
 
 
 interface PowerupIndicatorProps {
-    burstShot: number;
     shield: number;
     showMeteorWarning: boolean;
     footerStatus: { name: string; icon: string; color: string } | null;
 }
 
 export function PowerupIndicator({
-    burstShot,
     shield,
     showMeteorWarning,
     footerStatus,
@@ -50,20 +48,8 @@ export function PowerupIndicator({
     return (
         <>
             {/* Powerup Indicators - Symmetrical Left and Right Sides */}
-            {burstShot > 0 && (
-                <div className="absolute left-3 bottom-24 z-20 pointer-events-none">
-                    <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
-                        <div className="flex flex-col items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
-                                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                            </svg>
-                            <span className="font-bold text-xs">{burstShot}</span>
-                        </div>
-                    </div>
-                </div>
-            )}
             {shield > 0 && (
-                <div className="absolute left-[72px] bottom-24 z-20 pointer-events-none">
+                <div className="absolute left-3 bottom-24 z-20 pointer-events-none">
                     <div className="bg-white rounded-xl w-14 h-14 shadow-md border border-slate-200 animate-powerup-bounce flex flex-col items-center justify-center">
                         <div className="flex flex-col items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">

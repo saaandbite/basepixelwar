@@ -50,7 +50,6 @@ function createInitialState(width: number, height: number): GameState {
             isFiring: false,
             cooldown: 0,
             powerups: {
-                burstShot: 0,
                 shield: 0,
             },
             lastFireTime: 0,
@@ -70,7 +69,6 @@ function createInitialState(width: number, height: number): GameState {
             moveTimer: 0,
             difficulty: 0.3,
             powerups: {
-                burstShot: 0,
                 shield: 0,
             },
             // Ink Economy for enemy (for fairness)
@@ -272,12 +270,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     ...newState.player,
                     cooldown: weaponConfig.fireRate,
                     ink: newState.player.ink - inkCost,
-                    powerups: {
-                        ...newState.player.powerups!,
-                        burstShot: bullets.length > 1 && !newState.player.isFrenzy
-                            ? newState.player.powerups!.burstShot - 1
-                            : newState.player.powerups!.burstShot,
-                    },
                 };
                 action.playSound('shoot');
             }
@@ -326,16 +318,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 const bullets = createBullet(newState.enemy, 'red', 0.2);
                 newState.projectiles = [...newState.projectiles, ...bullets];
 
-                // If burst shot was used, decrement it
-                const enemyPowerups = { ...newState.enemy.powerups! };
-                if (bullets.length > 1) {
-                    enemyPowerups.burstShot = Math.max(0, enemyPowerups.burstShot - 1);
-                }
-
                 newState.enemy = {
                     ...newState.enemy,
                     cooldown: FIRE_RATE - Math.floor(newState.enemy.difficulty! * 3),
-                    powerups: enemyPowerups
                 };
                 action.playSound('shoot');
             }
@@ -609,9 +594,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         const targetPowerups = isPlayerTarget ? playerPowerups : newState.enemy.powerups!;
 
                         switch (pu.type) {
-                            case 'burst':
-                                targetPowerups.burstShot = Math.min(targetPowerups.burstShot + 2, 5);
-                                break;
                             case 'shield':
                                 targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
                                 break;

@@ -24,38 +24,19 @@ export function createBullet(
 ): Projectile[] {
     const bullets: Projectile[] = [];
 
-    // Check for burst shot powerup
-    if (source.powerups && source.powerups.burstShot > 0) {
-        const angles = [-0.2, 0, 0.2];
-        angles.forEach((angleOffset) => {
-            const angle = source.angle + angleOffset;
-            bullets.push({
-                x: source.x,
-                y: source.y,
-                vx: Math.cos(angle) * BULLET_SPEED,
-                vy: Math.sin(angle) * BULLET_SPEED,
-                team,
-                active: true,
-                isMeteor: false,
-                lifetime: 0,
-                paintRadius: 2,
-            });
-        });
-    } else {
-        // Regular shot
-        const angle = source.angle + (Math.random() - 0.5) * spread;
-        bullets.push({
-            x: source.x,
-            y: source.y,
-            vx: Math.cos(angle) * BULLET_SPEED,
-            vy: Math.sin(angle) * BULLET_SPEED,
-            team,
-            active: true,
-            isMeteor: false,
-            lifetime: 0,
-            paintRadius: 2,
-        });
-    }
+    // Regular shot
+    const angle = source.angle + (Math.random() - 0.5) * spread;
+    bullets.push({
+        x: source.x,
+        y: source.y,
+        vx: Math.cos(angle) * BULLET_SPEED,
+        vy: Math.sin(angle) * BULLET_SPEED,
+        team,
+        active: true,
+        isMeteor: false,
+        lifetime: 0,
+        paintRadius: 2,
+    });
 
     return bullets;
 }
@@ -378,23 +359,15 @@ export function createParticles(
 
 // Create powerup at position
 export function createPowerup(gx: number, gy: number): Powerup {
-    const types: ('burst' | 'shield')[] = ['burst', 'shield'];
-    const randomIndex = Math.floor(Math.random() * types.length);
-    const type = types[randomIndex] ?? 'burst';
-
-    const colorMap = {
-        burst: { color: COLORS.powerup.burst, glowColor: 'rgba(157, 78, 221, 0.6)' },
-        shield: { color: COLORS.powerup.shield, glowColor: 'rgba(76, 175, 80, 0.6)' },
-    };
-
     return {
         x: gx * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 20,
         y: gy * GRID_SIZE + GRID_SIZE / 2 - 30,
         vy: 0.5 + Math.random() * 0.5,
         rotation: Math.random() * Math.PI * 2,
-        type,
+        type: 'shield',
         collected: false,
-        ...colorMap[type],
+        color: COLORS.powerup.shield,
+        glowColor: 'rgba(76, 175, 80, 0.6)',
     };
 }
 

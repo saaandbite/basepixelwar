@@ -47,7 +47,7 @@ export default function GamePage() {
     const [showCombo, setShowCombo] = useState(false);
     const [footerStatus, setFooterStatus] = useState<{ name: string; icon: string; color: string } | null>(null);
     const [footerTimeout, setFooterTimeout] = useState<NodeJS.Timeout | null>(null);
-    const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'burst' | 'shield' | 'meteor'; x: number; y: number } | null>(null);
+    const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'shield' | 'meteor'; x: number; y: number } | null>(null);
 
     // Refs to track meteor triggers to prevent duplicates
     const triggeredMeteorsRef = useRef<Set<number>>(new Set());
@@ -141,12 +141,7 @@ export default function GamePage() {
         const curr = state.player.powerups;
 
         if (curr && prev) {
-            if (curr.burstShot > (prev.burstShot || 0)) {
-                showFooterStatus('BURST SHOT', 'auto_awesome', 'text-purple-500');
-                // Show powerup effect
-                setPowerupEffect({ show: true, type: 'burst', x: state.player.x, y: state.player.y });
-                setTimeout(() => setPowerupEffect(null), 1000);
-            } else if (curr.shield > (prev.shield || 0)) {
+            if (curr.shield > (prev.shield || 0)) {
                 showFooterStatus('SHIELD', 'shield', 'text-green-500');
                 // Show powerup effect
                 setPowerupEffect({ show: true, type: 'shield', x: state.player.x, y: state.player.y });
@@ -335,7 +330,6 @@ export default function GamePage() {
 
                         {/* Powerup Indicator & Footer */}
                         <PowerupIndicator
-                            burstShot={state.player.powerups?.burstShot || 0}
                             shield={state.player.powerups?.shield || 0}
                             showMeteorWarning={state.showMeteorIndicator}
                             footerStatus={footerStatus}

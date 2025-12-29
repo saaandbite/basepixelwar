@@ -229,25 +229,6 @@ export function drawPowerups(ctx: CanvasRenderingContext2D, powerups: Powerup[])
         ctx.lineWidth = 2.5;
 
         switch (pu.type) {
-            case 'burst':
-                // Sparkle/star shape
-                ctx.beginPath();
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i * Math.PI) / 4;
-                    const radius = i % 2 === 0 ? 8 : 4;
-                    const x = Math.cos(angle) * radius;
-                    const y = Math.sin(angle) * radius;
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-                ctx.closePath();
-                ctx.stroke();
-                ctx.fillStyle = pu.color + '40';
-                ctx.fill();
-                break;
             case 'shield':
                 // Shield shape
                 ctx.beginPath();
@@ -430,25 +411,12 @@ export function drawCannon(
 
     // Powerup indicators for player
     if (isPlayer && cannon.powerups) {
-        const { burstShot, shield } = cannon.powerups;
-        if (burstShot > 0 || shield > 0) {
+        const { shield } = cannon.powerups;
+        if (shield > 0) {
             ctx.save();
             ctx.rotate(-cannon.angle); // Unrotate for proper positioning
 
             let indicatorX = 25;
-            if (burstShot > 0) {
-                ctx.fillStyle = COLORS.powerup.burst;
-                ctx.beginPath();
-                ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'white';
-                ctx.font = '8px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(burstShot), indicatorX, -25);
-                indicatorX += 15;
-            }
-
             if (shield > 0) {
                 ctx.fillStyle = COLORS.powerup.shield;
                 ctx.beginPath();
@@ -505,33 +473,6 @@ export function drawTrajectory(
     ctx.setLineDash([5, 5]);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // Show burst shot preview if available
-    if (player.powerups && player.powerups.burstShot > 0) {
-        ctx.save();
-        ctx.translate(player.x, player.y);
-
-        // Main shot
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(player.angle) * 100, Math.sin(player.angle) * 100);
-        ctx.strokeStyle = 'rgba(157, 78, 221, 0.8)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Additional shots
-        const angles = [-0.3, 0.3];
-        angles.forEach((angle) => {
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(player.angle + angle) * 80, Math.sin(player.angle + angle) * 80);
-            ctx.strokeStyle = 'rgba(157, 78, 221, 0.6)';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-        });
-
-        ctx.restore();
-    }
 }
 
 // Draw screen flash effect

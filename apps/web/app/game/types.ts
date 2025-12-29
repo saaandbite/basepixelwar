@@ -36,7 +36,7 @@ export interface Powerup {
     y: number;
     vy: number;
     rotation: number;
-    type: 'burst' | 'shield';
+    type: 'shield';
     collected: boolean;
     color: string;
     glowColor: string;
@@ -68,7 +68,6 @@ export interface Cannon {
     moveTimer?: number;
     difficulty?: number;
     powerups?: {
-        burstShot: number;
         shield: number;
     };
     lastFireTime?: number;

@@ -9,7 +9,6 @@ export const COLORS = {
     meteorTrail: '#FDB813',
     bg: '#E2E8F0',        // Darker Slate for Grid Lines
     powerup: {
-        burst: '#9D4EDD',   // Purple
         shield: '#4CAF50',  // Green
         meteor: '#FF9800',  // Orange
     },
