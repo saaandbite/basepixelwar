@@ -96,6 +96,8 @@ function createInitialState(width: number, height: number): GameState {
         lastGoldenPixelSpawn: 0,
         // Global Shield
         globalShield: null,
+        // Shield Powerup Cooldown (shared for creation)
+        lastShieldPowerupTime: 0,
     };
 }
 
@@ -123,6 +125,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 gameActive: true,
                 isPaused: false,
                 gameStarted: true,
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -145,6 +148,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             return {
                 ...state,
                 isPaused: !state.isPaused,
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -152,6 +156,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             return {
                 ...state,
                 isSoundOn: !state.isSoundOn,
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -159,6 +164,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             return {
                 ...state,
                 player: { ...state.player, angle: action.angle },
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -170,6 +176,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     isFiring: action.firing,
                     lastFireTime: action.firing ? Date.now() : state.player.lastFireTime,
                 },
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -181,6 +188,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     weaponMode: action.mode,
                     cooldown: 0, // Reset cooldown when switching weapons
                 },
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -204,6 +212,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         ...state.enemy,
                         x: action.width / 2,
                     },
+                    lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
                 };
             }
 
@@ -218,6 +227,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     ...state.enemy,
                     x: action.width / 2,
                 },
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -522,8 +532,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                                         if (Date.now() - lastTerritoryFlip < 800) {
                                             comboStreak++;
                                             if (comboStreak > maxCombo) maxCombo = comboStreak;
-                                            if (comboStreak >= 3 && Math.random() < 0.3 && newPowerups.length < MAX_POWERUPS_ON_SCREEN) {
+                                            if (comboStreak >= 3 &&
+                                                Math.random() < 0.3 &&
+                                                newPowerups.length < MAX_POWERUPS_ON_SCREEN &&
+                                                Date.now() - state.lastShieldPowerupTime >= 15000) { // 15 second cooldown
                                                 newPowerups.push(createPowerup(gx, gy));
+                                                // Update last shield powerup time when creating a shield
+                                                newState.lastShieldPowerupTime = Date.now();
                                             }
                                         } else {
                                             comboStreak = 1;
@@ -695,6 +710,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 screenFlash,
                 totalPowerupsCollected,
                 goldenPixel,
+                lastShieldPowerupTime: newState.lastShieldPowerupTime,
                 player: {
                     ...newState.player,
                     powerups: playerPowerups,
@@ -723,7 +739,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             if (
                 newTimeLeft % 15 === 0 &&
                 state.powerups.length < MAX_POWERUPS_ON_SCREEN &&
-                Math.random() < 0.7
+                Math.random() < 0.7 &&
+                Date.now() - state.lastShieldPowerupTime >= 15000 // 15 second cooldown
             ) {
                 // Find border positions
                 const borderPositions: { x: number; y: number }[] = [];
@@ -755,6 +772,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                             ...state,
                             timeLeft: newTimeLeft,
                             powerups: [...state.powerups, createPowerup(pos.x, pos.y)],
+                            lastShieldPowerupTime: Date.now(), // Update last shield powerup time
                             goldenPixel: newGoldenPixel,
                             lastGoldenPixelSpawn,
                         };
@@ -776,6 +794,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 timeLeft: newTimeLeft,
                 goldenPixel: newGoldenPixel,
                 lastGoldenPixelSpawn,
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -783,6 +802,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             return {
                 ...state,
                 gameActive: false,
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }
 
@@ -819,12 +839,16 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     },
                 },
                 particles: [...state.particles, ...shieldParticles],
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
                 // shakeIntensity: 5, // Disabled
             };
         }
 
         default:
-            return state;
+            return {
+                ...state,
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
+            };
     }
 }
 

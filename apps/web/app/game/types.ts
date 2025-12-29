@@ -116,6 +116,8 @@ export interface GameState {
         endTime: number;
         team: 'blue' | 'red';
     } | null;
+    // Shield Powerup Cooldown (shared for creation)
+    lastShieldPowerupTime: number;
 }
 
 export type GameAction =
