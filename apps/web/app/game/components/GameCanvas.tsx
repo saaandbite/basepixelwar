@@ -19,7 +19,7 @@ import {
     drawTargetMarker,
     drawGoldenPixel,
     drawFrenzyOverlay,
-    drawTerritoryShields,
+    drawGlobalShieldOverlay,
 } from '../lib/renderer';
 import type { GameState } from '../types';
 
@@ -88,8 +88,17 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
         // Draw territory batches
         drawTerritoryBatches(ctx, state.territoryBatches);
 
-        // Draw territory shields
-        drawTerritoryShields(ctx, state.territoryShields, Date.now());
+        // Draw Global Shield Overlay if active
+        if (state.globalShield && state.globalShield.active && state.globalShield.team === 'blue') {
+            drawGlobalShieldOverlay(effectsCtx, width, height, state.globalShield.team);
+        }
+
+        // RED Team Global Shield? (Currently visuals are green for 'active' defense)
+        if (state.globalShield && state.globalShield.active && state.globalShield.team === 'red') {
+            // Maybe add a red tinted overlay for enemy shield?
+            // For now, let's just show the same overlay but maybe rely on the text
+            drawGlobalShieldOverlay(effectsCtx, width, height, state.globalShield.team);
+        }
 
         // Draw Golden Pixel (secondary objective)
         if (state.goldenPixel && state.goldenPixel.active) {

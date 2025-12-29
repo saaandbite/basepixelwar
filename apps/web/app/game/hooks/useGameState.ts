@@ -97,8 +97,8 @@ function createInitialState(width: number, height: number): GameState {
         // Golden Pixel
         goldenPixel: null,
         lastGoldenPixelSpawn: 0,
-        // Territory Shields
-        territoryShields: [],
+        // Global Shield
+        globalShield: null,
     };
 }
 
@@ -337,37 +337,32 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             // Use Shield if projectile is close
             if (enemyPowerups.shield > 0) {
                 const incomingBullet = newState.projectiles.find(p =>
-                    p.team === 'blue' && Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y) < 100
+                    p.team === 'blue' && Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y) < 150
                 );
 
                 if (incomingBullet) {
                     newState.enemy.powerups!.shield--;
                     action.playSound('powerup');
 
-                    // Create territory shield for enemy
-                    const gridX = Math.floor(newState.enemy.x / GRID_SIZE);
-                    const gridY = Math.floor(newState.enemy.y / GRID_SIZE);
+                    // Activate GLOBAL SHIELD for enemy
+                    newState.globalShield = {
+                        active: true,
+                        endTime: Date.now() + 5000,
+                        team: 'red'
+                    };
 
-                    newState.territoryShields.push({
-                        x: gridX,
-                        y: gridY,
-                        radius: 5,
-                        endTime: Date.now() + 3000,
-                        team: 'red',
-                    });
-
-                    // Create enemy shield particles
+                    // Create enemy shield activation particles
                     const shieldParticles: Particle[] = [];
-                    for (let i = 0; i < 20; i++) {
+                    for (let i = 0; i < 30; i++) {
                         const angle = Math.random() * Math.PI * 2;
-                        const speed = 1 + Math.random() * 2;
+                        const speed = 2 + Math.random() * 4;
                         shieldParticles.push({
                             x: newState.enemy.x,
                             y: newState.enemy.y,
                             vx: Math.cos(angle) * speed,
                             vy: Math.sin(angle) * speed,
                             life: 1.0,
-                            size: 3,
+                            size: 4,
                             color: COLORS.powerup.shield,
                         });
                     }
@@ -507,17 +502,16 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                             newGrid[gx] !== undefined
                         ) {
                             const gridCell = newGrid[gx][gy];
-                            // Check if this grid position is protected by a territory shield
-                            const isProtected = newState.territoryShields.some(shield => {
-                                const distance = Math.hypot(gx - shield.x, gy - shield.y);
-                                return distance <= shield.radius &&
-                                    shield.endTime > Date.now() &&
-                                    shield.team !== updatedP.team; // Only protect against enemy team
-                            });
+
+                            // Check if this grid position is protected by GLOBAL SHIELD
+                            const isProtected = newState.globalShield &&
+                                newState.globalShield.active &&
+                                newState.globalShield.endTime > Date.now() &&
+                                newState.globalShield.team !== updatedP.team; // Protected regarding specific team (the one who used shield)
 
                             if (gridCell !== updatedP.team) {
                                 if (isProtected) {
-                                    // Blocked by shield - destroy projectile and show effect
+                                    // Blocked by GLOBAL SHIELD - destroy projectile and show effect
                                     action.playSound('powerup'); // Use powerup sound for shield hit
                                     for (let i = 0; i < 8; i++) {
                                         const angle = Math.random() * Math.PI * 2;
@@ -601,9 +595,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
             // Remove expired territory shields
 
-            newState.territoryShields = newState.territoryShields.filter(shield =>
-                shield.endTime > now
-            );
+            // Disable expired global shield
+            if (newState.globalShield && newState.globalShield.endTime <= now) {
+                newState.globalShield = null;
+            }
 
             // Update particles (optimized - faster decay, limited count)
             const MAX_PARTICLES = 30;
@@ -653,44 +648,34 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
                         switch (pu.type) {
                             case 'shield':
-                                // Create territory shield at the location where powerup was collected
+                                // Activate Global Territory Shield
                                 if (isPlayerTarget) {
-                                    // Convert canvas coordinates to grid coordinates
-                                    const gridX = Math.floor(pu.x / GRID_SIZE);
-                                    const gridY = Math.floor(pu.y / GRID_SIZE);
-
-                                    // Create a territory shield that protects area around the collection point
-                                    const territoryShield = {
-                                        x: gridX,
-                                        y: gridY,
-                                        radius: 5, // 5 grid cells radius
-                                        endTime: Date.now() + 3000, // 3 seconds duration
-                                        team: 'blue' as const, // Player's team
+                                    newState.globalShield = {
+                                        active: true,
+                                        endTime: Date.now() + 5000, // 5 seconds
+                                        team: 'blue'
                                     };
 
-                                    newState.territoryShields = [...newState.territoryShields, territoryShield];
-
-                                    // Create shield particles at the collection location
+                                    // Visual flair for activation
                                     const shieldParticles: Particle[] = [];
-                                    for (let i = 0; i < 30; i++) {
+                                    for (let i = 0; i < 40; i++) {
                                         const angle = Math.random() * Math.PI * 2;
-                                        const speed = 1 + Math.random() * 3;
+                                        const speed = 2 + Math.random() * 5;
                                         shieldParticles.push({
                                             x: pu.x,
                                             y: pu.y,
                                             vx: Math.cos(angle) * speed,
                                             vy: Math.sin(angle) * speed,
-                                            life: 1.0,
-                                            size: 3,
+                                            life: 1.2,
+                                            size: 4,
                                             color: COLORS.powerup.shield,
                                         });
                                     }
                                     newState.particles = [...newState.particles, ...shieldParticles];
 
-                                    // Play sound effect
                                     action.playSound('powerup');
                                 } else {
-                                    // For enemy, just add to their inventory
+                                    // For enemy, just add to their inventory (they use it via AI logic)
                                     targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
                                 }
                                 break;

@@ -626,69 +626,57 @@ export function drawFrenzyOverlay(
     ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
 }
 
-// Draw territory shields
-export function drawTerritoryShields(
+// Draw global territory shield overlay
+export function drawGlobalShieldOverlay(
     ctx: CanvasRenderingContext2D,
-    shields: Array<{
-        x: number;
-        y: number;
-        radius: number;
-        endTime: number;
-        team: 'blue' | 'red';
-    }>,
-    time: number
+    width: number,
+    height: number,
+    team: 'blue' | 'red'
 ): void {
-    const now = Date.now();
+    const time = Date.now();
+    const pulse = 0.5 + 0.3 * Math.sin(time / 300);
 
-    shields.forEach(shield => {
-        if (shield.endTime <= now) return; // Skip expired shields
+    // Shield color (Green for "Protection")
+    const shieldColor = '#22c55e'; // Green-500
 
-        const centerX = shield.x * GRID_SIZE + GRID_SIZE / 2;
-        const centerY = shield.y * GRID_SIZE + GRID_SIZE / 2;
-        const radius = shield.radius * GRID_SIZE;
+    ctx.save();
 
-        // Create pulsing effect
-        const pulse = 0.8 + 0.2 * Math.sin(time / 200);
+    // 1. Draw glowing border
+    ctx.strokeStyle = `rgba(34, 197, 94, ${0.6 * pulse})`;
+    ctx.lineWidth = 6 + 2 * Math.sin(time / 200);
+    ctx.strokeRect(0, 0, width, height);
 
-        // Draw shield area with transparency
-        ctx.save();
-        ctx.globalAlpha = 0.3 * pulse;
-        const gradient = ctx.createRadialGradient(
-            centerX, centerY, 0,
-            centerX, centerY, radius
-        );
-        gradient.addColorStop(0, shield.team === 'blue' ? '#4CAF50' : '#4CAF50'); // Green for both teams
-        gradient.addColorStop(1, 'transparent');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.fill();
+    // 2. Draw subtle hexagonal grid overlay
+    ctx.globalAlpha = 0.05 * pulse;
+    ctx.strokeStyle = shieldColor;
+    ctx.lineWidth = 1;
 
-        // Draw shield border
-        ctx.globalAlpha = 0.6 * pulse;
-        ctx.strokeStyle = '#4CAF50'; // Green border
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.stroke();
+    const hexSize = 40;
+    const hexHeight = hexSize * Math.sqrt(3);
+    const hexWidth = hexSize * 2;
+    const xStep = hexWidth * 0.75;
+    const yStep = hexHeight;
 
-        // Draw shield pattern
-        ctx.globalAlpha = 0.4 * pulse;
-        ctx.strokeStyle = '#4CAF50';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const startX = centerX + Math.cos(angle) * radius * 0.3;
-            const startY = centerY + Math.sin(angle) * radius * 0.3;
-            const endX = centerX + Math.cos(angle) * radius * 0.8;
-            const endY = centerY + Math.sin(angle) * radius * 0.8;
-
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-            ctx.stroke();
+    // Simple grid pattern
+    ctx.beginPath();
+    for (let x = 0; x < width + hexSize; x += xStep) {
+        for (let y = 0; y < height + hexSize; y += yStep) {
+            const shiftY = (Math.floor(x / xStep) % 2) * (hexHeight / 2);
+            ctx.moveTo(x + hexSize * Math.cos(0), y + shiftY + hexSize * Math.sin(0));
+            for (let i = 1; i <= 6; i++) {
+                ctx.lineTo(x + hexSize * Math.cos(i * Math.PI / 3), y + shiftY + hexSize * Math.sin(i * Math.PI / 3));
+            }
         }
+    }
+    ctx.stroke();
 
-        ctx.restore();
-    });
+    // 3. Status Text
+    ctx.fillStyle = shieldColor;
+    ctx.globalAlpha = 0.8 * pulse;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('TERRITORY PROTECTION ACTIVE', width / 2, 20);
+
+    ctx.restore();
 }
