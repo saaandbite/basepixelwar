@@ -18,6 +18,7 @@ import { ComboEffect } from './components/ComboEffect';
 import { InkBar } from './components/InkBar';
 import { WeaponSelector } from './components/WeaponSelector';
 import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
+import { ControlsStatus } from './components/ControlsStatus';
 
 import './game.css';
 
@@ -259,8 +260,6 @@ export default function GamePage() {
 
                             <PowerupIndicator
                                 shield={state.player.powerups?.shield || 0}
-                                globalShield={state.globalShield}
-                                footerStatus={footerStatus}
                             />
 
                             {/* Overlays */}
@@ -303,7 +302,7 @@ export default function GamePage() {
                 <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 p-3 flex flex-col gap-3 ring-1 ring-slate-200/80">
                     {state.gameStarted && state.gameActive ? (
                         <>
-                            {/* Ink Bar */}
+                            {/* 1. Ink Bar (Top) */}
                             <div className="w-full">
                                 <InkBar
                                     ink={state.player.ink}
@@ -313,7 +312,7 @@ export default function GamePage() {
                                 />
                             </div>
 
-                            {/* Weapon Selector */}
+                            {/* 2. Weapon Selector (Middle) */}
                             <div className="w-full flex justify-center">
                                 <WeaponSelector
                                     currentMode={state.player.weaponMode}
@@ -322,6 +321,13 @@ export default function GamePage() {
                                     onSelectMode={setWeaponMode}
                                 />
                             </div>
+
+                            {/* 3. Controls & Status (Bottom) */}
+                            <ControlsStatus
+                                shield={state.player.powerups?.shield || 0}
+                                globalShield={state.globalShield}
+                                footerStatus={footerStatus}
+                            />
                         </>
                     ) : (
                         <div className="h-24 flex items-center justify-center text-slate-400 text-sm font-medium italic">
