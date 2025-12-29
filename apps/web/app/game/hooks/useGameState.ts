@@ -52,6 +52,8 @@ function createInitialState(width: number, height: number): GameState {
             powerups: {
                 shield: 0,
             },
+            shieldActive: false,
+            shieldEndTime: 0,
             lastFireTime: 0,
             // Ink Economy
             ink: INK_MAX,
@@ -71,6 +73,8 @@ function createInitialState(width: number, height: number): GameState {
             powerups: {
                 shield: 0,
             },
+            shieldActive: false,
+            shieldEndTime: 0,
             // Ink Economy for enemy (for fairness)
             ink: INK_MAX,
             maxInk: INK_MAX,
@@ -278,39 +282,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 newState.player = { ...newState.player, cooldown: newState.player.cooldown - 1 };
             }
 
-            // Check for automatic shield activation (2 seconds after collecting shield)
-            if (newState.player.powerups?.shieldTimer &&
-                newState.player.powerups.shield > 0 &&
-                Date.now() - newState.player.powerups.shieldTimer >= 2000) {
-                // Automatically activate shield after 2 seconds
-                const playerPowerups = { ...newState.player.powerups };
-                playerPowerups.shield = Math.max(0, playerPowerups.shield - 1);
-                playerPowerups.shieldTimer = undefined; // Reset timer
-
-                // Create shield particles
-                const shieldParticles: Particle[] = [];
-                for (let i = 0; i < 20; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = 1 + Math.random() * 2;
-                    shieldParticles.push({
-                        x: newState.player.x,
-                        y: newState.player.y,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        life: 1.0,
-                        size: 3,
-                        color: COLORS.powerup.shield,
-                    });
-                }
-
+            // Check for shield expiration
+            if (newState.player.shieldActive && Date.now() >= newState.player.shieldEndTime!) {
                 newState.player = {
                     ...newState.player,
-                    powerups: playerPowerups
+                    shieldActive: false,
+                    shieldEndTime: 0,
                 };
-                newState.particles = [...newState.particles, ...shieldParticles];
-
-                // Play sound effect
-                action.playSound('powerup');
             }
 
             // Enemy AI
@@ -395,7 +373,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             // Update projectiles
             const canvasWidth = newState.cols * GRID_SIZE;
             const canvasHeight = newState.rows * GRID_SIZE;
-            const newProjectiles: Projectile[] = [];
+            let newProjectiles: Projectile[] = [];
             const newParticles: Particle[] = [...newState.particles];
             let newGrid = newState.grid;
             const newTerritoryBatches = [...newState.territoryBatches];
@@ -565,6 +543,77 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 }
             }
 
+            // Check for shield blocking of projectiles
+            // Player shield blocks enemy projectiles
+            if (newState.player.shieldActive) {
+                const projectilesToKeep: Projectile[] = [];
+
+                for (const p of newProjectiles) {
+                    // Check if enemy projectile is close to player
+                    const distToPlayer = Math.hypot(p.x - newState.player.x, p.y - newState.player.y);
+                    if (p.team === 'red' && distToPlayer < 40) { // 40 pixel radius around player
+                        // Projectile is blocked by shield
+
+                        // Create shield impact particles
+                        for (let i = 0; i < 5; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = 1 + Math.random() * 2;
+                            newParticles.push({
+                                x: p.x,
+                                y: p.y,
+                                vx: Math.cos(angle) * speed,
+                                vy: Math.sin(angle) * speed,
+                                life: 0.8,
+                                size: 2,
+                                color: COLORS.powerup.shield,
+                            });
+                        }
+                        // Don't add this projectile to the keep list (effectively removing it)
+                    } else {
+                        // Keep this projectile
+                        projectilesToKeep.push(p);
+                    }
+                }
+
+                // Update projectiles with the ones that weren't blocked
+                newProjectiles = projectilesToKeep;
+            }
+
+            // Enemy shield blocks player projectiles
+            if (newState.enemy.shieldActive) {
+                const projectilesToKeep: Projectile[] = [];
+
+                for (const p of newProjectiles) {
+                    // Check if player projectile is close to enemy
+                    const distToEnemy = Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y);
+                    if (p.team === 'blue' && distToEnemy < 40) { // 40 pixel radius around enemy
+                        // Projectile is blocked by shield
+
+                        // Create shield impact particles
+                        for (let i = 0; i < 5; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = 1 + Math.random() * 2;
+                            newParticles.push({
+                                x: p.x,
+                                y: p.y,
+                                vx: Math.cos(angle) * speed,
+                                vy: Math.sin(angle) * speed,
+                                life: 0.8,
+                                size: 2,
+                                color: COLORS.powerup.shield,
+                            });
+                        }
+                        // Don't add this projectile to the keep list (effectively removing it)
+                    } else {
+                        // Keep this projectile
+                        projectilesToKeep.push(p);
+                    }
+                }
+
+                // Update projectiles with the ones that weren't blocked
+                newProjectiles = projectilesToKeep;
+            }
+
             // Activate frenzy if golden pixel was captured
             if (activateFrenzyFor === 'blue') {
                 newState.player = {
@@ -631,9 +680,35 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         switch (pu.type) {
                             case 'shield':
                                 targetPowerups.shield = Math.min(targetPowerups.shield + 1, 2);
-                                // Set timer when shield is collected by player
+                                // Immediately activate shield when collected by player
                                 if (isPlayerTarget) {
-                                    targetPowerups.shieldTimer = Date.now(); // Record when shield was collected
+                                    // Activate shield immediately
+                                    const now = Date.now();
+                                    newState.player = {
+                                        ...newState.player,
+                                        shieldActive: true,
+                                        shieldEndTime: now + 1000, // 1 second duration
+                                    };
+
+                                    // Create shield particles
+                                    const shieldParticles: Particle[] = [];
+                                    for (let i = 0; i < 20; i++) {
+                                        const angle = Math.random() * Math.PI * 2;
+                                        const speed = 1 + Math.random() * 2;
+                                        shieldParticles.push({
+                                            x: newState.player.x,
+                                            y: newState.player.y,
+                                            vx: Math.cos(angle) * speed,
+                                            vy: Math.sin(angle) * speed,
+                                            life: 1.0,
+                                            size: 3,
+                                            color: COLORS.powerup.shield,
+                                        });
+                                    }
+                                    newState.particles = [...newState.particles, ...shieldParticles];
+
+                                    // Play sound effect
+                                    action.playSound('powerup');
                                 }
                                 break;
                         }

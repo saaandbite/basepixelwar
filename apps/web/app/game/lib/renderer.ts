@@ -433,6 +433,24 @@ export function drawCannon(
         }
     }
 
+    // Draw active shield if present
+    if (cannon.shieldActive) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, 0, Math.PI * 2); // 30 pixel radius around cannon
+        const gradient = ctx.createRadialGradient(0, 0, 20, 0, 0, 30);
+        gradient.addColorStop(0, 'rgba(76, 175, 80, 0.2)'); // Green with transparency
+        gradient.addColorStop(1, 'rgba(76, 175, 80, 0.0)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Shield border
+        ctx.strokeStyle = COLORS.powerup.shield;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+
     ctx.restore();
 }
 

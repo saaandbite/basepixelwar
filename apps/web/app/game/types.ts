@@ -71,6 +71,8 @@ export interface Cannon {
         shield: number;
         shieldTimer?: number; // Timestamp when shield was collected
     };
+    shieldActive?: boolean; // Whether shield is currently active
+    shieldEndTime?: number; // When the active shield will end
     lastFireTime?: number;
     longDragAngle?: number;
     // Ink Economy
