@@ -5,12 +5,11 @@ export const COLORS = {
     red: '#FF8888',       // Enemy Grid
     bulletStrokeBlue: '#3B82F6', // Darker Blue Outline
     bulletStrokeRed: '#EF4444',  // Darker Red Outline
-    meteor: '#F9C74F',
-    meteorTrail: '#FDB813',
+
     bg: '#E2E8F0',        // Darker Slate for Grid Lines
     powerup: {
         shield: '#4CAF50',  // Green
-        meteor: '#FF9800',  // Orange
+
     },
     ink: '#4CC9F0',       // Ink bar color
     inkBomb: '#7B2CBF',   // Ink bomb color
@@ -24,7 +23,7 @@ export const GAME_DURATION = 90;
 export const POWERUP_CHANCE = 0.05; // 5% chance per territory flip
 export const MAX_POWERUPS_ON_SCREEN = 3;
 export const BULLET_SPEED = 8;
-export const METEOR_SPEED = 6;
+
 
 // ============================================
 // INK ECONOMY SYSTEM

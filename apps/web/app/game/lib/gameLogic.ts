@@ -1,7 +1,7 @@
 // Game Logic Functions
 
 import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon, GoldenPixel, WeaponMode } from '../types';
-import { GRID_SIZE, COLORS, BULLET_SPEED, WEAPON_MODES, GOLDEN_PIXEL_SIZE } from './constants';
+import { GRID_SIZE, COLORS, BULLET_SPEED, WEAPON_MODES } from './constants';
 
 // Initialize grid with half red (top) and half blue (bottom)
 export function initializeGrid(cols: number, rows: number): ('blue' | 'red')[][] {
@@ -33,7 +33,6 @@ export function createBullet(
         vy: Math.sin(angle) * BULLET_SPEED,
         team,
         active: true,
-        isMeteor: false,
         lifetime: 0,
         paintRadius: 2,
     });
@@ -60,7 +59,6 @@ export function createWeaponBullet(
                 vy: Math.sin(source.angle) * modeConfig.speed,
                 team,
                 active: true,
-                isMeteor: false,
                 isInkBomb: false,
                 lifetime: 0,
                 paintRadius: modeConfig.paintRadius,
@@ -79,7 +77,6 @@ export function createWeaponBullet(
                     vy: Math.sin(source.angle + offset) * modeConfig.speed,
                     team,
                     active: true,
-                    isMeteor: false,
                     isInkBomb: false,
                     lifetime: 0,
                     maxLifetime: shotgunConfig.maxLifetime,
@@ -102,7 +99,6 @@ export function createWeaponBullet(
                 vy: baseVy - 4, // Strong upward arc boost for lobbing effect
                 team,
                 active: true,
-                isMeteor: false,
                 isInkBomb: true,
                 lifetime: 0,
                 paintRadius: inkBombConfig.paintRadius,
@@ -134,26 +130,7 @@ export function createGoldenPixel(cols: number, rows: number): GoldenPixel {
 }
 
 // Create a meteor projectile
-export function createMeteor(
-    startX: number,
-    startY: number,
-    targetX: number,
-    targetY: number,
-    speed: number = 6
-): Projectile {
-    const angle = Math.atan2(targetY - startY, targetX - startX);
-    return {
-        x: startX,
-        y: startY,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        team: 'neutral',
-        active: true,
-        isMeteor: true,
-        target: { x: targetX, y: targetY },
-        lifetime: 0,
-    };
-}
+
 
 // Paint grid cells in a radius
 export function paintGrid(
@@ -190,38 +167,7 @@ export function paintGrid(
 }
 
 // Explode meteor and flip territory
-export function explodeMeteor(
-    grid: ('blue' | 'red')[][],
-    x: number,
-    y: number,
-    cols: number,
-    rows: number
-): ('blue' | 'red')[][] {
-    const newGrid = grid.map((col) => [...col]);
-    const gx = Math.floor(x / GRID_SIZE);
-    const gy = Math.floor(y / GRID_SIZE);
-    const radius = 9;
 
-    for (let i = -radius; i <= radius; i++) {
-        for (let j = -radius; j <= radius; j++) {
-            const nx = gx + i;
-            const ny = gy + j;
-            if (i * i + j * j <= radius * radius) {
-                if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
-                    const column = newGrid[nx];
-                    if (column) {
-                        const currentCell = column[ny];
-                        if (currentCell !== undefined) {
-                            column[ny] = currentCell === 'blue' ? 'red' : 'blue';
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return newGrid;
-}
 
 // Calculate score percentages
 export function calculateScore(
@@ -322,21 +268,17 @@ export function findLargestTerritory(
 export function createParticles(
     x: number,
     y: number,
-    type: 'blue' | 'red' | 'meteor',
+    type: 'blue' | 'red',
     count: number = 3
 ): Particle[] {
     // Limit particle count for performance
-    const actualCount = Math.min(count, type === 'meteor' ? 8 : 3);
+    const actualCount = Math.min(count, 3);
     const particles: Particle[] = [];
     let baseColor = '#FFFFFF';
-    let glow = false;
+    const glow = false;
 
     if (type === 'blue') baseColor = COLORS.bulletStrokeBlue;
     else if (type === 'red') baseColor = COLORS.bulletStrokeRed;
-    else if (type === 'meteor') {
-        baseColor = COLORS.meteor;
-        glow = true;
-    }
 
     for (let i = 0; i < actualCount; i++) {
         const angle = (i / actualCount) * Math.PI * 2; // Even distribution

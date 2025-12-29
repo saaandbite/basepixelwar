@@ -15,8 +15,7 @@ import {
     drawCannon,
     drawTrajectory,
     drawScreenFlash,
-    drawMeteorWarning,
-    drawTargetMarker,
+
     drawGoldenPixel,
     drawFrenzyOverlay,
     drawGlobalShieldOverlay,
@@ -90,14 +89,14 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
 
         // Draw Global Shield Overlay if active
         if (state.globalShield && state.globalShield.active && state.globalShield.team === 'blue') {
-            drawGlobalShieldOverlay(effectsCtx, width, height, state.globalShield.team);
+            drawGlobalShieldOverlay(effectsCtx, width, height);
         }
 
         // RED Team Global Shield? (Currently visuals are green for 'active' defense)
         if (state.globalShield && state.globalShield.active && state.globalShield.team === 'red') {
             // Maybe add a red tinted overlay for enemy shield?
             // For now, let's just show the same overlay but maybe rely on the text
-            drawGlobalShieldOverlay(effectsCtx, width, height, state.globalShield.team);
+            drawGlobalShieldOverlay(effectsCtx, width, height);
         }
 
         // Draw Golden Pixel (secondary objective)
@@ -126,13 +125,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
         // Draw effects overlay
         effectsCtx.clearRect(0, 0, width, height);
         drawScreenFlash(effectsCtx, state.screenFlash, width, height);
-        if (state.showMeteorIndicator) {
-            drawMeteorWarning(effectsCtx, width, height);
-        }
-        // Draw target marker if active
-        if (state.meteorTarget) {
-            drawTargetMarker(effectsCtx, state.meteorTarget.x, state.meteorTarget.y);
-        }
+
         // Draw frenzy mode overlay
         if (state.player.isFrenzy) {
             drawFrenzyOverlay(effectsCtx, width, height, 1);
@@ -172,7 +165,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
 
             const dx = cx - state.player.x;
             const dy = cy - state.player.y;
-            const dist = Math.hypot(dx, dy);
+            // const dist = Math.hypot(dx, dy);
 
             // Calculate angle
             let angle = Math.atan2(dy, dx);
@@ -184,7 +177,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
 
             onPlayerInput(angle, isDown, isDown);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.isFiring, state.player.powerups?.shield, onPlayerInput]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, onPlayerInput]
     );
 
     // Mouse events

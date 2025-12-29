@@ -6,14 +6,14 @@
 
 interface PowerupIndicatorProps {
     shield: number;
-    showMeteorWarning: boolean;
+    globalShield?: { active: boolean; team: 'blue' | 'red'; endTime: number } | null;
     footerStatus: { name: string; icon: string; color: string } | null;
 }
 
 export function PowerupIndicator({
     shield,
-    showMeteorWarning,
     footerStatus,
+    globalShield,
 }: PowerupIndicatorProps) {
 
 
@@ -61,16 +61,7 @@ export function PowerupIndicator({
                 </div>
             )}
 
-            {/* Meteor Warning Indicator */}
-            {showMeteorWarning && (
-                <div className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center pointer-events-none">
-                    <div className="bg-red-500/90 text-white p-3 rounded-full shadow-[0_0_20px_rgba(239,68,68,0.6)] animate-warning-flash border-2 border-white/50 backdrop-blur-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m13 2 9 6.265L12 22 2 8.265 11 2Z" />
-                        </svg>
-                    </div>
-                </div>
-            )}
+
 
 
             {/* Target Marker - Disabled: Canvas already renders this */}
@@ -107,6 +98,22 @@ export function PowerupIndicator({
                             <div className={`flex items-center gap-1 ${footerStatus.color} animate-pulse`}>
                                 {renderFooterIcon(footerStatus.icon)}
                                 <span className="text-xs font-bold tracking-wide">{footerStatus.name}</span>
+                            </div>
+                        </>
+                    ) : shield > 0 ? (
+                        <>
+                            <span className="text-[10px] text-slate-400 font-bold mb-0.5">STATUS</span>
+                            <div className="flex items-center gap-1 text-green-500">
+                                {renderFooterIcon('shield')}
+                                <span className="text-xs font-bold tracking-wide">SHIELD ACTIVE ({shield})</span>
+                            </div>
+                        </>
+                    ) : globalShield?.active && globalShield.team === 'blue' ? (
+                        <>
+                            <span className="text-[10px] text-slate-400 font-bold mb-0.5">STATUS</span>
+                            <div className="flex items-center gap-1 text-green-500 animate-pulse">
+                                {renderFooterIcon('shield')}
+                                <span className="text-xs font-bold tracking-wide">SHIELD PROTECTED</span>
                             </div>
                         </>
                     ) : (

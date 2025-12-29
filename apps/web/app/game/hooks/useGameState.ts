@@ -19,9 +19,7 @@ import {
     initializeGrid,
     createBullet,
     createWeaponBullet,
-    createMeteor,
     paintGrid,
-    explodeMeteor,
     findLargestTerritory,
     createParticles,
     createPowerup,
@@ -40,7 +38,7 @@ function createInitialState(width: number, height: number): GameState {
         rows,
         projectiles: [],
         particles: [],
-        meteors: [],
+
         powerups: [],
         territoryBatches: [],
         player: {
@@ -92,8 +90,7 @@ function createInitialState(width: number, height: number): GameState {
         shakeIntensity: 0,
         shakeDirection: { x: 0, y: 0 },
         screenFlash: 0,
-        showMeteorIndicator: false,
-        meteorTarget: null,
+
         // Golden Pixel
         goldenPixel: null,
         lastGoldenPixelSpawn: 0,
@@ -115,9 +112,7 @@ type GameAction =
     | { type: 'TIMER_TICK'; playSound: (name: string) => void }
     | { type: 'END_GAME' }
     | { type: 'USE_SHIELD'; playSound: (name: string) => void }
-    | { type: 'SHOW_METEOR_WARNING'; targetX: number; targetY: number }
-    | { type: 'LAUNCH_METEOR'; targetX: number; targetY: number }
-    | { type: 'HIDE_METEOR_WARNING' }
+
     | { type: 'ACTIVATE_FRENZY'; team: 'blue' | 'red'; playSound: (name: string) => void };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -373,7 +368,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             // Update projectiles
             const canvasWidth = newState.cols * GRID_SIZE;
             const canvasHeight = newState.rows * GRID_SIZE;
-            let newProjectiles: Projectile[] = [];
+            const newProjectiles: Projectile[] = [];
             const newParticles: Particle[] = [...newState.particles];
             let newGrid = newState.grid;
             const newTerritoryBatches = [...newState.territoryBatches];
@@ -418,24 +413,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     continue;
                 }
 
-                if (p.isMeteor && p.target) {
-                    const dist = Math.hypot(updatedP.x - p.target.x, updatedP.y - p.target.y);
-                    if (dist < 15 || updatedP.y > canvasHeight) {
-                        // Explode meteor
-                        newGrid = explodeMeteor(newGrid, updatedP.x, updatedP.y, newState.cols, newState.rows);
-                        newParticles.push(...createParticles(updatedP.x, updatedP.y, 'meteor', 50));
-                        newTerritoryBatches.push({
-                            x: Math.floor(updatedP.x / GRID_SIZE),
-                            y: Math.floor(updatedP.y / GRID_SIZE),
-                            radius: 10,
-                            color: COLORS.meteor,
-                            opacity: 1.0,
-                        });
-                        action.playSound('meteor');
-                    } else {
-                        newProjectiles.push(updatedP);
-                    }
-                } else if (p.isInkBomb) {
+                if (p.isInkBomb) {
                     // Ink bomb - mortar-style arc projectile
                     const gx = Math.floor(updatedP.x / GRID_SIZE);
                     const gy = Math.floor(updatedP.y / GRID_SIZE);
@@ -731,10 +709,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             let newGoldenPixel = state.goldenPixel;
             let lastGoldenPixelSpawn = state.lastGoldenPixelSpawn;
 
-            // Check for meteor spawn
-            if ([60, 40, 20].includes(newTimeLeft)) {
-                // Will be handled by component
-            }
+
 
             // Golden Pixel spawn every 30 seconds
             const timeSinceLastSpawn = GAME_DURATION - newTimeLeft - lastGoldenPixelSpawn;
@@ -811,35 +786,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             };
         }
 
-        case 'SHOW_METEOR_WARNING': {
-            return {
-                ...state,
-                showMeteorIndicator: true,
-                meteorTarget: { x: action.targetX, y: action.targetY },
-            };
-        }
 
-        case 'HIDE_METEOR_WARNING': {
-            return {
-                ...state,
-                showMeteorIndicator: false,
-            };
-        }
-
-        case 'LAUNCH_METEOR': {
-            const startX = Math.random() * (state.cols * GRID_SIZE);
-            const startY = -50;
-            const speed = 6 + Math.random() * 2;
-
-            return {
-                ...state,
-                showMeteorIndicator: false,
-                projectiles: [
-                    ...state.projectiles,
-                    createMeteor(startX, startY, action.targetX, action.targetY, speed),
-                ],
-            };
-        }
 
         case 'USE_SHIELD': {
             if (!state.player.powerups || state.player.powerups.shield <= 0) return state;
@@ -921,21 +868,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         dispatch({ type: 'TIMER_TICK', playSound });
     }, []);
 
-    const showMeteorWarning = useCallback((targetX: number, targetY: number) => {
-        dispatch({ type: 'SHOW_METEOR_WARNING', targetX, targetY });
-    }, []);
 
-    const hideMeteorWarning = useCallback(() => {
-        dispatch({ type: 'HIDE_METEOR_WARNING' });
-    }, []);
-
-    const launchMeteor = useCallback((targetX: number, targetY: number) => {
-        dispatch({ type: 'LAUNCH_METEOR', targetX, targetY });
-    }, []);
-
-    const callPlayerMeteor = useCallback(() => {
-        // Disabled
-    }, []);
 
     const activateShield = useCallback((playSound: (name: string) => void) => {
         dispatch({ type: 'USE_SHIELD', playSound });
@@ -957,10 +890,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         setWeaponMode,
         updateGame,
         timerTick,
-        showMeteorWarning,
-        hideMeteorWarning,
-        launchMeteor,
-        callPlayerMeteor,
+
         activateShield,
     };
 }

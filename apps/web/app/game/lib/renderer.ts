@@ -262,61 +262,22 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, projectiles: Proj
         ctx.save();
         ctx.translate(p.x, p.y);
 
-        if (p.isMeteor) {
-            // Meteor with trail
-            ctx.fillStyle = COLORS.meteor;
-            ctx.beginPath();
-            ctx.arc(0, 0, 10, 0, Math.PI * 2);
-            ctx.fill();
+        // Bullet with glow
+        const bulletColor = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+        gradient.addColorStop(0, bulletColor);
+        gradient.addColorStop(1, `${bulletColor}40`);
 
-            // Glowing edge
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
 
-            // Heat trail
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(-p.vx * 3, -p.vy * 3);
-            ctx.strokeStyle = COLORS.meteorTrail;
-            ctx.lineWidth = 4;
-            ctx.stroke();
-
-            // Fire particles
-            for (let i = 0; i < 3; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = Math.random() * 15;
-                const size = 2 + Math.random() * 3;
-
-                ctx.fillStyle = `rgba(249, 199, 79, ${0.7 - i * 0.2})`;
-                ctx.beginPath();
-                ctx.arc(
-                    -p.vx * i * 0.5 + Math.cos(angle) * dist,
-                    -p.vy * i * 0.5 + Math.sin(angle) * dist,
-                    size,
-                    0,
-                    Math.PI * 2
-                );
-                ctx.fill();
-            }
-        } else {
-            // Bullet with glow
-            const bulletColor = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
-            gradient.addColorStop(0, bulletColor);
-            gradient.addColorStop(1, `${bulletColor}40`);
-
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(0, 0, 6, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Core
-            ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.arc(0, 0, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // Core
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, 0, 3, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.restore();
     });
@@ -416,7 +377,7 @@ export function drawCannon(
             ctx.save();
             ctx.rotate(-cannon.angle); // Unrotate for proper positioning
 
-            let indicatorX = 25;
+            const indicatorX = 25;
             if (shield > 0) {
                 ctx.fillStyle = COLORS.powerup.shield;
                 ctx.beginPath();
@@ -489,43 +450,7 @@ export function drawScreenFlash(
 }
 
 // Draw target marker for meteor
-export function drawTargetMarker(
-    ctx: CanvasRenderingContext2D,
-    targetX: number,
-    targetY: number
-): void {
-    ctx.save();
 
-    // Outer dashed circle
-    ctx.beginPath();
-    ctx.arc(targetX, targetY, 40, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(249, 199, 79, 0.4)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([8, 6]);
-    ctx.stroke();
-
-    // Inner pulsating circle
-    const pulse = 0.5 + 0.3 * Math.sin(Date.now() / 200);
-    ctx.beginPath();
-    ctx.arc(targetX, targetY, 20, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(249, 199, 79, ${0.2 * pulse})`;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-// Draw meteor warning pulse
-export function drawMeteorWarning(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number
-): void {
-    const pulse = 0.05 + Math.sin(Date.now() / 100) * 0.03;
-    ctx.fillStyle = `rgba(249, 199, 79, ${pulse})`;
-    ctx.fillRect(0, 0, width, height);
-}
 
 // Draw Golden Pixel (secondary objective)
 export function drawGoldenPixel(
@@ -631,7 +556,7 @@ export function drawGlobalShieldOverlay(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    team: 'blue' | 'red'
+    // team: 'blue' | 'red' // unused for now but good to keep in API signature? user asked to fix lint.
 ): void {
     const time = Date.now();
     const pulse = 0.5 + 0.3 * Math.sin(time / 300);

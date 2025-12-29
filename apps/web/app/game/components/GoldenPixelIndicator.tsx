@@ -2,7 +2,7 @@
 
 // Golden Pixel Indicator Component - Shows golden pixel status and countdown
 
-import { COLORS, GOLDEN_PIXEL_SPAWN_INTERVAL, GAME_DURATION } from '../lib/constants';
+import { GOLDEN_PIXEL_SPAWN_INTERVAL, GAME_DURATION } from '../lib/constants';
 import type { GoldenPixel } from '../types';
 
 interface GoldenPixelIndicatorProps {
@@ -28,63 +28,15 @@ export function GoldenPixelIndicator({
     // Show frenzy mode indicator
     if (isFrenzy) {
         return (
-            <div className="golden-indicator frenzy">
-                <div className="frenzy-icon">⚡</div>
-                <div className="frenzy-text">
-                    <span className="frenzy-label">FRENZY!</span>
-                    <span className="frenzy-time">{frenzyTimeLeft.toFixed(1)}s</span>
+            <div className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                bg-gradient-to-br from-[#FF6B35] to-[#ff9500] text-white shadow-[0_0_20px_rgba(255,107,53,0.6)] animate-pulse
+            `}>
+                <div className="text-base animate-pulse">⚡</div>
+                <div className="flex flex-col leading-[1.1]">
+                    <span className="text-[11px] uppercase tracking-wider">FRENZY!</span>
+                    <span className="text-sm font-bold">{frenzyTimeLeft.toFixed(1)}s</span>
                 </div>
-
-                <style jsx>{`
-                    .golden-indicator {
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        padding: 6px 12px;
-                        border-radius: 20px;
-                        font-size: 12px;
-                        font-weight: 600;
-                    }
-
-                    .golden-indicator.frenzy {
-                        background: linear-gradient(135deg, ${COLORS.frenzy}, #ff9500);
-                        color: white;
-                        animation: frenzy-glow 0.3s ease-in-out infinite alternate;
-                        box-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
-                    }
-
-                    @keyframes frenzy-glow {
-                        from { transform: scale(1); }
-                        to { transform: scale(1.05); }
-                    }
-
-                    .frenzy-icon {
-                        font-size: 16px;
-                        animation: frenzy-pulse 0.2s ease-in-out infinite alternate;
-                    }
-
-                    @keyframes frenzy-pulse {
-                        from { transform: scale(1); }
-                        to { transform: scale(1.2); }
-                    }
-
-                    .frenzy-text {
-                        display: flex;
-                        flex-direction: column;
-                        line-height: 1.1;
-                    }
-
-                    .frenzy-label {
-                        font-size: 11px;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                    }
-
-                    .frenzy-time {
-                        font-size: 14px;
-                        font-weight: 700;
-                    }
-                `}</style>
             </div>
         );
     }
@@ -92,86 +44,24 @@ export function GoldenPixelIndicator({
     // Show active golden pixel
     if (goldenPixel && goldenPixel.active) {
         return (
-            <div className="golden-indicator active">
-                <div className="golden-icon">🪙</div>
-                <span className="golden-text">CAPTURE!</span>
-
-                <style jsx>{`
-                    .golden-indicator {
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        padding: 6px 12px;
-                        border-radius: 20px;
-                        font-size: 12px;
-                        font-weight: 600;
-                    }
-
-                    .golden-indicator.active {
-                        background: linear-gradient(135deg, ${COLORS.golden}, #ffc107);
-                        color: #7c5800;
-                        animation: golden-pulse 0.5s ease-in-out infinite alternate;
-                        box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-                    }
-
-                    @keyframes golden-pulse {
-                        from { transform: scale(1); box-shadow: 0 0 10px rgba(255, 215, 0, 0.4); }
-                        to { transform: scale(1.02); box-shadow: 0 0 20px rgba(255, 215, 0, 0.7); }
-                    }
-
-                    .golden-icon {
-                        font-size: 14px;
-                        animation: coin-spin 1s linear infinite;
-                    }
-
-                    @keyframes coin-spin {
-                        0% { transform: rotateY(0deg); }
-                        100% { transform: rotateY(360deg); }
-                    }
-
-                    .golden-text {
-                        font-size: 11px;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                        font-weight: 700;
-                    }
-                `}</style>
+            <div className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                bg-gradient-to-br from-[#FFD700] to-[#ffc107] text-[#7c5800] shadow-[0_0_15px_rgba(255,215,0,0.5)] animate-pulse
+            `}>
+                <div className="text-sm animate-[spin_1s_linear_infinite]">🪙</div>
+                <span className="text-[11px] uppercase tracking-wider font-bold">CAPTURE!</span>
             </div>
         );
     }
 
     // Show countdown to next spawn
     return (
-        <div className="golden-indicator countdown">
-            <div className="countdown-icon">🪙</div>
-            <span className="countdown-text">{Math.ceil(nextSpawnIn)}s</span>
-
-            <style jsx>{`
-                .golden-indicator {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    padding: 4px 10px;
-                    border-radius: 16px;
-                    font-size: 11px;
-                    font-weight: 600;
-                }
-
-                .golden-indicator.countdown {
-                    background: rgba(255, 215, 0, 0.15);
-                    color: #a08600;
-                    border: 1px solid rgba(255, 215, 0, 0.3);
-                }
-
-                .countdown-icon {
-                    font-size: 12px;
-                    opacity: 0.7;
-                }
-
-                .countdown-text {
-                    font-variant-numeric: tabular-nums;
-                }
-            `}</style>
+        <div className={`
+            flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+            bg-[rgba(255,215,0,0.15)] text-[#a08600] border border-[rgba(255,215,0,0.3)]
+        `}>
+            <div className="text-xs opacity-70">🪙</div>
+            <span className="tabular-nums">{Math.ceil(nextSpawnIn)}s</span>
         </div>
     );
 }

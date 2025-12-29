@@ -11,7 +11,7 @@ export interface Projectile {
     vy: number;
     team: 'blue' | 'red' | 'neutral';
     active: boolean;
-    isMeteor: boolean;
+
     isInkBomb?: boolean;
     target?: { x: number; y: number };
     lifetime: number;
@@ -88,7 +88,7 @@ export interface GameState {
     rows: number;
     projectiles: Projectile[];
     particles: Particle[];
-    meteors: Projectile[];
+
     powerups: Powerup[];
     territoryBatches: TerritoryBatch[];
     player: Cannon;
@@ -105,8 +105,7 @@ export interface GameState {
     shakeIntensity: number;
     shakeDirection: { x: number; y: number };
     screenFlash: number;
-    showMeteorIndicator: boolean;
-    meteorTarget: { x: number; y: number } | null;
+
     // Golden Pixel
     goldenPixel: GoldenPixel | null;
     lastGoldenPixelSpawn: number;
@@ -134,7 +133,7 @@ export type GameAction =
     | { type: 'UPDATE_PARTICLES' }
     | { type: 'UPDATE_POWERUPS' }
     | { type: 'UPDATE_ENEMY_AI' }
-    | { type: 'TRIGGER_METEOR' }
+
     | { type: 'COLLECT_POWERUP'; powerup: Powerup }
     | { type: 'ACTIVATE_FRENZY' }
     | { type: 'END_GAME' }
