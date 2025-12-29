@@ -25,7 +25,7 @@ export const WeaponSelector = WeaponSelectorMemo;
 
 function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode }: WeaponSelectorProps) {
     return (
-        <div className="flex gap-1.5 p-2 bg-white/95 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-black/5">
+        <div className="flex gap-2.5 p-2.5 bg-white/95 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-black/5">
             {WEAPON_LIST.map(({ mode, key }) => {
                 const config = WEAPON_MODES[mode];
                 const canAfford = isFrenzy || ink >= config.cost;

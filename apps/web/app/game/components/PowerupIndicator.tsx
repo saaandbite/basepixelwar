@@ -76,51 +76,34 @@ export function PowerupIndicator({
 
 
             {/* Footer */}
-            <footer className="bg-white/95 border-t border-slate-100/80 px-4 py-2 z-10 shrink-0 backdrop-blur-sm flex justify-between items-center gap-3 relative overflow-hidden h-14">
-                {/* Hint Text (LEFT) */}
-                <div className="flex flex-col items-start justify-center text-slate-500 font-bold tracking-wide">
-                    <div className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 2c0 .667-1 2-1 3.5s2 1.833 2 2.5c0 1.667-1.333 2-2 2H8.5c-.667 0-1.333-.333-2-1-.667-.667-1.5-3-2.5-3S3 6.5 3 7.5s1.333 5.5 3 6 1.333.5 2 1.5 2 2 3.5 2 2-.333 3.5-1.5 1-2.5 1-4-.5-4-1-5S14 1.333 14 2Z" />
-                        </svg>
-                        <span className="text-xs md:text-sm">CONTROLS</span>
-                    </div>
-                    <span className="text-[10px] md:text-xs text-slate-400 mt-0.5">
-                        HOLD & DRAG TO SHOOT
-                    </span>
+            <footer className="bg-white/95 border-t border-slate-100/80 px-4 py-3 z-10 shrink-0 backdrop-blur-sm flex justify-between items-center gap-3 relative overflow-hidden h-12">
+                {/* Hint Text (LEFT) - Simplified */}
+                <div className="flex items-center gap-2 text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2c0 .667-1 2-1 3.5s2 1.833 2 2.5c0 1.667-1.333 2-2 2H8.5c-.667 0-1.333-.333-2-1-.667-.667-1.5-3-2.5-3S3 6.5 3 7.5s1.333 5.5 3 6 1.333.5 2 1.5 2 2 3.5 2 2-.333 3.5-1.5 1-2.5 1-4-.5-4-1-5S14 1.333 14 2Z" />
+                    </svg>
+                    <span className="text-xs font-medium">Hold & drag to shoot</span>
                 </div>
 
-                {/* Power-up Notification (RIGHT) */}
-                <div className="flex flex-col items-end justify-center">
+                {/* Power-up Notification (RIGHT) - Simplified */}
+                <div className="flex items-center gap-1.5">
                     {footerStatus ? (
-                        <>
-                            <span className="text-[10px] text-slate-400 font-bold mb-0.5">ACQUIRED</span>
-                            <div className={`flex items-center gap-1 ${footerStatus.color} animate-pulse`}>
-                                {renderFooterIcon(footerStatus.icon)}
-                                <span className="text-xs font-bold tracking-wide">{footerStatus.name}</span>
-                            </div>
-                        </>
+                        <div className={`flex items-center gap-1.5 ${footerStatus.color} animate-pulse`}>
+                            {renderFooterIcon(footerStatus.icon)}
+                            <span className="text-sm font-bold">{footerStatus.name}</span>
+                        </div>
                     ) : shield > 0 ? (
-                        <>
-                            <span className="text-[10px] text-slate-400 font-bold mb-0.5">STATUS</span>
-                            <div className="flex items-center gap-1 text-green-500">
-                                {renderFooterIcon('shield')}
-                                <span className="text-xs font-bold tracking-wide">SHIELD ACTIVE ({shield})</span>
-                            </div>
-                        </>
+                        <div className="flex items-center gap-1.5 text-green-500">
+                            {renderFooterIcon('shield')}
+                            <span className="text-sm font-bold">Shield x{shield}</span>
+                        </div>
                     ) : globalShield?.active && globalShield.team === 'blue' ? (
-                        <>
-                            <span className="text-[10px] text-slate-400 font-bold mb-0.5">STATUS</span>
-                            <div className="flex items-center gap-1 text-green-500 animate-pulse">
-                                {renderFooterIcon('shield')}
-                                <span className="text-xs font-bold tracking-wide">SHIELD PROTECTED</span>
-                            </div>
-                        </>
+                        <div className="flex items-center gap-1.5 text-green-500 animate-pulse">
+                            {renderFooterIcon('shield')}
+                            <span className="text-sm font-bold">Protected</span>
+                        </div>
                     ) : (
-                        <>
-                            <span className="text-[10px] text-slate-400 font-bold mb-0.5">STATUS</span>
-                            <span className="text-xs text-slate-300 font-bold tracking-wide">NO BOOSTERS</span>
-                        </>
+                        <span className="text-xs text-slate-300 font-medium italic">No boosters</span>
                     )}
                 </div>
             </footer>

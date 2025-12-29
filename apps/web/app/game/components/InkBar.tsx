@@ -32,7 +32,7 @@ function InkBarComponent({ ink, maxInk, isFrenzy, frenzyEndTime }: InkBarProps) 
                 </div>
 
                 {/* Ink bar */}
-                <div className="flex-1 h-3 bg-gradient-to-r from-slate-200 to-slate-100 rounded-md relative overflow-hidden border border-black/5">
+                <div className="flex-1 h-5 bg-gradient-to-r from-slate-200 to-slate-100 rounded-lg relative overflow-hidden border border-black/5">
                     <div
                         className={`h-full rounded-md transition-all duration-100 ease-out shadow-[0_0_8px_rgba(76,201,240,0.4)] ${isFrenzy ? 'animate-frenzy bg-[length:200%_100%]' : ''}`}
                         style={{
@@ -64,7 +64,7 @@ function InkBarComponent({ ink, maxInk, isFrenzy, frenzyEndTime }: InkBarProps) 
                 </div>
 
                 {/* Ink value */}
-                <div className={`shrink-0 min-w-9 text-right text-xs font-bold tabular-nums ${isFrenzy ? 'text-[#FF6B35]' : 'text-slate-700'}`}>
+                <div className={`shrink-0 min-w-10 text-right text-sm font-bold tabular-nums ${isFrenzy ? 'text-[#FF6B35]' : 'text-slate-700'}`}>
                     {isFrenzy ? (
                         <span className="animate-pulse">∞ {frenzyTimeLeft.toFixed(1)}s</span>
                     ) : (

@@ -300,7 +300,7 @@ export default function GamePage() {
 
             {/* Dashboard / Controls Panel - Outside Game Canvas */}
             <div className="w-full max-w-[420px] p-2 pt-0 shrink-0 z-20">
-                <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 p-4 flex flex-col gap-4 ring-1 ring-slate-200/80">
+                <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 p-3 flex flex-col gap-3 ring-1 ring-slate-200/80">
                     {state.gameStarted && state.gameActive ? (
                         <>
                             {/* Ink Bar */}
