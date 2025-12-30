@@ -206,7 +206,10 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
 
                 if (solution) {
                     // Reachable!
-                    onInkBombPreview(clampedCx, clampedCy, true);
+                    // Only update preview if no ink bomb is currently in flight (so it stays in place after firing)
+                    if (!state.player.inkBombInFlight) {
+                        onInkBombPreview(clampedCx, clampedCy, true);
+                    }
                     targetPos = { x: clampedCx, y: clampedCy };
 
                     // We should update the visual angle of the cannon to match the launch angle
@@ -232,13 +235,13 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
 
             onPlayerInput(angle, isDown, isDown, targetPos);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.weaponMode, onPlayerInput, onInkBombPreview]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.weaponMode, state.player.inkBombInFlight, onPlayerInput, onInkBombPreview]
     );
 
     // Handle pointer movement for ink bomb preview
     const handlePointerMove = useCallback(
         (clientX: number, clientY: number) => {
-            if (!canvasRef.current || !state.gameActive || state.isPaused || state.player.weaponMode !== 'inkBomb') return;
+            if (!canvasRef.current || !state.gameActive || state.isPaused || state.player.weaponMode !== 'inkBomb' || state.player.inkBombInFlight) return;
 
             const canvas = canvasRef.current;
             const rect = canvas.getBoundingClientRect();
@@ -276,7 +279,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
                 onInkBombPreview(0, 0, false);
             }
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.weaponMode, onInkBombPreview]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.weaponMode, state.player.inkBombInFlight, onInkBombPreview]
     );
 
     // Mouse events
@@ -290,8 +293,8 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
 
     const handleMouseMove = useCallback(
         (e: React.MouseEvent) => {
-            // Update ink bomb preview position when moving mouse (even without clicking)
-            if (state.player.weaponMode === 'inkBomb') {
+            // Update ink bomb preview position when moving mouse (only if no ink bomb in flight)
+            if (state.player.weaponMode === 'inkBomb' && !state.player.inkBombInFlight) {
                 handlePointerMove(e.clientX, e.clientY);
             }
 
@@ -302,7 +305,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             }
             e.preventDefault();
         },
-        [handleInput, handlePointerMove, state.player.isFiring, state.player.angle, state.player.weaponMode, onPlayerInput]
+        [handleInput, handlePointerMove, state.player.inkBombInFlight, state.player.angle, state.player.weaponMode, onPlayerInput]
     );
 
     const handleMouseUp = useCallback(
@@ -338,14 +341,14 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             e.preventDefault();
             const touch = e.touches[0];
             if (touch) {
-                // Update ink bomb preview position when moving touch (even without "clicking")
-                if (state.player.weaponMode === 'inkBomb') {
+                // Update ink bomb preview position when moving touch (only if no ink bomb in flight)
+                if (state.player.weaponMode === 'inkBomb' && !state.player.inkBombInFlight) {
                     handlePointerMove(touch.clientX, touch.clientY);
                 }
                 handleInput(touch.clientX, touch.clientY, true);
             }
         },
-        [handleInput, handlePointerMove, state.player.weaponMode]
+        [handleInput, handlePointerMove, state.player.inkBombInFlight, state.player.weaponMode]
     );
 
     const handleTouchEnd = useCallback(

@@ -21,6 +21,27 @@ export interface Projectile {
     explodeTime?: number; // For ballistic targeting: explodes after this many frames
 }
 
+export interface Cannon {
+    x: number;
+    y: number;
+    angle: number;
+    isFiring: boolean;
+    cooldown: number;
+    powerups?: {
+        shield: number;
+    };
+    lastFireTime: number;
+    // Ink Economy
+    ink: number;
+    maxInk: number;
+    weaponMode: WeaponMode;
+    isFrenzy: boolean;
+    frenzyEndTime: number;
+    targetPos?: { x: number; y: number };
+    // Flag to track if an ink bomb is currently in flight
+    inkBombInFlight?: boolean;
+}
+
 export interface Particle {
     x: number;
     y: number;

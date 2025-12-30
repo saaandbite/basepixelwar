@@ -58,6 +58,7 @@ function createInitialState(width: number, height: number): GameState {
             weaponMode: 'machineGun' as WeaponMode,
             isFrenzy: false,
             frenzyEndTime: 0,
+            inkBombInFlight: false,
         },
         enemy: {
             x: width / 2 || 200,
@@ -77,6 +78,7 @@ function createInitialState(width: number, height: number): GameState {
             weaponMode: 'machineGun' as WeaponMode,
             isFrenzy: false,
             frenzyEndTime: 0,
+            inkBombInFlight: false,
         },
         timeLeft: GAME_DURATION,
         gameActive: false,
@@ -178,6 +180,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     ...state.player,
                     isFiring: action.firing,
                     lastFireTime: action.firing ? Date.now() : state.player.lastFireTime,
+                    // Set inkBombInFlight when firing and using ink bomb weapon
+                    inkBombInFlight: action.firing && state.player.weaponMode === 'inkBomb' ? true : state.player.inkBombInFlight,
                 },
                 lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
@@ -489,15 +493,36 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                             color: updatedP.team === 'blue' ? COLORS.blue : COLORS.red,
                             opacity: 1.0,
                         });
+
+                        // Clear ink bomb preview when bomb explodes (only for player's bombs)
+                        if (updatedP.team === 'blue' && updatedP.isInkBomb) {
+                            // Reset ink bomb preview when player's bomb explodes
+                            newState.inkBombPreview = { x: 0, y: 0, active: false };
+                            // Clear the ink bomb in flight flag
+                            newState.player = { ...newState.player, inkBombInFlight: false };
+                        }
+
                         action.playSound('explosion');
                     } else if (updatedP.x >= 0 && updatedP.x <= canvasWidth && !maxLifetimeReached) {
                         // Keep flying
                         newProjectiles.push(updatedP);
+                    } else {
+                        // Projectile went out of bounds - clear preview if it was a player's ink bomb
+                        if (updatedP.team === 'blue' && updatedP.isInkBomb) {
+                            newState.inkBombPreview = { x: 0, y: 0, active: false };
+                            // Clear the ink bomb in flight flag
+                            newState.player = { ...newState.player, inkBombInFlight: false };
+                        }
                     }
                 } else {
                     // Normal bullet
                     if (updatedP.x < 0 || updatedP.x > canvasWidth || updatedP.y < 0 || updatedP.y > canvasHeight) {
-                        // Out of bounds
+                        // Out of bounds - clear preview if it was a player's ink bomb that went out of bounds without exploding
+                        if (updatedP.team === 'blue' && updatedP.isInkBomb) {
+                            newState.inkBombPreview = { x: 0, y: 0, active: false };
+                            // Clear the ink bomb in flight flag
+                            newState.player = { ...newState.player, inkBombInFlight: false };
+                        }
                     } else {
                         const gx = Math.floor(updatedP.x / GRID_SIZE);
                         const gy = Math.floor(updatedP.y / GRID_SIZE);
@@ -547,6 +572,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                                         });
                                     }
                                     // Projectile destroyed (not added to newProjectiles)
+
+                                    // Clear preview if this was a player's ink bomb that hit shield
+                                    if (updatedP.team === 'blue' && updatedP.isInkBomb) {
+                                        newState.inkBombPreview = { x: 0, y: 0, active: false };
+                                        // Clear the ink bomb in flight flag
+                                        newState.player = { ...newState.player, inkBombInFlight: false };
+                                    }
                                 } else {
                                     const result = paintGrid(
                                         newGrid,
@@ -583,6 +615,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                                     );
                                     newTerritoryBatches.push(createTerritoryBatch(gx, gy, updatedP.team as 'blue' | 'red'));
                                     action.playSound('explosion');
+
+                                    // Clear preview if this was a player's ink bomb that hit a territory
+                                    if (updatedP.team === 'blue' && updatedP.isInkBomb) {
+                                        newState.inkBombPreview = { x: 0, y: 0, active: false };
+                                        // Clear the ink bomb in flight flag
+                                        newState.player = { ...newState.player, inkBombInFlight: false };
+                                    }
                                 }
                             } else {
                                 newProjectiles.push(updatedP);
