@@ -94,20 +94,28 @@ export function calculateBallisticVelocity(
     // Search flight times from 20 to 120 frames (approx 0.3s to 2s)
     for (let t = 20; t <= 150; t += 5) {
         const vx = dx / t;
-        const net_dy = dy - 0.5 * gravity * t * t;
-        const required_vy_initial = net_dy / t; // This is the final vy term needed in the equation y = vy*t + 0.5gt^2
+
+        // Discrete Physics Correction (Semi-implicit Euler: v+=g, p+=v)
+        // y_n = y_0 + n*v0 + 0.5*g*n*(n+1)
+        // dy = v0*t + 0.5*g*t*(t+1)
+        // v0*t = dy - 0.5*g*t*(t+1)
+        // v0 = dy/t - 0.5*g*(t+1)
+
+        const required_vy_initial = (dy / t) - 0.5 * gravity * (t + 1);
 
         // In our game physics: newVy = oldVy + gravity.
-        // pos += vy. 
-        // So y(t) approx sum(vy0 + n*g) = vy0*t + 0.5*g*t^2. Correct.
-        // But we add '4' to the stored vy to get the "launch vector".
-        // The actual vy used in physics is "baseVy - 4".
-        // So if we need required_vy_initial, then baseVy = required_vy_initial + 4.
-        // And we check if magnitude of (vx, baseVy) is close to 'speed'.
+        // The required_vy_initial IS the v0 we need to set.
+        // We use it directly.
 
-        const baseVy = required_vy_initial + 4; // Reversing the "-4" boost
+        // Check if this velocity is plausible given the weapon speed
+        // The game loop usually combines vectors. 
+        // We want to ensure we aren't firing super fast just to hit a target.
+        // We compare the magnitude against 'speed'.
 
-        const launchSpeed = Math.hypot(vx, baseVy);
+        // Note: The original logic had a weird "-4" boost abstraction.
+        // We just check the magnitude of the actual launch vector.
+
+        const launchSpeed = Math.hypot(vx, required_vy_initial);
         const diff = Math.abs(launchSpeed - speed);
 
         if (diff < minSpeedDiff) {
@@ -177,6 +185,7 @@ export function createWeaponBullet(
             const inkBombConfig = WEAPON_MODES.inkBomb;
 
             let vx, vy;
+            let flightTime: number | undefined;
 
             // Use Ballistic Targeting if available
             if (source.targetPos) {
@@ -191,14 +200,8 @@ export function createWeaponBullet(
 
                 if (solution) {
                     vx = solution.vx;
-                    vy = solution.vy; // solution.vy is already the initial velocity (without the +4 boost abstraction), see calc
-                    // Wait, in my loop I derived: required_vy_initial = net_dy/t.
-                    // And I said "baseVy = required_vy_initial + 4".
-                    // The old code did: vy = baseVy - 4.
-                    // So if I set logic to use vx, vy directly:
-                    // I should pass these directly.
-                    // BUT wait, createWeaponBullet logic previously calculated baseVx/baseVy from angle.
-                    // Now we override them.
+                    vy = solution.vy;
+                    flightTime = solution.flightTime;
                 }
             }
 
@@ -221,6 +224,8 @@ export function createWeaponBullet(
                 lifetime: 0,
                 paintRadius: inkBombConfig.paintRadius,
                 gravity: inkBombConfig.gravity,
+                target: source.targetPos,
+                explodeTime: flightTime,
             });
             break;
         }

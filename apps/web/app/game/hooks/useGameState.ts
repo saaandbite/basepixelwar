@@ -447,13 +447,30 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     // 1. Falling (vy > 0) AND on valid grid position, OR
                     // 2. Near/past bottom of screen, OR
                     // 3. Max lifetime reached (failsafe)
+                    // Ink bomb explosion logic
                     const isFalling = newVy > 0;  // y increases downward, so vy > 0 = falling
                     const isOnGrid = gx >= 0 && gx < newState.cols && gy >= 0 && gy < newState.rows;
                     const maxLifetimeReached = updatedP.lifetime > 60;
 
-                    const shouldExplode = (isFalling && isOnGrid && updatedP.lifetime > 10) ||
-                        updatedP.y > canvasHeight - 30 ||
-                        maxLifetimeReached;
+                    let shouldExplode = false;
+
+                    if (updatedP.explodeTime) {
+                        // Ballistic Targeting: Explode when flight time is reached
+                        // We add a tiny buffer (e.g. >=) or logic to ensure it hits ground if target is ground
+                        if (updatedP.lifetime >= updatedP.explodeTime) {
+                            shouldExplode = true;
+                        }
+                    } else {
+                        // Legacy logic (fallback)
+                        shouldExplode = (isFalling && isOnGrid && updatedP.lifetime > 10) ||
+                            updatedP.y > canvasHeight - 30 ||
+                            maxLifetimeReached;
+                    }
+
+                    // Always explode if hitting floor, regardless of timing (safety)
+                    if (updatedP.y > canvasHeight - 30) {
+                        shouldExplode = true;
+                    }
 
                     if (shouldExplode && gx >= 0 && gx < newState.cols && gy >= 0 && gy < newState.rows) {
                         // Large explosion!

@@ -18,6 +18,7 @@ export interface Projectile {
     maxLifetime?: number; // For shotgun short range
     paintRadius?: number; // Paint radius on impact
     gravity?: number; // For ink bomb arc
+    explodeTime?: number; // For ballistic targeting: explodes after this many frames
 }
 
 export interface Particle {

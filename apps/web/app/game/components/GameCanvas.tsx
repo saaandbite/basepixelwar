@@ -159,20 +159,24 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
     // Input handlers
     const handleInput = useCallback(
         (clientX: number, clientY: number, isDown: boolean) => {
-            if (!state.gameActive || state.isPaused) return;
+            if (!canvasRef.current || !state.gameActive || state.isPaused) return;
 
             const canvas = canvasRef.current;
-            if (!canvas) return;
-
             const rect = canvas.getBoundingClientRect();
-            const cx = clientX - rect.left;
-            const cy = clientY - rect.top;
 
-            // Prevent shooting into UI areas
-            if (cy < 60 || cy > canvas.height - 60) return;
+            // Handle scale (in case canvas display size differs from internal resolution)
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
 
-            const dx = cx - state.player.x;
-            const dy = cy - state.player.y;
+            const cx = (clientX - rect.left) * scaleX;
+            const cy = (clientY - rect.top) * scaleY;
+
+            // Also clamp to canvas bounds to prevent weird off-screen targeting
+            const clampedCx = Math.max(0, Math.min(canvas.width, cx));
+            const clampedCy = Math.max(0, Math.min(canvas.height, cy));
+
+            const dx = clampedCx - state.player.x;
+            const dy = clampedCy - state.player.y;
             // const dist = Math.hypot(dx, dy);
 
             // Calculate angle
@@ -194,16 +198,16 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
                 const solution = calculateBallisticVelocity(
                     state.player.x,
                     state.player.y,
-                    cx, // Target X
-                    cy, // Target Y
+                    clampedCx, // Target X
+                    clampedCy, // Target Y
                     modeConfig.speed,
                     inkBombConfig.gravity
                 );
 
                 if (solution) {
                     // Reachable!
-                    onInkBombPreview(cx, cy, true);
-                    targetPos = { x: cx, y: cy };
+                    onInkBombPreview(clampedCx, clampedCy, true);
+                    targetPos = { x: clampedCx, y: clampedCy };
 
                     // We should update the visual angle of the cannon to match the launch angle
                     // The solution gives us vx, vy.
