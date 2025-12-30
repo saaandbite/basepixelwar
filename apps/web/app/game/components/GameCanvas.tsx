@@ -4,7 +4,7 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { useGameLoop } from '../hooks/useGameLoop';
-import { COLORS, WEAPON_MODES } from '../lib/constants';
+import { COLORS, WEAPON_MODES, GAME_WIDTH, GAME_HEIGHT, GRID_SIZE } from '../lib/constants';
 import {
     drawBackground,
     drawGrid,
@@ -37,22 +37,18 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
     const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Canvas resize handler
+    // Initial setup - Enforce FIXED resolution
     useEffect(() => {
-        const handleResize = () => {
-            if (containerRef.current && canvasRef.current && effectsCanvasRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                canvasRef.current.width = rect.width;
-                canvasRef.current.height = rect.height;
-                effectsCanvasRef.current.width = rect.width;
-                effectsCanvasRef.current.height = rect.height;
-                onResize(rect.width, rect.height);
-            }
-        };
+        if (canvasRef.current && effectsCanvasRef.current) {
+            // Set fixed resolution
+            canvasRef.current.width = GAME_WIDTH;
+            canvasRef.current.height = GAME_HEIGHT;
+            effectsCanvasRef.current.width = GAME_WIDTH;
+            effectsCanvasRef.current.height = GAME_HEIGHT;
 
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+            // Notify parent of the fixed size
+            onResize(GAME_WIDTH, GAME_HEIGHT);
+        }
     }, [onResize]);
 
     // Draw function
@@ -164,7 +160,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             const canvas = canvasRef.current;
             const rect = canvas.getBoundingClientRect();
 
-            // Handle scale (in case canvas display size differs from internal resolution)
+            // Handle scale (Visual size vs Internal Fixed Resolution)
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
@@ -193,13 +189,19 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
                 const modeConfig = WEAPON_MODES.inkBomb;
                 const inkBombConfig = WEAPON_MODES.inkBomb; // Use specific config for gravity
 
+                // SNAP TO GRID CENTER for perfect accuracy
+                const gx = Math.floor(clampedCx / GRID_SIZE);
+                const gy = Math.floor(clampedCy / GRID_SIZE);
+                const snappedX = gx * GRID_SIZE + GRID_SIZE / 2;
+                const snappedY = gy * GRID_SIZE + GRID_SIZE / 2;
+
                 // Ballistic Targeting Logic
                 // 1. Calculate trajectory to hit the cursor position
                 const solution = calculateBallisticVelocity(
                     state.player.x,
                     state.player.y,
-                    clampedCx, // Target X
-                    clampedCy, // Target Y
+                    snappedX, // Target X (Snapped)
+                    snappedY, // Target Y (Snapped)
                     modeConfig.speed,
                     inkBombConfig.gravity
                 );
@@ -208,9 +210,9 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
                     // Reachable!
                     // Only update preview if no ink bomb is currently in flight (so it stays in place after firing)
                     if (!state.player.inkBombInFlight) {
-                        onInkBombPreview(clampedCx, clampedCy, true);
+                        onInkBombPreview(snappedX, snappedY, true);
                     }
-                    targetPos = { x: clampedCx, y: clampedCy };
+                    targetPos = { x: snappedX, y: snappedY };
 
                     // We should update the visual angle of the cannon to match the launch angle
                     // The solution gives us vx, vy.
@@ -246,7 +248,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             const canvas = canvasRef.current;
             const rect = canvas.getBoundingClientRect();
 
-            // Handle scale (in case canvas display size differs from internal resolution)
+            // Handle scale (Visual size vs Internal Fixed Resolution)
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
@@ -260,20 +262,26 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             const modeConfig = WEAPON_MODES.inkBomb;
             const inkBombConfig = WEAPON_MODES.inkBomb; // Use specific config for gravity
 
+            // SNAP TO GRID CENTER for perfect accuracy
+            const gx = Math.floor(clampedCx / GRID_SIZE);
+            const gy = Math.floor(clampedCy / GRID_SIZE);
+            const snappedX = gx * GRID_SIZE + GRID_SIZE / 2;
+            const snappedY = gy * GRID_SIZE + GRID_SIZE / 2;
+
             // Ballistic Targeting Logic
             // 1. Calculate trajectory to hit the cursor position
             const solution = calculateBallisticVelocity(
                 state.player.x,
                 state.player.y,
-                clampedCx, // Target X
-                clampedCy, // Target Y
+                snappedX, // Target X (Snapped)
+                snappedY, // Target Y (Snapped)
                 modeConfig.speed,
                 inkBombConfig.gravity
             );
 
             if (solution) {
                 // Reachable!
-                onInkBombPreview(clampedCx, clampedCy, true);
+                onInkBombPreview(snappedX, snappedY, true);
             } else {
                 // Not reachable (out of range)
                 onInkBombPreview(0, 0, false);

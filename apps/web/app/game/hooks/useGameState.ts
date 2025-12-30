@@ -476,19 +476,33 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         shouldExplode = true;
                     }
 
-                    if (shouldExplode && gx >= 0 && gx < newState.cols && gy >= 0 && gy < newState.rows) {
+                    // FORCE SNAP TO TARGET for explosion center
+                    // This fixes the issue where physics drift causes the explosion to be offset from the preview
+                    let explosionX = updatedP.x;
+                    let explosionY = updatedP.y;
+
+                    // If we have a locked target from the ballistic solver, use THAT as the explosion center
+                    if (shouldExplode && updatedP.target) {
+                        explosionX = updatedP.target.x;
+                        explosionY = updatedP.target.y;
+                    }
+
+                    const explosionGx = Math.floor(explosionX / GRID_SIZE);
+                    const explosionGy = Math.floor(explosionY / GRID_SIZE);
+
+                    if (shouldExplode && explosionGx >= 0 && explosionGx < newState.cols && explosionGy >= 0 && explosionGy < newState.rows) {
                         // Large explosion!
                         const result = paintGrid(
-                            newGrid, gx, gy,
+                            newGrid, explosionGx, explosionGy,
                             updatedP.team as 'blue' | 'red',
                             updatedP.paintRadius || 4,
                             newState.cols, newState.rows
                         );
                         newGrid = result.grid;
-                        newParticles.push(...createParticles(updatedP.x, updatedP.y, updatedP.team as 'blue' | 'red', 20));
+                        newParticles.push(...createParticles(explosionX, explosionY, updatedP.team as 'blue' | 'red', 20));
                         newTerritoryBatches.push({
-                            x: gx,
-                            y: gy,
+                            x: explosionGx,
+                            y: explosionGy,
                             radius: 8,
                             color: updatedP.team === 'blue' ? COLORS.blue : COLORS.red,
                             opacity: 1.0,
@@ -947,8 +961,8 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         dispatch({ type: 'TOGGLE_SOUND' });
     }, []);
 
-    const setPlayerAngle = useCallback((angle: number) => {
-        dispatch({ type: 'SET_PLAYER_ANGLE', angle });
+    const setPlayerAngle = useCallback((angle: number, targetPos?: { x: number; y: number }) => {
+        dispatch({ type: 'SET_PLAYER_ANGLE', angle, targetPos });
     }, []);
 
     const setPlayerFiring = useCallback((firing: boolean) => {

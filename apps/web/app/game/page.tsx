@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useAudio } from './hooks/useAudio';
+import { GAME_WIDTH, GAME_HEIGHT } from './lib/constants';
 
 import { calculateScore } from './lib/gameLogic';
 import { GameCanvas } from './components/GameCanvas';
@@ -40,7 +41,6 @@ export default function GamePage() {
 
     const { initAudio, playSound, setSoundOn } = useAudio();
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const canvasSizeRef = useRef({ width: 400, height: 700 });
 
     const [isMounted, setIsMounted] = useState(false);
     const [showCombo, setShowCombo] = useState(false);
@@ -112,37 +112,34 @@ export default function GamePage() {
     // Handlers
     const handleStart = useCallback(() => {
         initAudio();
-        resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
+        resetGame(GAME_WIDTH, GAME_HEIGHT);
         startGame(playSound);
     }, [initAudio, resetGame, startGame, playSound]);
 
     const handleRestart = useCallback(() => {
         togglePause();
         setTimeout(() => {
-            resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
+            resetGame(GAME_WIDTH, GAME_HEIGHT);
             startGame(playSound);
         }, 100);
     }, [togglePause, resetGame, startGame, playSound]);
 
     const handlePlayAgain = useCallback(() => {
-        resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
+        resetGame(GAME_WIDTH, GAME_HEIGHT);
         startGame(playSound);
     }, [resetGame, startGame, playSound]);
 
     const handleResize = useCallback(
         (width: number, height: number) => {
-            // Avoid extreme sensitivity
-            if (Math.abs(canvasSizeRef.current.width - width) < 2 && Math.abs(canvasSizeRef.current.height - height) < 2) return;
-
-            canvasSizeRef.current = { width, height };
-            setCanvasSize(width, height);
+            // Check if we need to update state (only if different from fixed size, which shouldn't happen)
+            // But actually we don't need to do anything here since state uses fixed grid
         },
         [setCanvasSize]
     );
 
     const handlePlayerInput = useCallback(
-        (angle: number, isFiring: boolean) => {
-            setPlayerAngle(angle);
+        (angle: number, isFiring: boolean, _isDown: boolean, targetPos?: { x: number; y: number }) => {
+            setPlayerAngle(angle, targetPos);
             setPlayerFiring(isFiring);
         },
         [setPlayerAngle, setPlayerFiring]
