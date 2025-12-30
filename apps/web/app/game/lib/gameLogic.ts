@@ -91,8 +91,8 @@ export function calculateBallisticVelocity(
     let bestSol: { vx: number; vy: number; flightTime: number } | null = null;
     let minSpeedDiff = Infinity;
 
-    // Search flight times from 20 to 120 frames (approx 0.3s to 2s)
-    for (let t = 20; t <= 150; t += 5) {
+    // Search flight times from 10 to 150 frames with smaller increments for better accuracy
+    for (let t = 10; t <= 150; t += 1) { // Changed from increment of 5 to 1 for better accuracy
         const vx = dx / t;
 
         // Discrete Physics Correction (Semi-implicit Euler: v+=g, p+=v)
@@ -108,7 +108,7 @@ export function calculateBallisticVelocity(
         // We use it directly.
 
         // Check if this velocity is plausible given the weapon speed
-        // The game loop usually combines vectors. 
+        // The game loop usually combines vectors.
         // We want to ensure we aren't firing super fast just to hit a target.
         // We compare the magnitude against 'speed'.
 
@@ -126,7 +126,8 @@ export function calculateBallisticVelocity(
 
     // If even the best solution is too far off (unreachable), return null
     // (e.g. trying to shoot across the map with weak gun)
-    if (bestSol && minSpeedDiff < speed * 0.5) {
+    // Reduced tolerance for better accuracy
+    if (bestSol && minSpeedDiff < speed * 0.3) { // Changed from 0.5 to 0.3 for stricter tolerance
         return bestSol;
     }
 

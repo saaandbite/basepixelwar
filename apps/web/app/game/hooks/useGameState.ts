@@ -291,18 +291,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             const inkCost = newState.player.isFrenzy ? 0 : weaponConfig.cost;
             const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
 
-            // Check if we should fire (either currently firing and cooldown ready, or buffered shot)
-            const shouldFire = (newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk) ||
-                              (!newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk && newState.player.lastFireTime > 0 && (Date.now() - newState.player.lastFireTime) < 100); // Allow firing within 100ms of releasing fire button
-
-            if (shouldFire) {
+            if (newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk) {
                 const bullets = createWeaponBullet(newState.player, 'blue', newState.player.weaponMode);
                 newState.projectiles = [...newState.projectiles, ...bullets];
                 newState.player = {
                     ...newState.player,
                     cooldown: weaponConfig.fireRate,
                     ink: newState.player.ink - inkCost,
-                    lastFireTime: Date.now(),
                 };
                 action.playSound('shoot');
             }

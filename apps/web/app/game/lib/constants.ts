@@ -43,7 +43,7 @@ export type WeaponModeType = 'machineGun' | 'shotgun' | 'inkBomb';
 export const WEAPON_MODES = {
     machineGun: {
         cost: 1,
-        fireRate: 4,
+        fireRate: 6,
         paintRadius: 1,
         speed: 10,
         name: 'Machine Gun',
@@ -52,7 +52,7 @@ export const WEAPON_MODES = {
     },
     shotgun: {
         cost: 5,
-        fireRate: 12,
+        fireRate: 18,
         paintRadius: 2,
         speed: 9,                        // Faster speed
         spreadAngles: [-0.2, 0, 0.2],    // Tighter spread
