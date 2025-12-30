@@ -18,7 +18,6 @@ import { ComboEffect } from './components/ComboEffect';
 import { InkBar } from './components/InkBar';
 import { WeaponSelector } from './components/WeaponSelector';
 import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
-import { ControlsStatus } from './components/ControlsStatus';
 
 import './game.css';
 
@@ -45,8 +44,6 @@ export default function GamePage() {
 
     const [isMounted, setIsMounted] = useState(false);
     const [showCombo, setShowCombo] = useState(false);
-    const [footerStatus, setFooterStatus] = useState<{ name: string; icon: string; color: string } | null>(null);
-    const [footerTimeout, setFooterTimeout] = useState<NodeJS.Timeout | null>(null);
     const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'shield'; x: number; y: number } | null>(null);
 
 
@@ -61,12 +58,7 @@ export default function GamePage() {
         setSoundOn(state.isSoundOn);
     }, [state.isSoundOn, setSoundOn]);
 
-    const showFooterStatus = useCallback((name: string, icon: string, color: string) => {
-        if (footerTimeout) clearTimeout(footerTimeout);
-        setFooterStatus({ name, icon, color });
-        const timeout = setTimeout(() => setFooterStatus(null), 3000);
-        setFooterTimeout(timeout);
-    }, [footerTimeout]);
+
 
 
 
@@ -100,7 +92,7 @@ export default function GamePage() {
         }
     }, [state.comboStreak, playSound]);
 
-    // Track powerup collection for footer
+    // Track powerup collection for effect
     const prevPowerupsRef = useRef(state.player.powerups);
     useEffect(() => {
         const prev = prevPowerupsRef.current;
@@ -108,7 +100,6 @@ export default function GamePage() {
 
         if (curr && prev) {
             if (curr.shield > (prev.shield || 0)) {
-                showFooterStatus('SHIELD', 'shield', 'text-green-500');
                 // Show powerup effect
                 setPowerupEffect({ show: true, type: 'shield', x: state.player.x, y: state.player.y });
                 setTimeout(() => setPowerupEffect(null), 1000);
@@ -116,7 +107,7 @@ export default function GamePage() {
         }
 
         prevPowerupsRef.current = curr;
-    }, [state.player.powerups, state.player.x, state.player.y, showFooterStatus]);
+    }, [state.player.powerups, state.player.x, state.player.y]);
 
     // Handlers
     const handleStart = useCallback(() => {
@@ -326,12 +317,7 @@ export default function GamePage() {
                             />
                         </div>
 
-                        {/* 3. Controls & Status (Bottom) */}
-                        <ControlsStatus
-                            shield={state.player.powerups?.shield || 0}
-                            globalShield={state.globalShield}
-                            footerStatus={footerStatus}
-                        />
+
                     </div>
                 </div>
             )}
