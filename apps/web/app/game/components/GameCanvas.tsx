@@ -4,7 +4,7 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { useGameLoop } from '../hooks/useGameLoop';
-import { COLORS } from '../lib/constants';
+import { COLORS, WEAPON_MODES } from '../lib/constants';
 import {
     drawBackground,
     drawGrid,
@@ -15,6 +15,7 @@ import {
     drawCannon,
     drawTrajectory,
     drawScreenFlash,
+    drawInkBombPreview,
 
     drawGoldenPixel,
     drawFrenzyOverlay,
@@ -26,10 +27,11 @@ interface GameCanvasProps {
     state: GameState;
     onResize: (width: number, height: number) => void;
     onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean) => void;
+    onInkBombPreview: (x: number, y: number, active: boolean) => void;
     onUpdate: () => void;
 }
 
-export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCanvasProps) {
+export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, onUpdate }: GameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -110,6 +112,11 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
         // Draw projectiles
         drawProjectiles(ctx, state.projectiles);
 
+        // Draw inkBomb preview if active
+        if (state.weaponMode === 'inkBomb' && state.inkBombPreview) {
+            drawInkBombPreview(ctx, state.inkBombPreview, WEAPON_MODES.inkBomb.paintRadius); // Using the inkBomb paint radius
+        }
+
         // Draw particles
         drawParticles(ctx, state.particles);
 
@@ -174,10 +181,17 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
             if (angle > 0) angle = angle > Math.PI / 2 ? -Math.PI + 0.2 : 0.2;
             if (angle < -Math.PI) angle = -Math.PI + 0.2;
 
+            // Update inkBomb preview if inkBomb weapon is selected
+            if (state.weaponMode === 'inkBomb') {
+                onInkBombPreview(cx, cy, true);
+            } else {
+                // Hide preview if not using inkBomb
+                onInkBombPreview(0, 0, false);
+            }
 
             onPlayerInput(angle, isDown, isDown);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, onPlayerInput]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.weaponMode, onPlayerInput, onInkBombPreview]
     );
 
     // Mouse events
@@ -213,7 +227,9 @@ export function GameCanvas({ state, onResize, onPlayerInput, onUpdate }: GameCan
         if (state.player.isFiring) {
             onPlayerInput(state.player.angle, false, false);
         }
-    }, [state.player.isFiring, state.player.angle, onPlayerInput]);
+        // Hide inkBomb preview when mouse leaves
+        onInkBombPreview(0, 0, false);
+    }, [state.player.isFiring, state.player.angle, onPlayerInput, onInkBombPreview]);
 
     // Touch events
     const handleTouchStart = useCallback(

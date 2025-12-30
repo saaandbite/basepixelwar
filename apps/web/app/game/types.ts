@@ -20,6 +20,37 @@ export interface Projectile {
     gravity?: number; // For ink bomb arc
 }
 
+export interface GameState {
+    grid: ('blue' | 'red')[][];
+    cols: number;
+    rows: number;
+    projectiles: Projectile[];
+    particles: Particle[];
+    powerups: Powerup[];
+    territoryBatches: TerritoryBatch[];
+    goldenPixel: GoldenPixel | null;
+    lastGoldenPixelSpawn: number;
+    isFrenzy: boolean;
+    frenzyEndTime: number;
+    timeLeft: number;
+    scoreBlue: number;
+    scoreRed: number;
+    comboStreak: number;
+    maxCombo: number;
+    powerupsCollected: number;
+    ink: number;
+    shield: number;
+    globalShield: { active: boolean; team: 'blue' | 'red'; endTime: number } | null;
+    player: Cannon;
+    enemy: Cannon;
+    weaponMode: WeaponMode;
+    isPaused: boolean;
+    isGameOver: boolean;
+    showCombo: boolean;
+    // Add preview position for inkBomb
+    inkBombPreview?: { x: number; y: number; active: boolean };
+}
+
 export interface Particle {
     x: number;
     y: number;

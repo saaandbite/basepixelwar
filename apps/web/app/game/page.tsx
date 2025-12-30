@@ -33,6 +33,7 @@ export default function GamePage() {
         setPlayerAngle,
         setPlayerFiring,
         setWeaponMode,
+        setInkBombPreview,
         updateGame,
         timerTick,
 
@@ -233,6 +234,7 @@ export default function GamePage() {
                                 state={state}
                                 onResize={handleResize}
                                 onPlayerInput={handlePlayerInput}
+                                onInkBombPreview={setInkBombPreview}
                                 onUpdate={handleUpdate}
                             />
 

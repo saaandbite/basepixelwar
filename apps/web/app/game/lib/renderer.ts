@@ -605,3 +605,25 @@ export function drawGlobalShieldOverlay(
 
     ctx.restore();
 }
+
+// Draw inkBomb explosion preview
+export function drawInkBombPreview(ctx: CanvasRenderingContext2D, preview: { x: number; y: number; active: boolean } | undefined, paintRadius: number): void {
+    if (!preview || !preview.active) return;
+
+    ctx.save();
+
+    // Create dashed yellow circle for explosion preview
+    ctx.strokeStyle = '#FFD700'; // Yellow color
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]); // Dashed pattern
+
+    // Draw the circle at the preview position with the explosion radius
+    ctx.beginPath();
+    ctx.arc(preview.x, preview.y, paintRadius * GRID_SIZE, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Reset line dash
+    ctx.setLineDash([]);
+
+    ctx.restore();
+}

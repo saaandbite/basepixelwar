@@ -98,6 +98,8 @@ function createInitialState(width: number, height: number): GameState {
         globalShield: null,
         // Shield Powerup Cooldown (shared for creation)
         lastShieldPowerupTime: 0,
+        // InkBomb preview position
+        inkBombPreview: { x: 0, y: 0, active: false },
     };
 }
 
@@ -110,6 +112,7 @@ type GameAction =
     | { type: 'SET_PLAYER_FIRING'; firing: boolean }
     | { type: 'SET_WEAPON_MODE'; mode: WeaponMode }
     | { type: 'SET_CANVAS_SIZE'; width: number; height: number }
+    | { type: 'SET_INKBOMB_PREVIEW'; x: number; y: number; active: boolean }
     | { type: 'GAME_UPDATE'; playSound: (name: string) => void }
     | { type: 'TIMER_TICK'; playSound: (name: string) => void }
     | { type: 'END_GAME' }
@@ -187,6 +190,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     ...state.player,
                     weaponMode: action.mode,
                     cooldown: 0, // Reset cooldown when switching weapons
+                },
+                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
+            };
+        }
+
+        case 'SET_INKBOMB_PREVIEW': {
+            return {
+                ...state,
+                inkBombPreview: {
+                    x: action.x,
+                    y: action.y,
+                    active: action.active,
                 },
                 lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
@@ -902,6 +917,10 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         dispatch({ type: 'SET_WEAPON_MODE', mode });
     }, []);
 
+    const setInkBombPreview = useCallback((x: number, y: number, active: boolean) => {
+        dispatch({ type: 'SET_INKBOMB_PREVIEW', x, y, active });
+    }, []);
+
     return {
         state,
         startGame,
@@ -912,6 +931,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         setPlayerAngle,
         setPlayerFiring,
         setWeaponMode,
+        setInkBombPreview,
         updateGame,
         timerTick,
 
