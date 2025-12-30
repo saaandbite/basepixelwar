@@ -235,6 +235,50 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
         [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.weaponMode, onPlayerInput, onInkBombPreview]
     );
 
+    // Handle pointer movement for ink bomb preview
+    const handlePointerMove = useCallback(
+        (clientX: number, clientY: number) => {
+            if (!canvasRef.current || !state.gameActive || state.isPaused || state.player.weaponMode !== 'inkBomb') return;
+
+            const canvas = canvasRef.current;
+            const rect = canvas.getBoundingClientRect();
+
+            // Handle scale (in case canvas display size differs from internal resolution)
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const cx = (clientX - rect.left) * scaleX;
+            const cy = (clientY - rect.top) * scaleY;
+
+            // Also clamp to canvas bounds to prevent weird off-screen targeting
+            const clampedCx = Math.max(0, Math.min(canvas.width, cx));
+            const clampedCy = Math.max(0, Math.min(canvas.height, cy));
+
+            const modeConfig = WEAPON_MODES.inkBomb;
+            const inkBombConfig = WEAPON_MODES.inkBomb; // Use specific config for gravity
+
+            // Ballistic Targeting Logic
+            // 1. Calculate trajectory to hit the cursor position
+            const solution = calculateBallisticVelocity(
+                state.player.x,
+                state.player.y,
+                clampedCx, // Target X
+                clampedCy, // Target Y
+                modeConfig.speed,
+                inkBombConfig.gravity
+            );
+
+            if (solution) {
+                // Reachable!
+                onInkBombPreview(clampedCx, clampedCy, true);
+            } else {
+                // Not reachable (out of range)
+                onInkBombPreview(0, 0, false);
+            }
+        },
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.weaponMode, onInkBombPreview]
+    );
+
     // Mouse events
     const handleMouseDown = useCallback(
         (e: React.MouseEvent) => {
@@ -246,6 +290,11 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
 
     const handleMouseMove = useCallback(
         (e: React.MouseEvent) => {
+            // Update ink bomb preview position when moving mouse (even without clicking)
+            if (state.player.weaponMode === 'inkBomb') {
+                handlePointerMove(e.clientX, e.clientY);
+            }
+
             if (e.buttons === 1) {
                 handleInput(e.clientX, e.clientY, true);
             } else if (state.player.isFiring) {
@@ -253,7 +302,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             }
             e.preventDefault();
         },
-        [handleInput, state.player.isFiring, state.player.angle, onPlayerInput]
+        [handleInput, handlePointerMove, state.player.isFiring, state.player.angle, state.player.weaponMode, onPlayerInput]
     );
 
     const handleMouseUp = useCallback(
@@ -289,10 +338,14 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             e.preventDefault();
             const touch = e.touches[0];
             if (touch) {
+                // Update ink bomb preview position when moving touch (even without "clicking")
+                if (state.player.weaponMode === 'inkBomb') {
+                    handlePointerMove(touch.clientX, touch.clientY);
+                }
                 handleInput(touch.clientX, touch.clientY, true);
             }
         },
-        [handleInput]
+        [handleInput, handlePointerMove, state.player.weaponMode]
     );
 
     const handleTouchEnd = useCallback(

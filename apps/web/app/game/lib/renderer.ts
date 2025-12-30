@@ -612,14 +612,45 @@ export function drawInkBombPreview(ctx: CanvasRenderingContext2D, preview: { x: 
 
     ctx.save();
 
-    // Create dashed yellow circle for explosion preview
+    // Create a more visible preview with multiple visual elements
+    const centerX = preview.x;
+    const centerY = preview.y;
+    const radius = paintRadius * GRID_SIZE;
+
+    // Draw outer glow effect
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 10);
+    gradient.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+    gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw main dashed circle
     ctx.strokeStyle = '#FFD700'; // Yellow color
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]); // Dashed pattern
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 6]); // More visible dashed pattern
 
     // Draw the circle at the preview position with the explosion radius
     ctx.beginPath();
-    ctx.arc(preview.x, preview.y, paintRadius * GRID_SIZE, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw inner targeting crosshair
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+
+    // Horizontal line
+    ctx.beginPath();
+    ctx.moveTo(centerX - 15, centerY);
+    ctx.lineTo(centerX + 15, centerY);
+    ctx.stroke();
+
+    // Vertical line
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY - 15);
+    ctx.lineTo(centerX, centerY + 15);
     ctx.stroke();
 
     // Reset line dash
