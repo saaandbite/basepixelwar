@@ -40,6 +40,92 @@ export function createBullet(
     return bullets;
 }
 
+// Calculate ballistic velocity to hit a target
+// Returns { vx, vy, flightTime } or null if unreachable
+export function calculateBallisticVelocity(
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number,
+    speed: number,
+    gravity: number
+): { vx: number; vy: number; flightTime: number } | null {
+    const dx = targetX - sourceX;
+    const dy = targetY - sourceY; // Positive dy is DOWN
+    const v2 = speed * speed;
+    const x2 = dx * dx;
+    const gx = gravity * dx;
+
+    // Safety check for range
+    // R_max = v^2 / g (on flat ground, simplified)
+    // We solving: y = x * tan(theta) + (g * x^2) / (2 * v^2 * cos^2(theta))
+    // But we know v_total is fixed to 'speed' (actually it's not, usually game physics splits vx/vy differently)
+    // Wait, the previous logic was: vx = cos(a)*s, vy = sin(a)*s - 4. 
+    // That means initial speed is actually variable depending on angle because of the -4 z-boost.
+    // Let's assume we want to solve for angle 'theta' such that:
+    // vx = S * cos(theta)
+    // vy = S * sin(theta) - 4
+    // 
+    // It's easier to iterate or approximate since the " - 4" makes the math messy for a direct analytic solution.
+    // However, to keep "Point and Click" simple and robust:
+    // We can assume we want to hit (tx, ty) in 't' frames.
+    // x(t) = sx + vx * t
+    // y(t) = sy + vy * t + 0.5 * g * t^2
+    // 
+    // We have constraints: sqrt(vx^2 + (vy+4)^2) = Speed.
+    // This is hard to solve exactly in real-time efficiently without iterations.
+
+    // ALTERNATIVE: Ignore the "-4" boost for the solver and just apply the physics required to hit the target.
+    // If the required velocity is within the weapon's "power", we use it. 
+    // If not, we clamp it.
+    // BUT the weapon definition in constants says "speed: 8".
+    // If we just calculate the needed vx, vy to hit the target, we might violate the speed constant.
+
+    // Let's try the iterate approach which is robust for this 2D grid:
+    // Try different flight times 't'.
+    // vx = dx / t
+    // vy_needed = (dy - 0.5 * gravity * t * t) / t
+    // Check if sqrt(vx^2 + (vy_needed + 4)^2) <= speed * 1.1 (allow some tolerance)
+    // Minimizing deviation from 'speed'
+
+    let bestSol: { vx: number; vy: number; flightTime: number } | null = null;
+    let minSpeedDiff = Infinity;
+
+    // Search flight times from 20 to 120 frames (approx 0.3s to 2s)
+    for (let t = 20; t <= 150; t += 5) {
+        const vx = dx / t;
+        const net_dy = dy - 0.5 * gravity * t * t;
+        const required_vy_initial = net_dy / t; // This is the final vy term needed in the equation y = vy*t + 0.5gt^2
+
+        // In our game physics: newVy = oldVy + gravity.
+        // pos += vy. 
+        // So y(t) approx sum(vy0 + n*g) = vy0*t + 0.5*g*t^2. Correct.
+        // But we add '4' to the stored vy to get the "launch vector".
+        // The actual vy used in physics is "baseVy - 4".
+        // So if we need required_vy_initial, then baseVy = required_vy_initial + 4.
+        // And we check if magnitude of (vx, baseVy) is close to 'speed'.
+
+        const baseVy = required_vy_initial + 4; // Reversing the "-4" boost
+
+        const launchSpeed = Math.hypot(vx, baseVy);
+        const diff = Math.abs(launchSpeed - speed);
+
+        if (diff < minSpeedDiff) {
+            minSpeedDiff = diff;
+            bestSol = { vx, vy: required_vy_initial, flightTime: t };
+        }
+    }
+
+    // If even the best solution is too far off (unreachable), return null
+    // (e.g. trying to shoot across the map with weak gun)
+    if (bestSol && minSpeedDiff < speed * 0.5) {
+        return bestSol;
+    }
+
+    return null;
+}
+
+
 // Create bullets based on weapon mode (INK ECONOMY)
 export function createWeaponBullet(
     source: Cannon,
@@ -87,16 +173,48 @@ export function createWeaponBullet(
         }
 
         case 'inkBomb': {
-            // Arc trajectory bomb - starts with upward velocity for lobbing effect
+            // Arc trajectory bomb
             const inkBombConfig = WEAPON_MODES.inkBomb;
-            const baseVx = Math.cos(source.angle) * modeConfig.speed;
-            const baseVy = Math.sin(source.angle) * modeConfig.speed;
+
+            let vx, vy;
+
+            // Use Ballistic Targeting if available
+            if (source.targetPos) {
+                const solution = calculateBallisticVelocity(
+                    source.x,
+                    source.y,
+                    source.targetPos.x,
+                    source.targetPos.y,
+                    modeConfig.speed,
+                    inkBombConfig.gravity
+                );
+
+                if (solution) {
+                    vx = solution.vx;
+                    vy = solution.vy; // solution.vy is already the initial velocity (without the +4 boost abstraction), see calc
+                    // Wait, in my loop I derived: required_vy_initial = net_dy/t.
+                    // And I said "baseVy = required_vy_initial + 4".
+                    // The old code did: vy = baseVy - 4.
+                    // So if I set logic to use vx, vy directly:
+                    // I should pass these directly.
+                    // BUT wait, createWeaponBullet logic previously calculated baseVx/baseVy from angle.
+                    // Now we override them.
+                }
+            }
+
+            // Fallback if no target or no solution
+            if (vx === undefined || vy === undefined) {
+                const baseVx = Math.cos(source.angle) * modeConfig.speed;
+                const baseVy = Math.sin(source.angle) * modeConfig.speed;
+                vx = baseVx;
+                vy = baseVy - 4;
+            }
 
             bullets.push({
                 x: source.x,
                 y: source.y,
-                vx: baseVx,
-                vy: baseVy - 4, // Strong upward arc boost for lobbing effect
+                vx: vx,
+                vy: vy,
                 team,
                 active: true,
                 isInkBomb: true,
@@ -107,6 +225,7 @@ export function createWeaponBullet(
             break;
         }
     }
+
 
     return bullets;
 }

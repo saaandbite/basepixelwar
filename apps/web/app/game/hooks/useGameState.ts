@@ -108,7 +108,7 @@ type GameAction =
     | { type: 'RESET_ENTITIES'; width: number; height: number }
     | { type: 'TOGGLE_PAUSE' }
     | { type: 'TOGGLE_SOUND' }
-    | { type: 'SET_PLAYER_ANGLE'; angle: number }
+    | { type: 'SET_PLAYER_ANGLE'; angle: number; targetPos?: { x: number; y: number } }
     | { type: 'SET_PLAYER_FIRING'; firing: boolean }
     | { type: 'SET_WEAPON_MODE'; mode: WeaponMode }
     | { type: 'SET_CANVAS_SIZE'; width: number; height: number }
@@ -166,7 +166,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         case 'SET_PLAYER_ANGLE': {
             return {
                 ...state,
-                player: { ...state.player, angle: action.angle },
+                player: { ...state.player, angle: action.angle, targetPos: action.targetPos },
                 lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
         }

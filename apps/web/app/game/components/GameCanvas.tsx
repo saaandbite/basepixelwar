@@ -21,12 +21,13 @@ import {
     drawFrenzyOverlay,
     drawGlobalShieldOverlay,
 } from '../lib/renderer';
+import { calculateBallisticVelocity } from '../lib/gameLogic';
 import type { GameState } from '../types';
 
 interface GameCanvasProps {
     state: GameState;
     onResize: (width: number, height: number) => void;
-    onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean) => void;
+    onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean, targetPos?: { x: number; y: number }) => void;
     onInkBombPreview: (x: number, y: number, active: boolean) => void;
     onUpdate: () => void;
 }
@@ -113,7 +114,7 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
         drawProjectiles(ctx, state.projectiles);
 
         // Draw inkBomb preview if active
-        if (state.weaponMode === 'inkBomb' && state.inkBombPreview) {
+        if (state.player.weaponMode === 'inkBomb' && state.inkBombPreview) {
             drawInkBombPreview(ctx, state.inkBombPreview, WEAPON_MODES.inkBomb.paintRadius); // Using the inkBomb paint radius
         }
 
@@ -181,17 +182,53 @@ export function GameCanvas({ state, onResize, onPlayerInput, onInkBombPreview, o
             if (angle > 0) angle = angle > Math.PI / 2 ? -Math.PI + 0.2 : 0.2;
             if (angle < -Math.PI) angle = -Math.PI + 0.2;
 
+            let targetPos = undefined;
+
             // Update inkBomb preview if inkBomb weapon is selected
-            if (state.weaponMode === 'inkBomb') {
-                onInkBombPreview(cx, cy, true);
+            if (state.player.weaponMode === 'inkBomb') {
+                const modeConfig = WEAPON_MODES.inkBomb;
+                const inkBombConfig = WEAPON_MODES.inkBomb; // Use specific config for gravity
+
+                // Ballistic Targeting Logic
+                // 1. Calculate trajectory to hit the cursor position
+                const solution = calculateBallisticVelocity(
+                    state.player.x,
+                    state.player.y,
+                    cx, // Target X
+                    cy, // Target Y
+                    modeConfig.speed,
+                    inkBombConfig.gravity
+                );
+
+                if (solution) {
+                    // Reachable!
+                    onInkBombPreview(cx, cy, true);
+                    targetPos = { x: cx, y: cy };
+
+                    // We should update the visual angle of the cannon to match the launch angle
+                    // The solution gives us vx, vy.
+                    // The angle is atan2(vy, vx).
+                    // HOWEVER, the `solution.vy` is the `initial_vy_required`.
+                    // The cannon visual usually represents the "aim direction".
+                    // In our physics abstraction (vy - 4), the "launch vector" is what matters.
+                    // Let's use the velocity vector to set the angle.
+                    const launchVy = solution.vy + 4; // visual vy (reverse of the -4 boost)
+                    angle = Math.atan2(launchVy, solution.vx);
+                } else {
+                    // Not reachable (out of range)
+                    // Show max range or hide? Let's hide for now or pin to max range.
+                    // For 'Point and Click', if they click outside, it might be better to show nothing or red.
+                    onInkBombPreview(0, 0, false);
+                }
+
             } else {
                 // Hide preview if not using inkBomb
                 onInkBombPreview(0, 0, false);
             }
 
-            onPlayerInput(angle, isDown, isDown);
+            onPlayerInput(angle, isDown, isDown, targetPos);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.weaponMode, onPlayerInput, onInkBombPreview]
+        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.weaponMode, onPlayerInput, onInkBombPreview]
     );
 
     // Mouse events
