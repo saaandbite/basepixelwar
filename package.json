@@ -2,12 +2,16 @@
   "name": "basepixelwar",
   "private": true,
   "scripts": {
+    "setup": "pnpm install && pnpm setup:foundry",
+    "setup:foundry": "command -v forge >/dev/null 2>&1 || (curl -L https://foundry.paradigm.xyz | bash && foundryup)",
+    "setup:check": "echo 'Checking dependencies...' && pnpm --version && docker --version && docker compose version && (forge --version || echo 'Foundry not installed. Run: pnpm setup:foundry')",
     "build": "turbo run build",
+    "build:contracts": "cd packages/contracts && forge build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "db:init": "mkdir -p tb_data && docker run --rm --security-opt seccomp=unconfined -v $(pwd)/tb_data:/data ghcr.io/tigerbeetle/tigerbeetle:latest format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle",
+    "db:init": "pnpm setup:check && mkdir -p tb_data && docker run --rm --security-opt seccomp=unconfined -v $(pwd)/tb_data:/data ghcr.io/tigerbeetle/tigerbeetle:latest format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "rm -rf tb_data redis_data && pnpm db:init"
