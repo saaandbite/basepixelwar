@@ -4,8 +4,9 @@
 // Simplified canvas that renders server-synced game state
 
 import { useRef, useEffect, useCallback } from 'react';
-import { GAME_WIDTH, GAME_HEIGHT, GRID_SIZE, COLORS } from '../lib/constants';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, INK_MAX } from '../lib/constants';
 import type { SyncedGameState } from '@repo/shared/multiplayer';
+import type { Projectile, Cannon } from '../types';
 import {
     drawBackground,
     drawGrid,
@@ -21,8 +22,6 @@ interface PvPGameCanvasProps {
 
 export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const effectsCanvasRef = useRef<HTMLCanvasElement>(null); // Add effects canvas later if needed, but for now single canvas is fine or use same structure as GameCanvas
-    // Actually renderer functions expect ctx.
 
     const isFlipped = myTeam === 'red';
 
@@ -50,47 +49,48 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         drawBackground(ctx, GAME_WIDTH, GAME_HEIGHT);
 
         // 2. Draw Grid
-        // Grid from server is simple array. drawGrid expects ('blue'|'red')[][]
+        // Grid from server is simple array. drawGrid expects ('blue' | 'red')[][]
         if (grid && grid.length > 0 && grid[0]) {
             // Need forceRedraw=true often because we don't cache grid hash in pvp component yet, 
             // or let renderer handle caching (it has internal cache).
             // But renderer cache depends on "lastCols" etc.
-            drawGrid(ctx, grid as any, grid.length, grid[0].length);
+            drawGrid(ctx, grid as ('blue' | 'red')[][], grid.length, grid[0].length);
         }
 
         // 3. Draw Projectiles
         // Map SyncedProjectile to Projectile compatible object
         // Synced: { id, x, y, vx, vy, team, type }
         // Renderer: { x, y, team, type, ... }
-        // Safe to cast or map
-        const renderProjectiles = projectiles.map(p => ({
+        const renderProjectiles: Projectile[] = projectiles.map(p => ({
             ...p,
-            life: 1.0, // Mock
-            active: true
-        })) as any[];
+            active: true,
+            lifetime: 1.0, // Default lifetime for rendering
+        }));
         drawProjectiles(ctx, renderProjectiles);
 
         // 4. Draw Cannons
         // Map SyncedPlayerState to Cannon compatible object
-        // Synced: { x, y, angle, isFiring, ink, weaponMode }
-        // Cannon: { x, y, angle, cooldown, powerups... }
-        const p1Cannon = {
+        const p1Cannon: Cannon = {
             ...player1,
             cooldown: 0,
-            powerups: { shield: 0, burst: 0, speed: 0 },
+            powerups: { shield: 0 },
             isFrenzy: false,
-            shield: { active: false, health: 0, maxHealth: 0 }
+            frenzyEndTime: 0,
+            lastFireTime: 0,
+            maxInk: INK_MAX,
         };
-        const p2Cannon = {
+        const p2Cannon: Cannon = {
             ...player2,
             cooldown: 0,
-            powerups: { shield: 0, burst: 0, speed: 0 },
+            powerups: { shield: 0 },
             isFrenzy: false,
-            shield: { active: false, health: 0, maxHealth: 0 }
+            frenzyEndTime: 0,
+            lastFireTime: 0,
+            maxInk: INK_MAX,
         };
 
-        drawCannon(ctx, p1Cannon as any, COLORS.bulletStrokeBlue, true); // Player 1 is Blue (server-side constant)
-        drawCannon(ctx, p2Cannon as any, COLORS.bulletStrokeRed, false); // Player 2 is Red
+        drawCannon(ctx, p1Cannon, COLORS.bulletStrokeBlue, true); // Player 1 is Blue (server-side constant)
+        drawCannon(ctx, p2Cannon, COLORS.bulletStrokeRed, false); // Player 2 is Red
 
         // Restore context (remove flip)
         ctx.restore();
