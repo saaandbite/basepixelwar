@@ -17,17 +17,40 @@ import { ComboEffect } from './components/ComboEffect';
 import { InkBar } from './components/InkBar';
 import { WeaponSelector } from './components/WeaponSelector';
 import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
+import { PvPGamePage } from './PvPGamePage';
 
 import './game.css';
 
+// Wrapper component to decide between PvP and AI mode
 export default function GamePage() {
+    const [isPvP, setIsPvP] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        const pvpMode = sessionStorage.getItem('pvp_mode') === 'true';
+        setIsPvP(pvpMode);
+    }, []);
+
+    if (!mounted) {
+        return <div className="game-container flex items-center justify-center h-screen">Loading...</div>;
+    }
+
+    if (isPvP) {
+        return <PvPGamePage />;
+    }
+
+    return <AIGamePage />;
+}
+
+// AI Game Page (original single-player vs AI)
+function AIGamePage() {
     const {
         gameStateRef, // Mutable Ref 
         uiState,      // React State (Synced)
         startGame,
         resetGame,
-        setCanvasSize,
-        toggleSound,
+
         setPlayerAngle,
         setPlayerFiring,
         setWeaponMode,
@@ -111,24 +134,16 @@ export default function GamePage() {
         startGame(playSound);
     }, [initAudio, resetGame, startGame, playSound]);
 
-    const handleRestart = useCallback(() => {
-        // No pause toggling needed
-        setTimeout(() => {
-            resetGame(GAME_WIDTH, GAME_HEIGHT);
-            startGame(playSound);
-        }, 100);
-    }, [resetGame, startGame, playSound]);
-
     const handlePlayAgain = useCallback(() => {
         resetGame(GAME_WIDTH, GAME_HEIGHT);
         startGame(playSound);
     }, [resetGame, startGame, playSound]);
 
     const handleResize = useCallback(
-        (width: number, height: number) => {
+        () => {
             // No-op for now as we enforce fixed size
         },
-        [setCanvasSize]
+        []
     );
 
     const handlePlayerInput = useCallback(
@@ -143,9 +158,7 @@ export default function GamePage() {
         updateGame(playSound);
     }, [updateGame, playSound]);
 
-    const handleToggleSound = useCallback(() => {
-        toggleSound();
-    }, [toggleSound]);
+
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -154,6 +167,7 @@ export default function GamePage() {
 
             // Weapon switching with number keys
             switch (e.key) {
+
                 case '1':
                     setWeaponMode('machineGun');
                     break;

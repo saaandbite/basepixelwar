@@ -125,6 +125,10 @@ export interface GameState {
     lastShieldPowerupTime: number;
     // InkBomb preview position
     inkBombPreview?: { x: number; y: number; active: boolean };
+
+    // PvP Mode
+    isPvPMode: boolean;
+    myTeam: 'blue' | 'red';
 }
 
 export type GameAction =

@@ -51,12 +51,7 @@ export function calculateBallisticVelocity(
     gravity: number
 ): { vx: number; vy: number; flightTime: number } | null {
     const dx = targetX - sourceX;
-    const dy = targetY - sourceY; // Positive dy is DOWN
-    const v2 = speed * speed;
-    const x2 = dx * dx;
-    const gx = gravity * dx;
-
-    // Safety check for range
+    const dy = targetY - sourceY; // Positive dy is DOWNg (on flat ground, simplified)
     // R_max = v^2 / g (on flat ground, simplified)
     // We solving: y = x * tan(theta) + (g * x^2) / (2 * v^2 * cos^2(theta))
     // But we know v_total is fixed to 'speed' (actually it's not, usually game physics splits vx/vy differently)

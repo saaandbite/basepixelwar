@@ -30,9 +30,10 @@ interface GameCanvasProps {
     onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean, targetPos?: { x: number; y: number }) => void;
     onInkBombPreview: (x: number, y: number, active: boolean) => void;
     onUpdate: () => void;
+    flipPerspective?: boolean; // PvP: Flip 180° for red team
 }
 
-export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPreview, onUpdate }: GameCanvasProps) {
+export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPreview, onUpdate, flipPerspective = false }: GameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -51,7 +52,7 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
         }
     }, [onResize]);
 
-    // Draw function
+    // Draw loop with lerp for smooth movement
     const draw = useCallback(() => {
         const canvas = canvasRef.current;
         const effectsCanvas = effectsCanvasRef.current;
@@ -61,8 +62,18 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
         const effectsCtx = effectsCanvas.getContext('2d');
         if (!ctx || !effectsCtx) return;
 
-        // READ STATE FROM REF (No React overhead)
+        // Use ref for current state to avoid closure staleness
         const state = gameStateRef.current;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Apply flip perspective if needed (for red team in PvP)
+        ctx.save();
+        if (flipPerspective) {
+            ctx.translate(canvas.width, canvas.height);
+            ctx.rotate(Math.PI);
+        }
 
         const width = canvas.width;
         const height = canvas.height;
@@ -82,7 +93,7 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
         }
 
         // Draw trajectory (player only)
-        if (!state.isPaused && state.gameActive) {
+        if (state.gameActive) {
             drawTrajectory(ctx, state.player, width, height);
         }
 
@@ -137,7 +148,7 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
         if (state.player.isFrenzy) {
             drawFrenzyOverlay(effectsCtx, width, height, 1);
         }
-    }, [gameStateRef]);
+    }, [gameStateRef, flipPerspective]);
 
     // Game loop
     // Dependencies: only onUpdate and draw (stable). Active state read from Ref? 
@@ -194,7 +205,7 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
             onUpdate();
             draw();
         }, [onUpdate, draw]),
-        state.gameActive && !state.isPaused
+        state.gameActive
     );
 
     // Initial draw for non-active state
@@ -208,7 +219,7 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
     const handleInput = useCallback(
         (clientX: number, clientY: number, isDown: boolean) => {
             const currentState = gameStateRef.current;
-            if (!canvasRef.current || !currentState.gameActive || currentState.isPaused) return;
+            if (!canvasRef.current || !currentState.gameActive) return;
 
             const canvas = canvasRef.current;
             const rect = canvas.getBoundingClientRect();
@@ -217,8 +228,14 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
-            const cx = (clientX - rect.left) * scaleX;
-            const cy = (clientY - rect.top) * scaleY;
+            let cx = (clientX - rect.left) * scaleX;
+            let cy = (clientY - rect.top) * scaleY;
+
+            // Flip coordinates if perspective is flipped
+            if (flipPerspective) {
+                cx = canvas.width - cx;
+                cy = canvas.height - cy;
+            }
 
             // Also clamp to canvas bounds to prevent weird off-screen targeting
             const clampedCx = Math.max(0, Math.min(canvas.width, cx));
@@ -277,21 +294,28 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
 
             onPlayerInput(angle, isDown, isDown, targetPos);
         },
-        [gameStateRef, onPlayerInput, onInkBombPreview]
+        [gameStateRef, onPlayerInput, onInkBombPreview, flipPerspective]
     );
 
     // Handle pointer movement for ink bomb preview
     const handlePointerMove = useCallback(
         (clientX: number, clientY: number) => {
             const currentState = gameStateRef.current;
-            if (!canvasRef.current || !currentState.gameActive || currentState.isPaused || currentState.player.weaponMode !== 'inkBomb' || currentState.player.inkBombInFlight) return;
+            if (!canvasRef.current || !currentState.gameActive || currentState.player.weaponMode !== 'inkBomb' || currentState.player.inkBombInFlight) return;
 
             const canvas = canvasRef.current;
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
-            const cx = (clientX - rect.left) * scaleX;
-            const cy = (clientY - rect.top) * scaleY;
+            let cx = (clientX - rect.left) * scaleX;
+            let cy = (clientY - rect.top) * scaleY;
+
+            // Flip coordinates if perspective is flipped
+            if (flipPerspective) {
+                cx = canvas.width - cx;
+                cy = canvas.height - cy;
+            }
+
             const clampedCx = Math.max(0, Math.min(canvas.width, cx));
             const clampedCy = Math.max(0, Math.min(canvas.height, cy));
 
@@ -318,7 +342,7 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
                 onInkBombPreview(0, 0, false);
             }
         },
-        [gameStateRef, onInkBombPreview]
+        [gameStateRef, onInkBombPreview, flipPerspective]
     );
 
     // Mouse events
@@ -404,6 +428,7 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
         <div
             ref={containerRef}
             className="relative flex-grow bg-gradient-to-b from-slate-100 to-slate-200 w-full overflow-hidden"
+            style={flipPerspective ? { transform: 'rotate(180deg)' } : undefined}
         >
             <canvas
                 ref={canvasRef}

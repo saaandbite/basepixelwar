@@ -1,20 +1,55 @@
-import { Pixel, ColorID } from "@repo/shared";
+// apps/server/src/index.ts
+// Main server entry point
 
-const serverName: string = "TigerBeetle Game Engine";
-console.log(`Starting ${serverName}...`);
+import { createServer } from 'http';
+import { initializeSocketServer } from './socketServer';
+import { getStats } from './roomManager';
 
-// TEST DATA (Sesuai Type Definition terbaru)
-const testPixel: Pixel = {
-  x: 10,
-  y: 20,
-  c: ColorID.Bull,    // Gunakan Enum, bukan angka manual
-  o: "0x123abc...",   // 'o' bukan 'owner'
-  t: Date.now()       // 't' timestamp (wajib ada sekarang)
-};
+const PORT = process.env.PORT || 3002;
 
-console.log("✅ Test Pixel Data Valid:", testPixel);
+// Create HTTP server
+const httpServer = createServer((req, res) => {
+  // Simple health check endpoint
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      ...getStats()
+    }));
+    return;
+  }
 
-// Simulasi Server Loop agar process tidak langsung mati saat dev
-setInterval(() => {
-  // Keep alive
-}, 10000);
+  // Stats endpoint
+  if (req.url === '/stats') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(getStats()));
+    return;
+  }
+
+  res.writeHead(404);
+  res.end('Not Found');
+});
+
+// Initialize WebSocket server
+initializeSocketServer(httpServer);
+
+// Start listening
+httpServer.listen(PORT, () => {
+  console.log('═══════════════════════════════════════════');
+  console.log('  🎮 Chroma Duel PvP Server');
+  console.log('═══════════════════════════════════════════');
+  console.log(`  📡 WebSocket: ws://localhost:${PORT}`);
+  console.log(`  🔗 Health:    http://localhost:${PORT}/health`);
+  console.log(`  📊 Stats:     http://localhost:${PORT}/stats`);
+  console.log('═══════════════════════════════════════════');
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('[Server] Shutting down...');
+  httpServer.close(() => {
+    console.log('[Server] Closed');
+    process.exit(0);
+  });
+});

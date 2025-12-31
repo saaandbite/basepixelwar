@@ -1,6 +1,6 @@
 // Game State Hook
 
-import { useReducer, useCallback, useRef, useState, useMemo } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { GameState, Projectile, Particle, WeaponMode } from '../types';
 
 import {
@@ -135,6 +135,10 @@ function createInitialState(width: number, height: number): GameState {
         lastShieldPowerupTime: 0,
         // InkBomb preview position
         inkBombPreview: { x: 0, y: 0, active: false },
+
+        // PvP Mode
+        isPvPMode: false,
+        myTeam: 'blue',
     };
 }
 
@@ -152,8 +156,11 @@ type GameAction =
     | { type: 'TIMER_TICK'; playSound: (name: string) => void }
     | { type: 'END_GAME' }
     | { type: 'USE_SHIELD'; playSound: (name: string) => void }
-
-    | { type: 'ACTIVATE_FRENZY'; team: 'blue' | 'red'; playSound: (name: string) => void };
+    | { type: 'ACTIVATE_FRENZY'; team: 'blue' | 'red'; playSound: (name: string) => void }
+    // PvP: Control enemy cannon via opponent input
+    | { type: 'SET_ENEMY_INPUT'; angle: number; firing: boolean; weaponMode: WeaponMode; targetPos?: { x: number; y: number } }
+    // PvP: Set PvP mode and team
+    | { type: 'SET_PVP_MODE'; isPvP: boolean; myTeam: 'blue' | 'red' };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
     switch (action.type) {
@@ -277,6 +284,29 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             };
         }
 
+        // PvP: Control enemy cannon via opponent input
+        case 'SET_ENEMY_INPUT': {
+            return {
+                ...state,
+                enemy: {
+                    ...state.enemy,
+                    angle: action.angle,
+                    isFiring: action.firing,
+                    weaponMode: action.weaponMode,
+                    targetPos: action.targetPos,
+                },
+            };
+        }
+
+        // PvP: Set PvP mode
+        case 'SET_PVP_MODE': {
+            return {
+                ...state,
+                isPvPMode: action.isPvP,
+                myTeam: action.myTeam,
+            };
+        }
+
         case 'GAME_UPDATE': {
             if (!state.gameActive) return state;
 
@@ -329,95 +359,121 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 action.playSound('shoot');
             }
 
+
             if (newState.player.cooldown > 0) {
                 newState.player = { ...newState.player, cooldown: newState.player.cooldown - 1 };
             }
 
+            // Enemy logic - different for AI vs PvP
+            if (!newState.isPvPMode) {
+                // === AI MODE: Full enemy AI logic ===
 
-
-            // Enemy AI
-            newState.enemy = { ...newState.enemy, moveTimer: (newState.enemy.moveTimer || 0) + 1 };
-            newState.enemy.difficulty = Math.min(
-                0.3 + ((GAME_DURATION - newState.timeLeft) / GAME_DURATION) * 0.5,
-                0.9
-            );
-
-            if (newState.enemy.moveTimer! > 30 - newState.enemy.difficulty! * 20) {
-                const blueTerritory = findLargestTerritory(
-                    newState.grid,
-                    'blue',
-                    newState.cols,
-                    newState.rows
-                );
-                if (blueTerritory && Math.random() < newState.enemy.difficulty!) {
-                    const tx = blueTerritory.x * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 60;
-                    const ty = blueTerritory.y * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 60;
-                    const dx = tx - newState.enemy.x;
-                    const dy = ty - newState.enemy.y;
-                    newState.enemy.targetAngle = Math.atan2(dy, dx);
-                } else {
-                    const tx = Math.random() * (newState.cols * GRID_SIZE);
-                    const ty = (newState.rows * GRID_SIZE) / 2 + Math.random() * ((newState.rows * GRID_SIZE) / 3);
-                    const dx = tx - newState.enemy.x;
-                    const dy = ty - newState.enemy.y;
-                    newState.enemy.targetAngle = Math.atan2(dy, dx);
-                }
-                newState.enemy.moveTimer = 0;
-            }
-
-            // Smooth rotation
-            const rotationSpeed = 0.05 + newState.enemy.difficulty! * 0.1;
-            newState.enemy.angle += (newState.enemy.targetAngle! - newState.enemy.angle) * rotationSpeed;
-
-            // Enemy fire
-            newState.enemy.cooldown--;
-            if (newState.enemy.cooldown <= 0) {
-                const bullets = createBullet(newState.enemy, 'red', 0.2);
-                newState.projectiles = [...newState.projectiles, ...bullets];
-
-                newState.enemy = {
-                    ...newState.enemy,
-                    cooldown: FIRE_RATE - Math.floor(newState.enemy.difficulty! * 3),
-                };
-                action.playSound('shoot');
-            }
-
-            // Enemy Special Powerup Usage AI
-            const enemyPowerups = newState.enemy.powerups!;
-
-            // Use Shield if projectile is close
-            if (enemyPowerups.shield > 0) {
-                const incomingBullet = newState.projectiles.find(p =>
-                    p.team === 'blue' && Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y) < 150
+                // Enemy AI targeting
+                newState.enemy = { ...newState.enemy, moveTimer: (newState.enemy.moveTimer || 0) + 1 };
+                newState.enemy.difficulty = Math.min(
+                    0.3 + ((GAME_DURATION - newState.timeLeft) / GAME_DURATION) * 0.5,
+                    0.9
                 );
 
-                if (incomingBullet) {
-                    newState.enemy.powerups!.shield--;
-                    action.playSound('powerup');
-
-                    // Activate GLOBAL SHIELD for enemy
-                    newState.globalShield = {
-                        active: true,
-                        endTime: Date.now() + 5000,
-                        team: 'red'
-                    };
-
-                    // Create enemy shield activation particles
-                    const shieldParticles: Particle[] = [];
-                    for (let i = 0; i < 30; i++) {
-                        const angle = Math.random() * Math.PI * 2;
-                        const speed = 2 + Math.random() * 4;
-                        shieldParticles.push({
-                            x: newState.enemy.x,
-                            y: newState.enemy.y,
-                            vx: Math.cos(angle) * speed,
-                            vy: Math.sin(angle) * speed,
-                            life: 1.0,
-                            size: 4,
-                            color: COLORS.powerup.shield,
-                        });
+                if (newState.enemy.moveTimer! > 30 - newState.enemy.difficulty! * 20) {
+                    const blueTerritory = findLargestTerritory(
+                        newState.grid,
+                        'blue',
+                        newState.cols,
+                        newState.rows
+                    );
+                    if (blueTerritory && Math.random() < newState.enemy.difficulty!) {
+                        const tx = blueTerritory.x * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 60;
+                        const ty = blueTerritory.y * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 60;
+                        const dx = tx - newState.enemy.x;
+                        const dy = ty - newState.enemy.y;
+                        newState.enemy.targetAngle = Math.atan2(dy, dx);
+                    } else {
+                        const tx = Math.random() * (newState.cols * GRID_SIZE);
+                        const ty = (newState.rows * GRID_SIZE) / 2 + Math.random() * ((newState.rows * GRID_SIZE) / 3);
+                        const dx = tx - newState.enemy.x;
+                        const dy = ty - newState.enemy.y;
+                        newState.enemy.targetAngle = Math.atan2(dy, dx);
                     }
-                    newState.particles = [...newState.particles, ...shieldParticles];
+                    newState.enemy.moveTimer = 0;
+                }
+
+                // Smooth rotation (AI mode)
+                const rotationSpeed = 0.05 + newState.enemy.difficulty! * 0.1;
+                newState.enemy.angle += (newState.enemy.targetAngle! - newState.enemy.angle) * rotationSpeed;
+
+                // Enemy fire (AI mode - constant firing)
+                newState.enemy.cooldown--;
+                if (newState.enemy.cooldown <= 0) {
+                    const bullets = createBullet(newState.enemy, 'red', 0.2);
+                    newState.projectiles = [...newState.projectiles, ...bullets];
+
+                    newState.enemy = {
+                        ...newState.enemy,
+                        cooldown: FIRE_RATE - Math.floor(newState.enemy.difficulty! * 3),
+                    };
+                    action.playSound('shoot');
+                }
+
+                // Enemy Special Powerup Usage AI
+                const enemyPowerups = newState.enemy.powerups!;
+
+                // Use Shield if projectile is close
+                if (enemyPowerups.shield > 0) {
+                    const incomingBullet = newState.projectiles.find(p =>
+                        p.team === 'blue' && Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y) < 150
+                    );
+
+                    if (incomingBullet) {
+                        newState.enemy.powerups!.shield--;
+                        action.playSound('powerup');
+
+                        // Activate GLOBAL SHIELD for enemy
+                        newState.globalShield = {
+                            active: true,
+                            endTime: Date.now() + 5000,
+                            team: 'red'
+                        };
+
+                        // Create enemy shield activation particles
+                        const shieldParticles: Particle[] = [];
+                        for (let i = 0; i < 30; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = 2 + Math.random() * 4;
+                            shieldParticles.push({
+                                x: newState.enemy.x,
+                                y: newState.enemy.y,
+                                vx: Math.cos(angle) * speed,
+                                vy: Math.sin(angle) * speed,
+                                life: 1.0,
+                                size: 4,
+                                color: COLORS.powerup.shield,
+                            });
+                        }
+                        newState.particles = [...newState.particles, ...shieldParticles];
+                    }
+                }
+            } else {
+                // === PVP MODE: Enemy controlled by opponent input ===
+                // Enemy shooting based on isFiring state (set by opponent input)
+                if (newState.enemy.isFiring && newState.enemy.cooldown <= 0) {
+                    const enemyWeaponConfig = WEAPON_MODES[newState.enemy.weaponMode || 'machineGun'];
+                    const hasEnoughInk = newState.enemy.ink >= enemyWeaponConfig.cost;
+
+                    if (hasEnoughInk) {
+                        const bullets = createWeaponBullet(newState.enemy, 'red', newState.enemy.weaponMode || 'machineGun');
+                        newState.projectiles = [...newState.projectiles, ...bullets];
+                        newState.enemy = {
+                            ...newState.enemy,
+                            cooldown: enemyWeaponConfig.fireRate,
+                            ink: newState.enemy.ink - enemyWeaponConfig.cost,
+                        };
+                        action.playSound('shoot');
+                    }
+                }
+
+                if (newState.enemy.cooldown > 0) {
+                    newState.enemy = { ...newState.enemy, cooldown: newState.enemy.cooldown - 1 };
                 }
             }
 
@@ -1095,8 +1151,12 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
                 break;
             case 'START_GAME':
             case 'RESET_ENTITIES':
+                shouldSync = true;
+                break;
             // TOGGLE_PAUSE removed
             case 'TOGGLE_SOUND':
+                shouldSync = true;
+                break;
             case 'SET_WEAPON_MODE':
             case 'TIMER_TICK':
             case 'END_GAME':
@@ -1164,6 +1224,21 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         processAction({ type: 'SET_INKBOMB_PREVIEW', x, y, active });
     }, [processAction]);
 
+    // PvP: Set enemy input from opponent
+    const setEnemyInput = useCallback((
+        angle: number,
+        firing: boolean,
+        weaponMode: WeaponMode,
+        targetPos?: { x: number; y: number }
+    ) => {
+        processAction({ type: 'SET_ENEMY_INPUT', angle, firing, weaponMode, targetPos });
+    }, [processAction]);
+
+    // PvP: Set PvP mode
+    const setPvPMode = useCallback((isPvP: boolean, myTeam: 'blue' | 'red') => {
+        processAction({ type: 'SET_PVP_MODE', isPvP, myTeam });
+    }, [processAction]);
+
     return {
         gameStateRef, // Expose Ref for Canvas
         uiState,      // Expose UI State for Components
@@ -1179,5 +1254,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         updateGame,
         timerTick,
         activateShield,
+        setEnemyInput, // PvP
+        setPvPMode,    // PvP
     };
 }

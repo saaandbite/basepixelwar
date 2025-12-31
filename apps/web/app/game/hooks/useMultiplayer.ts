@@ -1,0 +1,299 @@
+// apps/web/app/game/hooks/useMultiplayer.ts
+// Client-side hook untuk PvP multiplayer
+
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import type {
+    ClientToServerEvents,
+    ServerToClientEvents,
+    PvPPlayer,
+    GameRoom,
+    GameStartData,
+    SyncedGameState,
+    GameResult,
+    PlayerInput,
+} from '@repo/shared/multiplayer';
+
+type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+// ============================================
+// CONNECTION STATE
+// ============================================
+
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+export type MatchmakingStatus = 'idle' | 'queue' | 'found' | 'countdown' | 'playing';
+
+export interface MultiplayerState {
+    connectionStatus: ConnectionStatus;
+    matchmakingStatus: MatchmakingStatus;
+    playerId: string | null;
+    room: GameRoom | null;
+    opponent: PvPPlayer | null;
+    myTeam: 'blue' | 'red' | null;
+    gameConfig: GameStartData['config'] | null;
+    queuePosition: number;
+    countdown: number;
+    latestGameState: SyncedGameState | null;
+    lastGameResult: GameResult | null;
+    error: string | null;
+}
+
+const SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3002';
+
+// ============================================
+// HOOK
+// ============================================
+
+export function useMultiplayer() {
+    const socketRef = useRef<GameSocket | null>(null);
+
+    const [state, setState] = useState<MultiplayerState>({
+        connectionStatus: 'disconnected',
+        matchmakingStatus: 'idle',
+        playerId: null,
+        room: null,
+        opponent: null,
+        myTeam: null,
+        gameConfig: null,
+        queuePosition: 0,
+        countdown: 0,
+        latestGameState: null,
+        lastGameResult: null,
+        error: null,
+    });
+
+    // Callback ref for opponent input handling
+    const opponentInputCallbackRef = useRef<((input: PlayerInput & { team: 'blue' | 'red' }) => void) | null>(null);
+
+    // Connect to server
+    const connect = useCallback(() => {
+        if (socketRef.current?.connected) return;
+
+        setState(prev => ({ ...prev, connectionStatus: 'connecting', error: null }));
+
+        const socket: GameSocket = io(SERVER_URL, {
+            transports: ['websocket'],
+            autoConnect: true,
+        });
+
+        socketRef.current = socket;
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        socket.on('connect', () => {
+            console.log('[Multiplayer] Connected to server');
+        });
+
+        socket.on('connected', (playerId) => {
+            console.log('[Multiplayer] Received player ID:', playerId);
+            setState(prev => ({
+                ...prev,
+                connectionStatus: 'connected',
+                playerId,
+            }));
+        });
+
+        socket.on('disconnect', () => {
+            console.log('[Multiplayer] Disconnected from server');
+            setState(prev => ({
+                ...prev,
+                connectionStatus: 'disconnected',
+                matchmakingStatus: 'idle',
+                room: null,
+                opponent: null,
+            }));
+        });
+
+        socket.on('queue_status', ({ position, totalInQueue }) => {
+            console.log(`[Multiplayer] Queue position: ${position}/${totalInQueue}`);
+            setState(prev => ({
+                ...prev,
+                queuePosition: position,
+                matchmakingStatus: position > 0 ? 'queue' : prev.matchmakingStatus,
+            }));
+        });
+
+        socket.on('match_found', ({ roomId, opponent }) => {
+            console.log('[Multiplayer] Match found!', roomId, opponent);
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'found',
+                opponent,
+            }));
+        });
+
+        socket.on('room_created', (room) => {
+            console.log('[Multiplayer] Room created:', room.id);
+            setState(prev => ({
+                ...prev,
+                room,
+                matchmakingStatus: 'found',
+            }));
+        });
+
+        socket.on('room_joined', (room) => {
+            console.log('[Multiplayer] Joined room:', room.id);
+            setState(prev => ({
+                ...prev,
+                room,
+                matchmakingStatus: 'found',
+            }));
+        });
+
+        socket.on('player_joined', (player) => {
+            console.log('[Multiplayer] Player joined:', player.name);
+            setState(prev => ({
+                ...prev,
+                opponent: player,
+            }));
+        });
+
+        socket.on('player_left', (playerId) => {
+            console.log('[Multiplayer] Player left:', playerId);
+            setState(prev => ({
+                ...prev,
+                opponent: null,
+                matchmakingStatus: prev.matchmakingStatus === 'playing' ? 'idle' : prev.matchmakingStatus,
+            }));
+        });
+
+        socket.on('room_error', (message) => {
+            console.error('[Multiplayer] Room error:', message);
+            setState(prev => ({
+                ...prev,
+                error: message,
+            }));
+        });
+
+        socket.on('game_countdown', (seconds) => {
+            console.log('[Multiplayer] Countdown:', seconds);
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'countdown',
+                countdown: seconds,
+            }));
+        });
+
+        socket.on('game_start', (data) => {
+            console.log('[Multiplayer] Game starting!', data);
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'playing',
+                myTeam: data.yourTeam,
+                opponent: data.opponent,
+                gameConfig: data.config,
+                countdown: 0,
+            }));
+        });
+
+        socket.on('game_state', (gameState) => {
+            setState(prev => ({
+                ...prev,
+                latestGameState: gameState,
+            }));
+        });
+
+        socket.on('game_over', (result) => {
+            console.log('[Multiplayer] Game over!', result);
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'idle',
+                lastGameResult: result,
+            }));
+        });
+
+        // Handle opponent input relay
+        socket.on('opponent_input', (input) => {
+            if (opponentInputCallbackRef.current) {
+                opponentInputCallbackRef.current(input);
+            }
+        });
+
+    }, []);
+
+    // Disconnect from server
+    const disconnect = useCallback(() => {
+        if (socketRef.current) {
+            socketRef.current.disconnect();
+            socketRef.current = null;
+        }
+        setState(prev => ({
+            ...prev,
+            connectionStatus: 'disconnected',
+            matchmakingStatus: 'idle',
+            room: null,
+            opponent: null,
+        }));
+    }, []);
+
+    // Join matchmaking queue
+    const joinQueue = useCallback(() => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('join_queue');
+            setState(prev => ({ ...prev, matchmakingStatus: 'queue' }));
+        }
+    }, []);
+
+    // Leave matchmaking queue
+    const leaveQueue = useCallback(() => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('leave_queue');
+            setState(prev => ({ ...prev, matchmakingStatus: 'idle', queuePosition: 0 }));
+        }
+    }, []);
+
+    // Signal ready to start
+    const setReady = useCallback(() => {
+        if (socketRef.current?.connected) {
+            socketRef.current.emit('player_ready');
+        }
+    }, []);
+
+    // Send player input (for game loop)
+    const sendInput = useCallback((input: Omit<PlayerInput, 'timestamp' | 'sequence'>) => {
+        if (socketRef.current?.connected && state.matchmakingStatus === 'playing') {
+            socketRef.current.emit('player_input', {
+                ...input,
+                timestamp: Date.now(),
+                sequence: 0, // TODO: Implement input sequencing
+            });
+        }
+    }, [state.matchmakingStatus]);
+
+    // Set callback for receiving opponent inputs
+    const setOpponentInputCallback = useCallback((
+        callback: ((input: PlayerInput & { team: 'blue' | 'red' }) => void) | null
+    ) => {
+        opponentInputCallbackRef.current = callback;
+    }, []);
+
+    // Auto-disconnect on unmount
+    useEffect(() => {
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
+        };
+    }, []);
+
+    return {
+        // State
+        ...state,
+        isConnected: state.connectionStatus === 'connected',
+        isInQueue: state.matchmakingStatus === 'queue',
+        isPlaying: state.matchmakingStatus === 'playing',
+
+        // Actions
+        connect,
+        disconnect,
+        joinQueue,
+        leaveQueue,
+        setReady,
+        sendInput,
+        setOpponentInputCallback,
+    };
+}
