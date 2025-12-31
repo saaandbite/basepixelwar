@@ -2,12 +2,11 @@
 
 // Chroma Duel Game Page
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useAudio } from './hooks/useAudio';
 import { GAME_WIDTH, GAME_HEIGHT } from './lib/constants';
 
-import { calculateScore } from './lib/gameLogic';
 import { GameCanvas } from './components/GameCanvas';
 import { GameHUD } from './components/GameHUD';
 import { GameInstructions } from './components/GameInstructions';
@@ -24,7 +23,8 @@ import './game.css';
 
 export default function GamePage() {
     const {
-        state,
+        gameStateRef, // Mutable Ref 
+        uiState,      // React State (Synced)
         startGame,
         resetGame,
         setCanvasSize,
@@ -43,10 +43,12 @@ export default function GamePage() {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     const [isMounted, setIsMounted] = useState(false);
+    // showCombo is now derived in uiState? No, I added it to uiState interface but didn't fully implement logic to override local state? 
+    // Actually simpler to keep showCombo local if we want, OR use the one from uiState?
+    // Let's keep local for animation control if uiState update isn't 60fps.
+    // However, the `comboStreak` comes from `uiState`.
     const [showCombo, setShowCombo] = useState(false);
     const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'shield'; x: number; y: number } | null>(null);
-
-
 
     // Initial mount hydration safety
     useEffect(() => {
@@ -55,16 +57,13 @@ export default function GamePage() {
 
     // Audio sync
     useEffect(() => {
-        setSoundOn(state.isSoundOn);
-    }, [state.isSoundOn, setSoundOn]);
-
-
-
-
+        setSoundOn(uiState.isSoundOn);
+    }, [uiState.isSoundOn, setSoundOn]);
 
     // Timer
+    const { gameActive, isPaused } = uiState;
     useEffect(() => {
-        if (state.gameActive && !state.isPaused) {
+        if (gameActive && !isPaused) {
             timerRef.current = setInterval(() => {
                 timerTick(playSound);
             }, 1000);
@@ -76,38 +75,37 @@ export default function GamePage() {
                 timerRef.current = null;
             }
         };
-    }, [state.gameActive, state.isPaused, timerTick, playSound]);
-
-
+    }, [gameActive, isPaused, timerTick, playSound]);
 
     // Combo display
     useEffect(() => {
-        if (state.comboStreak >= 2) {
+        if (uiState.comboStreak >= 2) {
             setShowCombo(true);
-            if (state.comboStreak > 2) {
+            if (uiState.comboStreak > 2) {
                 playSound('combo');
             }
             const timeout = setTimeout(() => setShowCombo(false), 1500);
             return () => clearTimeout(timeout);
         }
-    }, [state.comboStreak, playSound]);
+    }, [uiState.comboStreak, playSound]);
 
     // Track powerup collection for effect
-    const prevPowerupsRef = useRef(state.player.powerups);
+    const prevPowerupsRef = useRef(uiState.player.powerups);
     useEffect(() => {
         const prev = prevPowerupsRef.current;
-        const curr = state.player.powerups;
+        const curr = uiState.player.powerups;
 
         if (curr && prev) {
             if (curr.shield > (prev.shield || 0)) {
-                // Show powerup effect
-                setPowerupEffect({ show: true, type: 'shield', x: state.player.x, y: state.player.y });
+                // Show powerup effect - Read position from REF for accuracy
+                const playerPos = gameStateRef.current.player;
+                setPowerupEffect({ show: true, type: 'shield', x: playerPos.x, y: playerPos.y });
                 setTimeout(() => setPowerupEffect(null), 1000);
             }
         }
 
         prevPowerupsRef.current = curr;
-    }, [state.player.powerups, state.player.x, state.player.y]);
+    }, [uiState.player.powerups, gameStateRef]); // Removed player.x/y dependency to avoid re-running on move
 
     // Handlers
     const handleStart = useCallback(() => {
@@ -131,8 +129,7 @@ export default function GamePage() {
 
     const handleResize = useCallback(
         (width: number, height: number) => {
-            // Check if we need to update state (only if different from fixed size, which shouldn't happen)
-            // But actually we don't need to do anything here since state uses fixed grid
+            // No-op for now as we enforce fixed size
         },
         [setCanvasSize]
     );
@@ -145,16 +142,15 @@ export default function GamePage() {
         [setPlayerAngle, setPlayerFiring]
     );
 
-
     const handleUpdate = useCallback(() => {
         updateGame(playSound);
     }, [updateGame, playSound]);
 
     const handlePause = useCallback(() => {
-        if (state.gameActive && state.gameStarted) {
+        if (uiState.gameActive && uiState.gameStarted) {
             togglePause();
         }
-    }, [state.gameActive, state.gameStarted, togglePause]);
+    }, [uiState.gameActive, uiState.gameStarted, togglePause]);
 
     const handleToggleSound = useCallback(() => {
         toggleSound();
@@ -163,7 +159,7 @@ export default function GamePage() {
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (!state.gameActive || state.isPaused) return;
+            if (!uiState.gameActive || uiState.isPaused) return;
 
             // Weapon switching with number keys
             switch (e.key) {
@@ -171,12 +167,12 @@ export default function GamePage() {
                     setWeaponMode('machineGun');
                     break;
                 case '2':
-                    if (state.player.isFrenzy || state.player.ink >= 5) {
+                    if (uiState.player.isFrenzy || uiState.player.ink >= 5) {
                         setWeaponMode('shotgun');
                     }
                     break;
                 case '3':
-                    if (state.player.isFrenzy || state.player.ink >= 20) {
+                    if (uiState.player.isFrenzy || uiState.player.ink >= 20) {
                         setWeaponMode('inkBomb');
                     }
                     break;
@@ -185,18 +181,16 @@ export default function GamePage() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [state.gameActive, state.isPaused, state.player.ink, state.player.isFrenzy, setWeaponMode]);
+    }, [uiState.gameActive, uiState.isPaused, uiState.player.ink, uiState.player.isFrenzy, setWeaponMode]);
 
-    const score = useMemo(
-        () => calculateScore(state.grid, state.cols, state.rows),
-        [state.grid, state.cols, state.rows]
-    );
+    // Score from UI State (Synced periodically)
+    const score = uiState.score;
 
     // Is game over?
-    const isGameOver = state.gameStarted && !state.gameActive && state.timeLeft <= 0;
+    const isGameOver = uiState.gameStarted && !uiState.gameActive && uiState.timeLeft <= 0;
 
-    // Should show control panel? Only during active gameplay (not paused, not game over, not before start)
-    const showControlPanel = state.gameStarted && state.gameActive && !state.isPaused;
+    // Should show control panel?
+    const showControlPanel = uiState.gameStarted && uiState.gameActive && !uiState.isPaused;
 
     return (
         <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans bg-slate-100 overflow-hidden">
@@ -209,17 +203,17 @@ export default function GamePage() {
                             <GameHUD
                                 scoreBlue={score.blue}
                                 scoreRed={score.red}
-                                timeLeft={state.timeLeft}
-                                isSoundOn={state.isSoundOn}
+                                timeLeft={uiState.timeLeft}
+                                isSoundOn={uiState.isSoundOn}
                                 onPause={handlePause}
                                 onToggleSound={handleToggleSound}
-                                comboStreak={state.comboStreak}
+                                comboStreak={uiState.comboStreak}
                                 showCombo={showCombo}
                             />
 
-                            {/* Game Canvas */}
+                            {/* Game Canvas - Now uses Ref */}
                             <GameCanvas
-                                state={state}
+                                gameStateRef={gameStateRef}
                                 onResize={handleResize}
                                 onPlayerInput={handlePlayerInput}
                                 onInkBombPreview={setInkBombPreview}
@@ -227,20 +221,20 @@ export default function GamePage() {
                             />
 
                             {/* In-Game Indicators (Must stay on canvas) */}
-                            {state.gameStarted && state.gameActive && (
+                            {uiState.gameStarted && uiState.gameActive && (
                                 <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                                     <GoldenPixelIndicator
-                                        goldenPixel={state.goldenPixel}
-                                        timeLeft={state.timeLeft}
-                                        lastGoldenPixelSpawn={state.lastGoldenPixelSpawn}
-                                        isFrenzy={state.player.isFrenzy}
-                                        frenzyEndTime={state.player.frenzyEndTime}
+                                        goldenPixel={uiState.goldenPixel}
+                                        timeLeft={uiState.timeLeft}
+                                        lastGoldenPixelSpawn={uiState.lastGoldenPixelSpawn}
+                                        isFrenzy={uiState.player.isFrenzy}
+                                        frenzyEndTime={uiState.player.frenzyEndTime}
                                     />
                                 </div>
                             )}
 
                             {/* Effects */}
-                            <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
+                            <ComboEffect show={showCombo} comboStreak={uiState.comboStreak} />
 
                             {powerupEffect && (
                                 <PowerupEffect
@@ -248,25 +242,27 @@ export default function GamePage() {
                                     type={powerupEffect.type}
                                     x={powerupEffect.x}
                                     y={powerupEffect.y}
+                                // Note: PowerupEffect might need to know if it's following the player or static? 
+                                // It uses absolute positioning.
                                 />
                             )}
 
                             <PowerupIndicator
-                                shield={state.player.powerups?.shield || 0}
+                                shield={uiState.player.powerups?.shield || 0}
                             />
 
                             {/* Overlays */}
-                            {!state.gameStarted && <GameInstructions onStart={handleStart} />}
+                            {!uiState.gameStarted && <GameInstructions onStart={handleStart} />}
 
-                            {state.isPaused && (
+                            {uiState.isPaused && (
                                 <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
                             )}
 
                             {isGameOver && (
                                 <GameOverModal
                                     blueScore={score.blue}
-                                    maxCombo={state.maxCombo}
-                                    powerupsCollected={state.totalPowerupsCollected}
+                                    maxCombo={uiState.maxCombo}
+                                    powerupsCollected={uiState.totalPowerupsCollected}
                                     onPlayAgain={handlePlayAgain}
                                 />
                             )}
@@ -297,23 +293,22 @@ export default function GamePage() {
                         {/* 1. Ink Bar (Top) */}
                         <div className="w-full">
                             <InkBar
-                                ink={state.player.ink}
-                                maxInk={state.player.maxInk}
-                                isFrenzy={state.player.isFrenzy}
-                                frenzyEndTime={state.player.frenzyEndTime}
+                                ink={uiState.player.ink}
+                                maxInk={uiState.player.maxInk}
+                                isFrenzy={uiState.player.isFrenzy}
+                                frenzyEndTime={uiState.player.frenzyEndTime}
                             />
                         </div>
 
                         {/* 2. Weapon Selector (Middle) */}
                         <div className="w-full flex justify-center">
                             <WeaponSelector
-                                currentMode={state.player.weaponMode}
-                                ink={state.player.ink}
-                                isFrenzy={state.player.isFrenzy}
+                                currentMode={uiState.player.weaponMode}
+                                ink={uiState.player.ink}
+                                isFrenzy={uiState.player.isFrenzy}
                                 onSelectMode={setWeaponMode}
                             />
                         </div>
-
 
                     </div>
                 </div>

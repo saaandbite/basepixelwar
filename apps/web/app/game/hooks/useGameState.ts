@@ -1,7 +1,8 @@
 // Game State Hook
 
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useRef, useState, useMemo } from 'react';
 import type { GameState, Projectile, Particle, WeaponMode } from '../types';
+
 import {
     GRID_SIZE,
     FIRE_RATE,
@@ -25,8 +26,38 @@ import {
     createPowerup,
     createTerritoryBatch,
     createGoldenPixel,
+    calculateScore,
 } from '../lib/gameLogic';
+
 import { clearGridCache } from '../lib/renderer';
+
+// Define UI State for React (Lightweight, no Grid)
+export interface GameUIState {
+    score: { blue: number; red: number };
+    timeLeft: number;
+    gameActive: boolean;
+    isPaused: boolean;
+    isSoundOn: boolean;
+    gameStarted: boolean;
+    comboStreak: number;
+    maxCombo: number;
+    totalPowerupsCollected: number;
+    lastTerritoryFlip: number;
+    player: {
+        ink: number;
+        maxInk: number;
+        isFrenzy: boolean;
+        frenzyEndTime: number;
+        weaponMode: WeaponMode;
+        powerups: { shield: number };
+    };
+    goldenPixel: GameState['goldenPixel'];
+    lastGoldenPixelSpawn: number;
+    // Add logic-derived values usually needed by UI
+    showCombo: boolean;
+    powerupEffect: { show: boolean; type: 'shield'; x: number; y: number } | null;
+}
+
 
 function createInitialState(width: number, height: number): GameState {
     const cols = Math.ceil(width / GRID_SIZE) || 35;
@@ -938,61 +969,171 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 }
 
 export function useGameState(initialWidth: number = 400, initialHeight: number = 700) {
-    const [state, dispatch] = useReducer(gameReducer, createInitialState(initialWidth, initialHeight));
+    // 1. Mutable Game State (Ref) - Source of Truth
+    // initialized lazy to ensure window/dims are correct if needed, but here we just use defaults
+    const gameStateRef = useRef<GameState>(createInitialState(initialWidth, initialHeight));
 
-    const startGame = useCallback((playSound: (name: string) => void) => {
-        dispatch({ type: 'START_GAME' });
-        playSound('powerup');
+    // 2. React UI State (Sync output)
+    const [uiState, setUiState] = useState<GameUIState>({
+        score: { blue: 50, red: 50 },
+        timeLeft: GAME_DURATION,
+        gameActive: false,
+        isPaused: false,
+        isSoundOn: true,
+        gameStarted: false,
+        comboStreak: 0,
+        maxCombo: 0,
+        totalPowerupsCollected: 0,
+        lastTerritoryFlip: 0,
+        player: {
+            ink: INK_MAX,
+            maxInk: INK_MAX,
+            isFrenzy: false,
+            frenzyEndTime: 0,
+            weaponMode: 'machineGun',
+            powerups: { shield: 0 }
+        },
+        goldenPixel: null,
+        lastGoldenPixelSpawn: 0,
+        showCombo: false,
+        powerupEffect: null,
+    });
+
+    // Helper for scoring (imported)
+    // Note: calculateScore is imported from gameLogic.
+
+    // Internal sync function
+    // We use a Ref to throttle UI updates
+    const lastUiSyncRef = useRef<number>(0);
+    const syncUI = useCallback((state: GameState, force: boolean = false) => {
+        const now = Date.now();
+        // Limit UI updates to ~30 FPS (every 33ms) or forced events
+        if (!force && now - lastUiSyncRef.current < 33) return;
+
+        const score = calculateScore(state.grid, state.cols, state.rows);
+
+        // Logic for derived UI states (moved from page.tsx to here or just passed raw)
+        // keeping raw mostly
+
+        setUiState(prev => ({
+            ...prev,
+            score,
+            timeLeft: state.timeLeft,
+            gameActive: state.gameActive,
+            isPaused: state.isPaused,
+            isSoundOn: state.isSoundOn,
+            gameStarted: state.gameStarted,
+            comboStreak: state.comboStreak,
+            maxCombo: state.maxCombo,
+            totalPowerupsCollected: state.totalPowerupsCollected,
+            lastTerritoryFlip: state.lastTerritoryFlip,
+            player: {
+                ink: state.player.ink,
+                maxInk: state.player.maxInk,
+                isFrenzy: state.player.isFrenzy,
+                frenzyEndTime: state.player.frenzyEndTime,
+                weaponMode: state.player.weaponMode,
+                powerups: state.player.powerups || { shield: 0 },
+            },
+            goldenPixel: state.goldenPixel,
+            lastGoldenPixelSpawn: state.lastGoldenPixelSpawn,
+        }));
+
+        lastUiSyncRef.current = now;
     }, []);
+
+    // Action Processor
+    const processAction = useCallback((action: GameAction) => {
+        // Apply Reducer logic to current ref state
+        const nextState = gameReducer(gameStateRef.current, action);
+        gameStateRef.current = nextState;
+
+        // Determine if we should sync UI
+        // Always sync on these events
+        let shouldSync = false;
+        let forceSync = false;
+
+        switch (action.type) {
+            case 'GAME_UPDATE':
+                // Sync periodically for Ink/Score
+                shouldSync = true;
+                break;
+            case 'START_GAME':
+            case 'RESET_ENTITIES':
+            case 'TOGGLE_PAUSE':
+            case 'TOGGLE_SOUND':
+            case 'SET_WEAPON_MODE':
+            case 'TIMER_TICK':
+            case 'END_GAME':
+            case 'USE_SHIELD':
+            case 'ACTIVATE_FRENZY':
+                shouldSync = true;
+                forceSync = true; // Always update immediately for user interactions
+                break;
+            default:
+                // Input events like Angle/Firing don't need immediate UI sync (Canvas handles feedback)
+                // InkBomb preview in state doesn't need React UI sync (Canvas draws preview)
+                break;
+        }
+
+        if (shouldSync) {
+            syncUI(nextState, forceSync);
+        }
+    }, [syncUI]);
+
+    // Public API wrappers
+    const startGame = useCallback((playSound: (name: string) => void) => {
+        processAction({ type: 'START_GAME' });
+        playSound('powerup');
+    }, [processAction]);
 
     const resetGame = useCallback((width: number, height: number) => {
-        dispatch({ type: 'RESET_ENTITIES', width, height });
-    }, []);
+        processAction({ type: 'RESET_ENTITIES', width, height });
+    }, [processAction]);
 
     const setCanvasSize = useCallback((width: number, height: number) => {
-        dispatch({ type: 'SET_CANVAS_SIZE', width, height });
-    }, []);
+        processAction({ type: 'SET_CANVAS_SIZE', width, height });
+    }, [processAction]);
 
     const togglePause = useCallback(() => {
-        dispatch({ type: 'TOGGLE_PAUSE' });
-    }, []);
+        processAction({ type: 'TOGGLE_PAUSE' });
+    }, [processAction]);
 
     const toggleSound = useCallback(() => {
-        dispatch({ type: 'TOGGLE_SOUND' });
-    }, []);
+        processAction({ type: 'TOGGLE_SOUND' });
+    }, [processAction]);
 
     const setPlayerAngle = useCallback((angle: number, targetPos?: { x: number; y: number }) => {
-        dispatch({ type: 'SET_PLAYER_ANGLE', angle, targetPos });
-    }, []);
+        processAction({ type: 'SET_PLAYER_ANGLE', angle, targetPos });
+    }, [processAction]);
 
     const setPlayerFiring = useCallback((firing: boolean) => {
-        dispatch({ type: 'SET_PLAYER_FIRING', firing });
-    }, []);
+        processAction({ type: 'SET_PLAYER_FIRING', firing });
+    }, [processAction]);
 
     const updateGame = useCallback((playSound: (name: string) => void) => {
-        dispatch({ type: 'GAME_UPDATE', playSound });
-    }, []);
+        processAction({ type: 'GAME_UPDATE', playSound });
+    }, [processAction]);
 
     const timerTick = useCallback((playSound: (name: string) => void) => {
-        dispatch({ type: 'TIMER_TICK', playSound });
-    }, []);
-
-
+        processAction({ type: 'TIMER_TICK', playSound });
+    }, [processAction]);
 
     const activateShield = useCallback((playSound: (name: string) => void) => {
-        dispatch({ type: 'USE_SHIELD', playSound });
-    }, []);
+        processAction({ type: 'USE_SHIELD', playSound });
+    }, [processAction]);
 
     const setWeaponMode = useCallback((mode: WeaponMode) => {
-        dispatch({ type: 'SET_WEAPON_MODE', mode });
-    }, []);
+        processAction({ type: 'SET_WEAPON_MODE', mode });
+    }, [processAction]);
 
     const setInkBombPreview = useCallback((x: number, y: number, active: boolean) => {
-        dispatch({ type: 'SET_INKBOMB_PREVIEW', x, y, active });
-    }, []);
+        processAction({ type: 'SET_INKBOMB_PREVIEW', x, y, active });
+    }, [processAction]);
 
     return {
-        state,
+        gameStateRef, // Expose Ref for Canvas
+        uiState,      // Expose UI State for Components
         startGame,
         resetGame,
         setCanvasSize,
@@ -1004,7 +1145,6 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         setInkBombPreview,
         updateGame,
         timerTick,
-
         activateShield,
     };
 }
