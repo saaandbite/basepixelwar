@@ -69,6 +69,13 @@ export function usePvPGame() {
 
         socket.on('connected', (playerId) => {
             setState(prev => ({ ...prev, playerId }));
+
+            // Try to rejoin if roomId is in session
+            const storedRoomId = sessionStorage.getItem('pvp_room_id');
+            if (storedRoomId) {
+                console.log('[PvP] Attempting to rejoin room:', storedRoomId);
+                socket.emit('rejoin_game', storedRoomId);
+            }
         });
 
         socket.on('match_found', ({ roomId, opponent }) => {
@@ -84,12 +91,14 @@ export function usePvPGame() {
         });
 
         socket.on('game_start', (data: GameStartData) => {
-            console.log('[PvP] Game started', data);
+            console.log('[PvP] Game started (Rejoin/Start)', data);
             setState(prev => ({
                 ...prev,
+                roomId: data.roomId, // IMPORTANT: Ensure roomId is set!
                 myTeam: data.yourTeam,
                 isPlaying: true,
                 countdown: 0,
+                opponentName: data.opponent.name,
             }));
         });
 

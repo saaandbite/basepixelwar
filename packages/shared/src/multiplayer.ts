@@ -32,6 +32,7 @@ export type ClientToServerEvents = {
 
     // Gameplay
     'player_input': (input: PlayerInput) => void;
+    'rejoin_game': (roomId: string) => void;
 
     // Room
     'create_room': (name: string) => void;

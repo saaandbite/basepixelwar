@@ -25,6 +25,7 @@ export default function RoomPage() {
         joinQueue,
         leaveQueue,
         setReady,
+        room,
     } = useMultiplayer();
 
     const [playerName, setPlayerName] = useState('');
@@ -38,12 +39,19 @@ export default function RoomPage() {
     // Redirect to game when match starts
     useEffect(() => {
         if (isPlaying) {
+            console.log('[RoomPage] Game started, redirecting...');
             // Store team info in sessionStorage for game page
+            if (room?.id) {
+                console.log('[RoomPage] Saving roomId:', room.id);
+                sessionStorage.setItem('pvp_room_id', room.id);
+            } else {
+                console.error('[RoomPage] Room ID missing during redirect!');
+            }
             sessionStorage.setItem('pvp_team', myTeam || 'blue');
             sessionStorage.setItem('pvp_mode', 'true');
             router.push('/game');
         }
-    }, [isPlaying, myTeam, router]);
+    }, [isPlaying, myTeam, router, room]);
 
     // Auto ready when match found
     useEffect(() => {

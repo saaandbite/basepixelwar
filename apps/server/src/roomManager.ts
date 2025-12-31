@@ -190,6 +190,26 @@ export function tryMatchPlayers(): { player1: PvPPlayer; player2: PvPPlayer; roo
 }
 
 // ============================================
+
+export function reconnectPlayer(roomId: string, oldPlayerId: string, newPlayerId: string): boolean {
+    const room = rooms.get(roomId);
+    if (!room) return false;
+
+    const player = room.players.find(p => p.id === oldPlayerId);
+    if (!player) return false;
+
+    // Update player ID
+    player.id = newPlayerId;
+
+    // Update map
+    playerRoomMap.delete(oldPlayerId);
+    playerRoomMap.set(newPlayerId, roomId);
+
+    console.log(`[RoomManager] Reconnected player ${oldPlayerId} -> ${newPlayerId} in room ${roomId}`);
+    return true;
+}
+
+// ============================================
 // DEBUG / STATS
 // ============================================
 

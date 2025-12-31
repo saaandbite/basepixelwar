@@ -66,6 +66,7 @@ function handleConnection(socket: GameSocket) {
     socket.on('player_input', (input: Parameters<ClientToServerEvents['player_input']>[0]) => handlePlayerInput(socket, input));
     socket.on('create_room', (name: string) => handleCreateRoom(socket, name));
     socket.on('join_room', (roomId: string) => handleJoinRoom(socket, roomId));
+    socket.on('rejoin_game', (roomId: string) => handleRejoinGame(socket, roomId));
     socket.on('leave_room', () => handleLeaveRoom(socket));
     socket.on('disconnect', () => handleDisconnect(socket));
 }
@@ -207,11 +208,67 @@ function handleLeaveRoom(socket: GameSocket) {
 function handleDisconnect(socket: GameSocket) {
     console.log(`[SocketServer] Client disconnected: ${socket.data.playerId}`);
 
-    // Leave queue if in queue
+    // Leave queue if in queue (always safe)
     RoomManager.leaveQueue(socket.data.playerId!);
 
-    // Leave room if in room
+    // Check availability for grace period
+    if (socket.data.roomId) {
+        const room = RoomManager.getRoom(socket.data.roomId);
+        // If room has 2 players, keep session alive for reconnect
+        if (room && room.players.length === 2 && (room.status === 'playing' || room.status === 'countdown' || room.status === 'waiting')) {
+            console.log(`[SocketServer] Player ${socket.data.playerId} disconnected from active room ${room.id}. Keeping session alive.`);
+            return;
+        }
+    }
+
+    // Leave room if in room (normal cleanup)
     handleLeaveRoom(socket);
+}
+
+function handleRejoinGame(socket: GameSocket, roomId: string) {
+    const room = RoomManager.getRoom(roomId);
+    if (!room) return;
+
+    // Find disconnected player slot
+    let oldPlayerId: string | null = null;
+
+    for (const p of room.players) {
+        const s = io.sockets.sockets.get(p.id);
+        if (!s) {
+            oldPlayerId = p.id;
+            break;
+        }
+    }
+
+    if (oldPlayerId) {
+        const success = RoomManager.reconnectPlayer(roomId, oldPlayerId, socket.data.playerId!);
+        if (success) {
+            socket.join(roomId);
+            socket.data.roomId = roomId;
+
+            const player = room.players.find(p => p.id === socket.data.playerId!)!;
+            const opponent = room.players.find(p => p.id !== player.id)!;
+
+            const gameConfig: GameStartData['config'] = {
+                duration: 90,
+                gridCols: 35,
+                gridRows: 54,
+                canvasWidth: 420,
+                canvasHeight: 640,
+            };
+
+            const startData: GameStartData = {
+                roomId: room.id,
+                yourTeam: player.team,
+                opponent,
+                config: gameConfig,
+                startTime: room.gameStartedAt || Date.now(),
+            };
+
+            socket.emit('game_start', startData);
+            console.log(`[SocketServer] Player rejoined room ${roomId}`);
+        }
+    }
 }
 
 // ============================================

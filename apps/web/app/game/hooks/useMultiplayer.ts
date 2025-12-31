@@ -123,6 +123,13 @@ export function useMultiplayer() {
                 ...prev,
                 matchmakingStatus: 'found',
                 opponent,
+                // Create a minimal room object so we can access roomId
+                room: {
+                    id: roomId,
+                    players: [], // Not critical for this view
+                    status: 'waiting',
+                    createdAt: Date.now()
+                } as unknown as GameRoom
             }));
         });
 
