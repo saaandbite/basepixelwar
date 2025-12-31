@@ -18,12 +18,13 @@ export const COLORS = {
 } as const;
 
 export const GRID_SIZE = 12;
-export const TARGET_FPS = 45; // Lowered from 60 to slow down gameplay
+
+export const TARGET_FPS = 60; // Reverted to 60 for smoothness, slowing down via per-frame constants instead
 export const FIRE_RATE = 8;
 export const GAME_DURATION = 90;
 export const POWERUP_CHANCE = 0.05; // 5% chance per territory flip
 export const MAX_POWERUPS_ON_SCREEN = 3;
-export const BULLET_SPEED = 8;
+export const BULLET_SPEED = 5; // Reduced global baseline
 
 export const GAME_WIDTH = 420;
 export const GAME_HEIGHT = 640;
@@ -46,34 +47,35 @@ export type WeaponModeType = 'machineGun' | 'shotgun' | 'inkBomb';
 export const WEAPON_MODES = {
     machineGun: {
         cost: 1,
-        fireRate: 6,
+        fireRate: 9,        // Slower fire rate (was 6) -> ~6.6 shots/sec
         paintRadius: 1,
-        speed: 10,
+        speed: 6,           // Slower speed (was 10) -> 360px/sec
         name: 'Machine Gun',
         icon: '🔫',
         description: 'Fast shots, small area',
     },
     shotgun: {
         cost: 5,
-        fireRate: 18,
+        fireRate: 25,       // Slower fire rate (was 18) -> ~2.4 shots/sec
         paintRadius: 2,
-        speed: 9,                        // Faster speed
-        spreadAngles: [-0.2, 0, 0.2],    // Tighter spread
-        maxLifetime: 45,                 // Longer range (was 20)
+        speed: 5.5,         // Slower speed (was 9)
+        spreadAngles: [-0.2, 0, 0.2],
+        maxLifetime: 60,    // Need longer lifetime to cover same distance at slower speed
         name: 'Shotgun',
         icon: '💥',
         description: '3-way spread, medium range',
     },
     inkBomb: {
         cost: 20,
-        fireRate: 35,
-        paintRadius: 4,                  // 5x5 explosion area
-        speed: 8,                        // Moderate speed for good range
-        gravity: 0.10,                   // Balanced fall rate
+        fireRate: 50,       // Slower fire rate (was 35) -> ~1.2 shots/sec
+        paintRadius: 4,
+        speed: 5,           // Slower speed (was 8)
+        gravity: 0.08,      // Lower gravity for floatier arc at slower speed (was 0.10)
         name: 'Ink Bomb',
         icon: '💣',
         description: 'Arc shot, massive explosion',
     },
+
 } as const;
 
 // ============================================
