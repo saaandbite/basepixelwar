@@ -123,6 +123,13 @@ export function startGameLoop(roomId: string) {
     const state = gameStates.get(roomId);
     if (!state || !ioInstance) return;
 
+    // Safety: If loop already exists, clear it first
+    if (gameLoops.has(roomId)) {
+        clearInterval(gameLoops.get(roomId));
+        gameLoops.delete(roomId);
+        console.warn(`[GameStateManager] Cleared existing loop for room ${roomId} before starting new one`);
+    }
+
     state.status = 'playing';
 
     // Game loop runs at ~30fps (33ms)

@@ -129,7 +129,11 @@ function handlePlayerReady(socket: GameSocket) {
     const room = RoomManager.setPlayerReady(socket.data.playerId!, true);
 
     if (room && RoomManager.areAllPlayersReady(room)) {
-        startGameCountdown(room.id);
+        // Only start countdown if room is waiting
+        // If it's already playing or counting down, ignore this trigger
+        if (room.status === 'waiting') {
+            startGameCountdown(room.id);
+        }
     }
 }
 
