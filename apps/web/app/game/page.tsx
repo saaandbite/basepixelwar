@@ -8,9 +8,8 @@ import { useAudio } from './hooks/useAudio';
 import { GAME_WIDTH, GAME_HEIGHT } from './lib/constants';
 
 import { GameCanvas } from './components/GameCanvas';
-import { GameHUD } from './components/GameHUD';
+import { GameNavbar } from './components/GameNavbar';
 import { GameInstructions } from './components/GameInstructions';
-import { PauseOverlay } from './components/PauseOverlay';
 import { GameOverModal } from './components/GameOverModal';
 import { PowerupIndicator } from './components/PowerupIndicator';
 import { PowerupEffect } from './components/PowerupEffect';
@@ -28,7 +27,6 @@ export default function GamePage() {
         startGame,
         resetGame,
         setCanvasSize,
-        togglePause,
         toggleSound,
         setPlayerAngle,
         setPlayerFiring,
@@ -44,8 +42,7 @@ export default function GamePage() {
 
     const [isMounted, setIsMounted] = useState(false);
     // showCombo is now derived in uiState? No, I added it to uiState interface but didn't fully implement logic to override local state? 
-    // Actually simpler to keep showCombo local if we want, OR use the one from uiState?
-    // Let's keep local for animation control if uiState update isn't 60fps.
+    // Actually simpler to keep local for animation control if uiState update isn't 60fps.
     // However, the `comboStreak` comes from `uiState`.
     const [showCombo, setShowCombo] = useState(false);
     const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'shield'; x: number; y: number } | null>(null);
@@ -61,9 +58,9 @@ export default function GamePage() {
     }, [uiState.isSoundOn, setSoundOn]);
 
     // Timer
-    const { gameActive, isPaused } = uiState;
+    const { gameActive } = uiState;
     useEffect(() => {
-        if (gameActive && !isPaused) {
+        if (gameActive) {
             timerRef.current = setInterval(() => {
                 timerTick(playSound);
             }, 1000);
@@ -75,7 +72,7 @@ export default function GamePage() {
                 timerRef.current = null;
             }
         };
-    }, [gameActive, isPaused, timerTick, playSound]);
+    }, [gameActive, timerTick, playSound]);
 
     // Combo display
     useEffect(() => {
@@ -115,12 +112,12 @@ export default function GamePage() {
     }, [initAudio, resetGame, startGame, playSound]);
 
     const handleRestart = useCallback(() => {
-        togglePause();
+        // No pause toggling needed
         setTimeout(() => {
             resetGame(GAME_WIDTH, GAME_HEIGHT);
             startGame(playSound);
         }, 100);
-    }, [togglePause, resetGame, startGame, playSound]);
+    }, [resetGame, startGame, playSound]);
 
     const handlePlayAgain = useCallback(() => {
         resetGame(GAME_WIDTH, GAME_HEIGHT);
@@ -146,12 +143,6 @@ export default function GamePage() {
         updateGame(playSound);
     }, [updateGame, playSound]);
 
-    const handlePause = useCallback(() => {
-        if (uiState.gameActive && uiState.gameStarted) {
-            togglePause();
-        }
-    }, [uiState.gameActive, uiState.gameStarted, togglePause]);
-
     const handleToggleSound = useCallback(() => {
         toggleSound();
     }, [toggleSound]);
@@ -159,7 +150,7 @@ export default function GamePage() {
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (!uiState.gameActive || uiState.isPaused) return;
+            if (!uiState.gameActive) return;
 
             // Weapon switching with number keys
             switch (e.key) {
@@ -181,7 +172,7 @@ export default function GamePage() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [uiState.gameActive, uiState.isPaused, uiState.player.ink, uiState.player.isFrenzy, setWeaponMode]);
+    }, [uiState.gameActive, uiState.player.ink, uiState.player.isFrenzy, setWeaponMode]);
 
     // Score from UI State (Synced periodically)
     const score = uiState.score;
@@ -190,7 +181,7 @@ export default function GamePage() {
     const isGameOver = uiState.gameStarted && !uiState.gameActive && uiState.timeLeft <= 0;
 
     // Should show control panel?
-    const showControlPanel = uiState.gameStarted && uiState.gameActive && !uiState.isPaused;
+    const showControlPanel = uiState.gameStarted && uiState.gameActive;
 
     return (
         <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans bg-slate-100 overflow-hidden">
@@ -199,16 +190,11 @@ export default function GamePage() {
                 <main className={`relative w-full h-full bg-gradient-to-b from-white/95 to-blue-50 shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80 ${showControlPanel ? 'rounded-t-2xl' : 'rounded-2xl'}`}>
                     {isMounted ? (
                         <>
-                            {/* HUD */}
-                            <GameHUD
+                            {/* Navbar */}
+                            <GameNavbar
                                 scoreBlue={score.blue}
                                 scoreRed={score.red}
                                 timeLeft={uiState.timeLeft}
-                                isSoundOn={uiState.isSoundOn}
-                                onPause={handlePause}
-                                onToggleSound={handleToggleSound}
-                                comboStreak={uiState.comboStreak}
-                                showCombo={showCombo}
                             />
 
                             {/* Game Canvas - Now uses Ref */}
@@ -254,9 +240,7 @@ export default function GamePage() {
                             {/* Overlays */}
                             {!uiState.gameStarted && <GameInstructions onStart={handleStart} />}
 
-                            {uiState.isPaused && (
-                                <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
-                            )}
+                            {/* PauseOverlay Removed */}
 
                             {isGameOver && (
                                 <GameOverModal

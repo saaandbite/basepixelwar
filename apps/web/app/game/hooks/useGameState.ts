@@ -36,7 +36,7 @@ export interface GameUIState {
     score: { blue: number; red: number };
     timeLeft: number;
     gameActive: boolean;
-    isPaused: boolean;
+    // isPaused removed
     isSoundOn: boolean;
     gameStarted: boolean;
     comboStreak: number;
@@ -96,6 +96,8 @@ function createInitialState(width: number, height: number): GameState {
             y: 40,
             angle: Math.PI / 2,
             targetAngle: Math.PI / 2,
+            isFiring: false,
+            lastFireTime: 0,
             cooldown: 0,
             moveTimer: 0,
             difficulty: 0.3,
@@ -113,7 +115,7 @@ function createInitialState(width: number, height: number): GameState {
         },
         timeLeft: GAME_DURATION,
         gameActive: false,
-        isPaused: false,
+        // isPaused removed
         isSoundOn: true,
         gameStarted: false,
         comboStreak: 0,
@@ -139,7 +141,7 @@ function createInitialState(width: number, height: number): GameState {
 type GameAction =
     | { type: 'START_GAME' }
     | { type: 'RESET_ENTITIES'; width: number; height: number }
-    | { type: 'TOGGLE_PAUSE' }
+    // TOGGLE_PAUSE removed
     | { type: 'TOGGLE_SOUND' }
     | { type: 'SET_PLAYER_ANGLE'; angle: number; targetPos?: { x: number; y: number } }
     | { type: 'SET_PLAYER_FIRING'; firing: boolean }
@@ -159,7 +161,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             return {
                 ...state,
                 gameActive: true,
-                isPaused: false,
+                // isPaused removed
                 gameStarted: true,
                 lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
             };
@@ -180,13 +182,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             };
         }
 
-        case 'TOGGLE_PAUSE': {
-            return {
-                ...state,
-                isPaused: !state.isPaused,
-                lastShieldPowerupTime: state.lastShieldPowerupTime, // Preserve shield cooldown
-            };
-        }
+
 
         case 'TOGGLE_SOUND': {
             return {
@@ -282,7 +278,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         }
 
         case 'GAME_UPDATE': {
-            if (!state.gameActive || state.isPaused) return state;
+            if (!state.gameActive) return state;
 
             const newState = { ...state };
             const now = Date.now();
@@ -874,7 +870,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         }
 
         case 'TIMER_TICK': {
-            if (!state.gameActive || state.isPaused) return state;
+            if (!state.gameActive) return state;
 
             const newTimeLeft = state.timeLeft - 1;
             let newGoldenPixel = state.goldenPixel;
@@ -1017,7 +1013,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         score: { blue: 50, red: 50 },
         timeLeft: GAME_DURATION,
         gameActive: false,
-        isPaused: false,
+        // isPaused removed
         isSoundOn: true,
         gameStarted: false,
         comboStreak: 0,
@@ -1059,7 +1055,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
             score,
             timeLeft: state.timeLeft,
             gameActive: state.gameActive,
-            isPaused: state.isPaused,
+            // isPaused removed
             isSoundOn: state.isSoundOn,
             gameStarted: state.gameStarted,
             comboStreak: state.comboStreak,
@@ -1099,7 +1095,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
                 break;
             case 'START_GAME':
             case 'RESET_ENTITIES':
-            case 'TOGGLE_PAUSE':
+            // TOGGLE_PAUSE removed
             case 'TOGGLE_SOUND':
             case 'SET_WEAPON_MODE':
             case 'TIMER_TICK':
@@ -1134,9 +1130,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         processAction({ type: 'SET_CANVAS_SIZE', width, height });
     }, [processAction]);
 
-    const togglePause = useCallback(() => {
-        processAction({ type: 'TOGGLE_PAUSE' });
-    }, [processAction]);
+    // togglePause removed
 
     const toggleSound = useCallback(() => {
         processAction({ type: 'TOGGLE_SOUND' });
@@ -1176,7 +1170,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
         startGame,
         resetGame,
         setCanvasSize,
-        togglePause,
+        // togglePause removed
         toggleSound,
         setPlayerAngle,
         setPlayerFiring,

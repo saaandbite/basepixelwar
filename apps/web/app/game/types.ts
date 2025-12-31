@@ -21,27 +21,6 @@ export interface Projectile {
     explodeTime?: number; // For ballistic targeting: explodes after this many frames
 }
 
-export interface Cannon {
-    x: number;
-    y: number;
-    angle: number;
-    isFiring: boolean;
-    cooldown: number;
-    powerups?: {
-        shield: number;
-    };
-    lastFireTime: number;
-    // Ink Economy
-    ink: number;
-    maxInk: number;
-    weaponMode: WeaponMode;
-    isFrenzy: boolean;
-    frenzyEndTime: number;
-    targetPos?: { x: number; y: number };
-    // Flag to track if an ink bomb is currently in flight
-    inkBombInFlight?: boolean;
-}
-
 export interface Particle {
     x: number;
     y: number;
@@ -80,11 +59,12 @@ export interface GoldenPixel {
     pulsePhase: number;
 }
 
+// Merged Cannon interface
 export interface Cannon {
     x: number;
     y: number;
     angle: number;
-    isFiring?: boolean;
+    isFiring: boolean;
     cooldown: number;
     targetAngle?: number;
     moveTimer?: number;
@@ -95,7 +75,7 @@ export interface Cannon {
         shieldTimer?: number; // Timestamp when shield was collected
     };
 
-    lastFireTime?: number;
+    lastFireTime: number;
     longDragAngle?: number;
     // Ink Economy
     ink: number;
@@ -103,6 +83,8 @@ export interface Cannon {
     weaponMode: WeaponMode;
     isFrenzy: boolean;
     frenzyEndTime: number;
+    // Flag to track if an ink bomb is currently in flight
+    inkBombInFlight?: boolean;
 }
 
 export interface GameState {
@@ -118,7 +100,7 @@ export interface GameState {
     enemy: Cannon;
     timeLeft: number;
     gameActive: boolean;
-    isPaused: boolean;
+    // isPaused removed
     isSoundOn: boolean;
     gameStarted: boolean;
     comboStreak: number;
@@ -148,7 +130,7 @@ export interface GameState {
 export type GameAction =
     | { type: 'START_GAME' }
     | { type: 'RESET_GAME' }
-    | { type: 'TOGGLE_PAUSE' }
+    // TOGGLE_PAUSE removed
     | { type: 'TOGGLE_SOUND' }
     | { type: 'TICK' }
     | { type: 'UPDATE_PLAYER_ANGLE'; angle: number }
@@ -166,4 +148,3 @@ export type GameAction =
     | { type: 'END_GAME' }
     | { type: 'SET_CANVAS_SIZE'; width: number; height: number }
     | { type: 'GAME_LOOP_UPDATE'; deltaTime: number };
-
