@@ -6,6 +6,12 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { GAME_WIDTH, GAME_HEIGHT, GRID_SIZE, COLORS } from '../lib/constants';
 import type { SyncedGameState } from '@repo/shared/multiplayer';
+import {
+    drawBackground,
+    drawGrid,
+    drawProjectiles,
+    drawCannon
+} from '../lib/renderer';
 
 interface PvPGameCanvasProps {
     gameState: SyncedGameState | null;
@@ -15,6 +21,9 @@ interface PvPGameCanvasProps {
 
 export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const effectsCanvasRef = useRef<HTMLCanvasElement>(null); // Add effects canvas later if needed, but for now single canvas is fine or use same structure as GameCanvas
+    // Actually renderer functions expect ctx.
+
     const isFlipped = myTeam === 'red';
 
     // Draw function
@@ -27,85 +36,79 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
 
         const { grid, player1, player2, projectiles } = gameState;
 
-        // Clear
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        // Clear canvas
+        ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
         // Apply flip transform for red team
+        ctx.save();
         if (isFlipped) {
-            ctx.save();
             ctx.translate(GAME_WIDTH, GAME_HEIGHT);
             ctx.rotate(Math.PI);
         }
 
-        // Draw grid
-        if (grid && grid.length > 0) {
-            for (let x = 0; x < grid.length; x++) {
-                const col = grid[x];
-                if (!col) continue;
-                for (let y = 0; y < col.length; y++) {
-                    const color = col[y] === 'blue' ? COLORS.blue : COLORS.red;
-                    ctx.fillStyle = color;
-                    ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-                }
-            }
+        // 1. Draw Background
+        drawBackground(ctx, GAME_WIDTH, GAME_HEIGHT);
+
+        // 2. Draw Grid
+        // Grid from server is simple array. drawGrid expects ('blue'|'red')[][]
+        if (grid && grid.length > 0 && grid[0]) {
+            // Need forceRedraw=true often because we don't cache grid hash in pvp component yet, 
+            // or let renderer handle caching (it has internal cache).
+            // But renderer cache depends on "lastCols" etc.
+            drawGrid(ctx, grid as any, grid.length, grid[0].length);
         }
 
-        // Draw projectiles
-        for (const p of projectiles) {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
-            ctx.fill();
-        }
+        // 3. Draw Projectiles
+        // Map SyncedProjectile to Projectile compatible object
+        // Synced: { id, x, y, vx, vy, team, type }
+        // Renderer: { x, y, team, type, ... }
+        // Safe to cast or map
+        const renderProjectiles = projectiles.map(p => ({
+            ...p,
+            life: 1.0, // Mock
+            active: true
+        })) as any[];
+        drawProjectiles(ctx, renderProjectiles);
 
-        // Draw cannons
-        drawCannon(ctx, player1, COLORS.bulletStrokeBlue, true);
-        drawCannon(ctx, player2, COLORS.bulletStrokeRed, false);
+        // 4. Draw Cannons
+        // Map SyncedPlayerState to Cannon compatible object
+        // Synced: { x, y, angle, isFiring, ink, weaponMode }
+        // Cannon: { x, y, angle, cooldown, powerups... }
+        const p1Cannon = {
+            ...player1,
+            cooldown: 0,
+            powerups: { shield: 0, burst: 0, speed: 0 },
+            isFrenzy: false,
+            shield: { active: false, health: 0, maxHealth: 0 }
+        };
+        const p2Cannon = {
+            ...player2,
+            cooldown: 0,
+            powerups: { shield: 0, burst: 0, speed: 0 },
+            isFrenzy: false,
+            shield: { active: false, health: 0, maxHealth: 0 }
+        };
 
-        if (isFlipped) {
-            ctx.restore();
-        }
+        drawCannon(ctx, p1Cannon as any, COLORS.bulletStrokeBlue, true); // Player 1 is Blue (server-side constant)
+        drawCannon(ctx, p2Cannon as any, COLORS.bulletStrokeRed, false); // Player 2 is Red
+
+        // Restore context (remove flip)
+        ctx.restore();
+
     }, [gameState, isFlipped]);
 
-    // Draw cannon helper
-    function drawCannon(
-        ctx: CanvasRenderingContext2D,
-        cannon: { x: number; y: number; angle: number },
-        color: string,
-        isBottom: boolean
-    ) {
-        ctx.save();
-        ctx.translate(cannon.x, cannon.y);
-        ctx.rotate(cannon.angle);
-
-        // Barrel
-        ctx.fillStyle = color;
-        ctx.fillRect(0, -6, 30, 12);
-
-        // Base
-        ctx.beginPath();
-        ctx.arc(0, 0, 15, 0, Math.PI * 2);
-        ctx.fillStyle = isBottom ? '#3b82f6' : '#ef4444';
-        ctx.fill();
-
-        ctx.restore();
-    }
-
-    // Animation loop
+    // Animation loop uses draw...
     useEffect(() => {
         let animationId: number;
-
         const loop = () => {
             draw();
             animationId = requestAnimationFrame(loop);
         };
-
         animationId = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(animationId);
     }, [draw]);
 
-    // Input handling
+    // Input handling ...
     const handleInput = useCallback((e: React.MouseEvent | React.TouchEvent, isDown: boolean) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -126,7 +129,7 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         let cx = (clientX - rect.left) * scaleX;
         let cy = (clientY - rect.top) * scaleY;
 
-        // Flip coordinates for red team
+        // Flip coordinates for red team input
         if (isFlipped) {
             cx = GAME_WIDTH - cx;
             cy = GAME_HEIGHT - cy;
@@ -149,7 +152,14 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
             ref={canvasRef}
             width={GAME_WIDTH}
             height={GAME_HEIGHT}
-            style={{ touchAction: 'none', width: '100%', maxWidth: GAME_WIDTH }}
+            style={{
+                touchAction: 'none',
+                width: '100%',
+                maxWidth: '420px', // Match standard game width constraint
+                display: 'block',
+                margin: '0 auto',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}
             onMouseDown={(e) => handleInput(e, true)}
             onMouseMove={(e) => e.buttons === 1 && handleInput(e, true)}
             onMouseUp={() => onPlayerInput(0, false)}
