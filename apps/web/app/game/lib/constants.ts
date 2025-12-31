@@ -69,7 +69,7 @@ export const WEAPON_MODES = {
         cost: 20,
         fireRate: 50,       // Slower fire rate (was 35) -> ~1.2 shots/sec
         paintRadius: 4,
-        speed: 5,           // Slower speed (was 8)
+        speed: 9,           // Increased speed (was 5) to allow full map range
         gravity: 0.08,      // Lower gravity for floatier arc at slower speed (was 0.10)
         name: 'Ink Bomb',
         icon: '💣',

@@ -521,7 +521,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     const explosionGx = Math.floor(explosionX / GRID_SIZE);
                     const explosionGy = Math.floor(explosionY / GRID_SIZE);
 
-                    if (shouldExplode && explosionGx >= 0 && explosionGx < newState.cols && explosionGy >= 0 && explosionGy < newState.rows) {
+                    if (shouldExplode) {
                         // Large explosion!
                         const result = paintGrid(
                             newGrid, explosionGx, explosionGy,

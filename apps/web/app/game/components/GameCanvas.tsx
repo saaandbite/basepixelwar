@@ -242,8 +242,8 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
                 const inkBombConfig = WEAPON_MODES.inkBomb;
 
                 // SNAP TO GRID CENTER for perfect accuracy
-                const gx = Math.floor(clampedCx / GRID_SIZE);
-                const gy = Math.floor(clampedCy / GRID_SIZE);
+                const gx = Math.max(0, Math.min(Math.floor(clampedCx / GRID_SIZE), currentState.cols - 1));
+                const gy = Math.max(0, Math.min(Math.floor(clampedCy / GRID_SIZE), currentState.rows - 1));
                 const snappedX = gx * GRID_SIZE + GRID_SIZE / 2;
                 const snappedY = gy * GRID_SIZE + GRID_SIZE / 2;
 
@@ -298,8 +298,8 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
             const modeConfig = WEAPON_MODES.inkBomb;
             const inkBombConfig = WEAPON_MODES.inkBomb;
 
-            const gx = Math.floor(clampedCx / GRID_SIZE);
-            const gy = Math.floor(clampedCy / GRID_SIZE);
+            const gx = Math.max(0, Math.min(Math.floor(clampedCx / GRID_SIZE), currentState.cols - 1));
+            const gy = Math.max(0, Math.min(Math.floor(clampedCy / GRID_SIZE), currentState.rows - 1));
             const snappedX = gx * GRID_SIZE + GRID_SIZE / 2;
             const snappedY = gy * GRID_SIZE + GRID_SIZE / 2;
 
