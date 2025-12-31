@@ -485,7 +485,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     // Ink bomb explosion logic
                     const isFalling = newVy > 0;  // y increases downward, so vy > 0 = falling
                     const isOnGrid = gx >= 0 && gx < newState.cols && gy >= 0 && gy < newState.rows;
-                    const maxLifetimeReached = updatedP.lifetime > 60;
+                    const maxLifetimeReached = updatedP.lifetime > 200; // Increased from 60 to 300 to allow long range shots
 
                     let shouldExplode = false;
 
