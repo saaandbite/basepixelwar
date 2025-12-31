@@ -1,11 +1,12 @@
 // Game Loop Hook with Performance Optimization
 
 import { useCallback, useRef, useEffect } from 'react';
+import { TARGET_FPS } from '../lib/constants';
 
-// Target 60 FPS
-const TARGET_FPS = 60;
+// Target FPS and timing derived from constants
 const FRAME_TIME = 1000 / TARGET_FPS;
 const MAX_DELTA = FRAME_TIME * 3; // Cap delta to prevent spiral of death
+
 
 // Performance tracking
 let frameCount = 0;

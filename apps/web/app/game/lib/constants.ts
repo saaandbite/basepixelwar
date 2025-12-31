@@ -18,11 +18,13 @@ export const COLORS = {
 } as const;
 
 export const GRID_SIZE = 12;
+export const TARGET_FPS = 45; // Lowered from 60 to slow down gameplay
 export const FIRE_RATE = 8;
 export const GAME_DURATION = 90;
 export const POWERUP_CHANCE = 0.05; // 5% chance per territory flip
 export const MAX_POWERUPS_ON_SCREEN = 3;
 export const BULLET_SPEED = 8;
+
 export const GAME_WIDTH = 420;
 export const GAME_HEIGHT = 640;
 
@@ -32,8 +34,9 @@ export const GAME_HEIGHT = 640;
 // ============================================
 export const INK_MAX = 100;
 export const INK_REFILL_RATE = 10; // per second (refilled each tick)
-export const INK_REFILL_PER_FRAME = INK_REFILL_RATE / 60; // ~0.167 per frame at 60fps
+export const INK_REFILL_PER_FRAME = INK_REFILL_RATE / TARGET_FPS; // refilled each tick based on actual update rate
 export const FRENZY_DURATION = 5000; // 5 seconds in ms
+
 
 // ============================================
 // WEAPON MODES
