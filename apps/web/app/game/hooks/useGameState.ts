@@ -478,6 +478,45 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     const gx = Math.floor(updatedP.x / GRID_SIZE);
                     const gy = Math.floor(updatedP.y / GRID_SIZE);
 
+                    // Check for GLOBAL SHIELD blocking
+                    // If an enemy shield is active, it blocks ink bombs from entering the airspace
+                    if (newState.globalShield &&
+                        newState.globalShield.active &&
+                        newState.globalShield.team !== updatedP.team) {
+
+                        // Check if projectile is within the grid area (effective shield range)
+                        const isOverGrid = updatedP.x >= 0 && updatedP.x <= canvasWidth && updatedP.y >= 0 && updatedP.y <= canvasHeight;
+
+                        if (isOverGrid) {
+                            // Blocked by Shield!
+                            action.playSound('powerup'); // Shield hit sound
+
+                            // Visuals for blocking
+                            for (let i = 0; i < 15; i++) {
+                                const angle = Math.random() * Math.PI * 2;
+                                const speed = 2 + Math.random() * 5;
+                                newParticles.push({
+                                    x: updatedP.x,
+                                    y: updatedP.y,
+                                    vx: Math.cos(angle) * speed,
+                                    vy: Math.sin(angle) * speed,
+                                    life: 0.8,
+                                    size: 3,
+                                    color: COLORS.powerup.shield,
+                                });
+                            }
+
+                            // Clear preview if this was a player's ink bomb
+                            if (updatedP.team === 'blue' && updatedP.isInkBomb) {
+                                newState.inkBombPreview = { x: 0, y: 0, active: false };
+                                newState.player = { ...newState.player, inkBombInFlight: false };
+                            }
+
+                            // Destroy projectile (do NOT add to newProjectiles)
+                            continue;
+                        }
+                    }
+
                     // Ink bomb explodes when:
                     // 1. Falling (vy > 0) AND on valid grid position, OR
                     // 2. Near/past bottom of screen, OR
