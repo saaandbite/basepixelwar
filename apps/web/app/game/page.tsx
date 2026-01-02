@@ -209,6 +209,10 @@ function AIGamePage() {
                                 scoreBlue={score.blue}
                                 scoreRed={score.red}
                                 timeLeft={uiState.timeLeft}
+                                goldenPixel={uiState.goldenPixel}
+                                lastGoldenPixelSpawn={uiState.lastGoldenPixelSpawn}
+                                isFrenzy={uiState.player.isFrenzy}
+                                frenzyEndTime={uiState.player.frenzyEndTime}
                             />
 
                             {/* Game Canvas - Now uses Ref */}
@@ -220,18 +224,7 @@ function AIGamePage() {
                                 onUpdate={handleUpdate}
                             />
 
-                            {/* In-Game Indicators (Must stay on canvas) */}
-                            {uiState.gameStarted && uiState.gameActive && (
-                                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-                                    <GoldenPixelIndicator
-                                        goldenPixel={uiState.goldenPixel}
-                                        timeLeft={uiState.timeLeft}
-                                        lastGoldenPixelSpawn={uiState.lastGoldenPixelSpawn}
-                                        isFrenzy={uiState.player.isFrenzy}
-                                        frenzyEndTime={uiState.player.frenzyEndTime}
-                                    />
-                                </div>
-                            )}
+
 
                             {/* Effects */}
                             <ComboEffect show={showCombo} comboStreak={uiState.comboStreak} />
