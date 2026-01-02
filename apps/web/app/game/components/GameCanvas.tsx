@@ -38,19 +38,17 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
     const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Initial setup - Enforce FIXED resolution
+    // Initial setup - Enforce FIXED resolution ... (unchanged logic)
     useEffect(() => {
         if (canvasRef.current && effectsCanvasRef.current) {
-            // Set fixed resolution
             canvasRef.current.width = GAME_WIDTH;
             canvasRef.current.height = GAME_HEIGHT;
             effectsCanvasRef.current.width = GAME_WIDTH;
             effectsCanvasRef.current.height = GAME_HEIGHT;
-
-            // Notify parent of the fixed size
             onResize(GAME_WIDTH, GAME_HEIGHT);
         }
     }, [onResize]);
+
 
     // Draw loop with lerp for smooth movement
     const draw = useCallback(() => {
@@ -427,11 +425,13 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
     return (
         <div
             ref={containerRef}
-            className="relative flex-grow bg-gradient-to-b from-slate-100 to-slate-200 w-full overflow-hidden"
+            className="relative w-full h-full min-h-0 bg-gradient-to-b from-slate-100 to-slate-200 overflow-hidden"
             style={flipPerspective ? { transform: 'rotate(180deg)' } : undefined}
         >
             <canvas
                 ref={canvasRef}
+                className="w-full h-full block"
+                style={{ touchAction: 'none' }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -440,9 +440,12 @@ export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPre
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
-                style={{ touchAction: 'none' }}
             />
-            <canvas ref={effectsCanvasRef} id="effectsOverlay" />
+            <canvas
+                ref={effectsCanvasRef}
+                id="effectsOverlay"
+                className="absolute inset-0 pointer-events-none w-full h-full"
+            />
         </div>
     );
 }

@@ -54,7 +54,6 @@ export const createProjectilePool = (initialSize: number = 50): ObjectPool<Proje
             vy: 0,
             team: 'blue',
             active: false,
-            isMeteor: false,
             lifetime: 0,
         }),
         // Reset
@@ -65,7 +64,6 @@ export const createProjectilePool = (initialSize: number = 50): ObjectPool<Proje
             p.vy = 0;
             p.team = 'blue';
             p.active = false;
-            p.isMeteor = false;
             p.target = undefined;
             p.lifetime = 0;
         },
@@ -127,7 +125,6 @@ export const acquireProjectile = (
     vx: number,
     vy: number,
     team: 'blue' | 'red' | 'neutral',
-    isMeteor: boolean = false,
     target?: { x: number; y: number }
 ): Projectile => {
     const p = getProjectilePool().acquire();
@@ -137,7 +134,6 @@ export const acquireProjectile = (
     p.vy = vy;
     p.team = team;
     p.active = true;
-    p.isMeteor = isMeteor;
     p.target = target;
     p.lifetime = 0;
     return p;
