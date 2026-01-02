@@ -37,7 +37,7 @@ function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode }: W
                         key={mode}
                         className={`
                             relative flex flex-col items-center justify-between flex-1
-                            aspect-square max-h-[60px] rounded-xl transition-all duration-150 ease-out
+                            aspect-square max-h-[60px] rounded-lg transition-all duration-150 ease-out
                             ${isActive
                                 ? 'bg-gradient-to-b from-[#E6F7FC] to-[#D0F0FA] border-2 border-[#4CC9F0] shadow-[0_0_8px_rgba(76,201,240,0.4)]'
                                 : 'bg-gradient-to-b from-[#F8F9FA] to-[#E9ECEF] border border-slate-200'

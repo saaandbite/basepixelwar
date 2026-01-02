@@ -26,8 +26,8 @@ export const POWERUP_CHANCE = 0.05; // 5% chance per territory flip
 export const MAX_POWERUPS_ON_SCREEN = 3;
 export const BULLET_SPEED = 5; // Reduced global baseline
 
-export const GAME_WIDTH = 380;
-export const GAME_HEIGHT = 640;
+export const GAME_WIDTH = 390; // Exactly 26 columns (15px * 26)
+export const GAME_HEIGHT = 645; // Exactly 43 rows (15px * 43)
 
 
 // ============================================

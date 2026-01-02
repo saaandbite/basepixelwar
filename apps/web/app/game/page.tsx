@@ -194,13 +194,13 @@ function AIGamePage() {
     // Is game over?
     const isGameOver = uiState.gameStarted && !uiState.gameActive && uiState.timeLeft <= 0;
 
-    // Should show control panel?
-    const showControlPanel = uiState.gameStarted && uiState.gameActive;
+    // Should show control panel? Always show it so it's visible under blur
+    const showControlPanel = isMounted;
 
     return (
         <div className="h-screen w-full bg-slate-100 overflow-hidden flex flex-col items-center justify-center p-2">
             {/* Unified Game Card - "One Body" */}
-            <div className="relative flex flex-col w-full max-w-[420px] bg-white shadow-2xl rounded-2xl overflow-hidden ring-1 ring-slate-900/5 h-auto max-h-full">
+            <div className="relative flex flex-col w-full max-w-[420px] bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-slate-900/5 h-auto max-h-full">
 
                 {isMounted ? (
                     <>

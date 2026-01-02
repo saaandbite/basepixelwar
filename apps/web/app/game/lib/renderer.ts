@@ -4,6 +4,21 @@ import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon, GoldenPixel
 import { GRID_SIZE, COLORS, GOLDEN_PIXEL_SIZE } from './constants';
 import { shadeColor } from './gameLogic';
 
+// Helper to adjust brightness of a hex color
+function adjustBrightness(hex: string, factor: number): string {
+    // Parse hex
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+
+    // Adjust brightness
+    const adjust = (c: number) => Math.min(255, Math.max(0, Math.round(c * (1 + factor))));
+
+    // Convert back to hex
+    const toHex = (c: number) => c.toString(16).padStart(2, '0');
+    return `#${toHex(adjust(r))}${toHex(adjust(g))}${toHex(adjust(b))}`;
+}
+
 // Grid cache for performance optimization
 let gridCacheCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 let gridCacheCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
@@ -110,36 +125,38 @@ function drawGridDirect(
     // Clear cache
     ctx.clearRect(0, 0, cols * GRID_SIZE, rows * GRID_SIZE);
 
-    // Batch draw by color for better performance
-    ctx.fillStyle = COLORS.blue;
-    ctx.beginPath();
+    // Draw cells with per-tile color variation for textured look
     for (let i = 0; i < cols; i++) {
         const column = grid[i];
         if (!column) continue;
         for (let j = 0; j < rows; j++) {
-            if (column[j] === 'blue') {
-                ctx.rect(i * GRID_SIZE, j * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
-            }
+            const color = column[j];
+            const x = i * GRID_SIZE;
+            const y = j * GRID_SIZE;
+
+            // Create subtle color variation based on position (seeded variation)
+            const variation = ((i * 7 + j * 13) % 20 - 10) / 100; // -0.1 to +0.1
+
+            // Base color with variation
+            const baseColor = color === 'blue' ? COLORS.blue : COLORS.red;
+            ctx.fillStyle = adjustBrightness(baseColor, variation);
+            ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+
+            // Subtle inner highlight (top-left)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.fillRect(x, y, GRID_SIZE, 1);
+            ctx.fillRect(x, y, 1, GRID_SIZE);
+
+            // Subtle inner shadow (bottom-right)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            ctx.fillRect(x, y + GRID_SIZE - 1, GRID_SIZE, 1);
+            ctx.fillRect(x + GRID_SIZE - 1, y, 1, GRID_SIZE);
         }
     }
-    ctx.fill();
 
-    ctx.fillStyle = COLORS.red;
-    ctx.beginPath();
-    for (let i = 0; i < cols; i++) {
-        const column = grid[i];
-        if (!column) continue;
-        for (let j = 0; j < rows; j++) {
-            if (column[j] === 'red') {
-                ctx.rect(i * GRID_SIZE, j * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
-            }
-        }
-    }
-    ctx.fill();
-
-    // Draw borders between territories
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 1;
+    // Draw subtle borders between territories
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
 
     for (let i = 0; i < cols; i++) {

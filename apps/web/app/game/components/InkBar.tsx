@@ -30,9 +30,9 @@ function InkBarComponent({ ink, maxInk, isFrenzy, frenzyEndTime }: InkBarProps) 
             </div>
 
             {/* Progress bar */}
-            <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden">
+            <div className="flex-1 h-3 bg-slate-200 rounded-lg overflow-hidden">
                 <div
-                    className={`h-full rounded-full transition-all duration-100 ease-out ${isFrenzy ? 'animate-frenzy bg-[length:200%_100%]' : ''}`}
+                    className={`h-full rounded-lg transition-all duration-100 ease-out ${isFrenzy ? 'animate-frenzy bg-[length:200%_100%]' : ''}`}
                     style={{
                         width: `${isFrenzy ? 100 : percentage}%`,
                         background: isFrenzy

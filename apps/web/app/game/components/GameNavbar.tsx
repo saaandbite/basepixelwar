@@ -35,7 +35,7 @@ export function GameNavbar({
         <div className="w-full flex items-center justify-between px-3 py-2 bg-white/90 backdrop-blur-sm shadow-sm shrink-0 border-b border-slate-100">
             {/* Left: Blue Score */}
             <div className="flex items-center gap-2 min-w-[80px]">
-                <div className="w-9 h-9 rounded-lg bg-[#4CC9F0] flex items-center justify-center shadow-sm border-2 border-white">
+                <div className="w-9 h-9 rounded-xl bg-[#4CC9F0] flex items-center justify-center shadow-sm border-2 border-white">
                     <span className="text-base">👤</span>
                 </div>
                 <div className="flex flex-col items-start leading-tight">
@@ -46,7 +46,7 @@ export function GameNavbar({
 
             {/* Center: Timer */}
             <div className="flex flex-col items-center">
-                <div className="bg-slate-800 text-white font-mono font-bold text-lg px-3 py-0.5 rounded-md shadow">
+                <div className="bg-slate-800 text-white font-mono font-bold text-lg px-3 py-0.5 rounded-lg shadow">
                     {timeString}
                 </div>
             </div>
@@ -57,7 +57,7 @@ export function GameNavbar({
                     <span className="text-[10px] font-semibold text-slate-400 uppercase">Enemy</span>
                     <span className="text-base font-bold text-[#FF6B6B] tabular-nums">{scoreRed}%</span>
                 </div>
-                <div className="w-9 h-9 rounded-lg bg-[#FF6B6B] flex items-center justify-center shadow-sm border-2 border-white">
+                <div className="w-9 h-9 rounded-xl bg-[#FF6B6B] flex items-center justify-center shadow-sm border-2 border-white">
                     <span className="text-base">😈</span>
                 </div>
             </div>
