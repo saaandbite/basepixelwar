@@ -331,83 +331,142 @@ export function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle
     ctx.globalAlpha = 1.0;
 }
 
-// Draw cannon
+// Draw cannon - Ink Dropper/Blob Style
 export function drawCannon(
     ctx: CanvasRenderingContext2D,
     cannon: Cannon,
     color: string,
     isPlayer: boolean
 ): void {
+    const time = Date.now() / 1000;
+
+    // Idle breathing animation
+    const breatheScale = 1 + Math.sin(time * 2.5) * 0.03;
+    const breatheY = Math.sin(time * 2) * 2;
+
     ctx.save();
-    ctx.translate(cannon.x, cannon.y);
+    ctx.translate(cannon.x, cannon.y + breatheY);
+
+    // === SHADOW ===
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.beginPath();
+    ctx.ellipse(0, 12, 22 * breatheScale, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === MAIN BLOB BODY ===
+    ctx.save();
+    ctx.scale(breatheScale, breatheScale);
+
+    // Body gradient (team color)
+    const bodyGradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, 28);
+    bodyGradient.addColorStop(0, shadeColor(color, 40));
+    bodyGradient.addColorStop(0.5, color);
+    bodyGradient.addColorStop(1, shadeColor(color, -30));
+
+    ctx.fillStyle = bodyGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner shine highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(-8, -8, 10, 7, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Secondary small highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.beginPath();
+    ctx.arc(6, -12, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // === NOZZLE/DROPPER TIP ===
+    ctx.save();
     ctx.rotate(cannon.angle);
 
-    // Cannon shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    // Nozzle base (connects to blob)
+    const nozzleGradient = ctx.createLinearGradient(20, 0, 45, 0);
+    nozzleGradient.addColorStop(0, color);
+    nozzleGradient.addColorStop(1, shadeColor(color, -40));
+
+    ctx.fillStyle = nozzleGradient;
     ctx.beginPath();
-    ctx.ellipse(0, 5, 18, 8, 0, 0, Math.PI * 2);
+    ctx.moveTo(18, -10);
+    ctx.lineTo(40, -6);
+    ctx.lineTo(48, 0);
+    ctx.lineTo(40, 6);
+    ctx.lineTo(18, 10);
+    ctx.closePath();
     ctx.fill();
 
-    // Cannon base gradient
-    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 18);
-    gradient.addColorStop(0, '#FFFFFF');
-    gradient.addColorStop(1, '#F1F5F9');
-
-    ctx.fillStyle = gradient;
+    // Nozzle highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.moveTo(20, -8);
+    ctx.lineTo(38, -5);
+    ctx.lineTo(38, -2);
+    ctx.lineTo(20, -4);
+    ctx.closePath();
     ctx.fill();
 
-    // Cannon barrel with gradient
-    const barrelGradient = ctx.createLinearGradient(0, -12, 40, -12);
-    barrelGradient.addColorStop(0, color);
-    barrelGradient.addColorStop(1, shadeColor(color, -20));
-
-    ctx.fillStyle = barrelGradient;
+    // Droplet tip (animated)
+    const dropPulse = 1 + Math.sin(time * 4) * 0.15;
+    ctx.fillStyle = shadeColor(color, 20);
     ctx.beginPath();
-    ctx.roundRect(-5, -12, 45, 24, 8);
+    ctx.arc(48, 0, 5 * dropPulse, 0, Math.PI * 2);
     ctx.fill();
 
-    // Cannon details
-    ctx.fillStyle = '#CBD5E1';
+    // Droplet shine
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.beginPath();
-    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.arc(46, -2, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#94A3B8';
+    ctx.restore();
+
+    // === CENTER DETAIL ===
+    // Inner circle (eye-like detail)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
     ctx.fill();
 
-    // Player indicator
-    if (isPlayer) {
-        ctx.fillStyle = '#60A5FA';
-        ctx.beginPath();
-        ctx.arc(30, 0, 5, 0, Math.PI * 2);
-        ctx.fill();
-    }
+    // Pupil/core
+    ctx.fillStyle = shadeColor(color, -50);
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Powerup indicators for player
+    // Eye shine
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.beginPath();
+    ctx.arc(-2, -2, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === POWERUP INDICATORS ===
     if (isPlayer && cannon.powerups) {
         const { shield } = cannon.powerups;
         if (shield > 0) {
-            ctx.save();
-            ctx.rotate(-cannon.angle); // Unrotate for proper positioning
+            // Shield ring effect
+            ctx.strokeStyle = COLORS.powerup.shield;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, 32, 0, Math.PI * 2);
+            ctx.stroke();
 
-            const indicatorX = 25;
-            if (shield > 0) {
-                ctx.fillStyle = COLORS.powerup.shield;
-                ctx.beginPath();
-                ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'white';
-                ctx.font = '8px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(shield), indicatorX, -25);
-            }
+            // Shield counter badge
+            ctx.fillStyle = COLORS.powerup.shield;
+            ctx.beginPath();
+            ctx.arc(22, -22, 10, 0, Math.PI * 2);
+            ctx.fill();
 
-            ctx.restore();
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(shield), 22, -22);
         }
     }
 
