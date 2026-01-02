@@ -57,10 +57,11 @@ export function GoldenPixelIndicator({
     // Show countdown to next spawn
     return (
         <div className={`
-            flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
-            bg-[rgba(255,215,0,0.15)] text-[#a08600] border border-[rgba(255,215,0,0.3)]
+            flex items-center px-2.5 py-1 rounded-full text-xs font-bold
+            bg-gradient-to-br from-[#FFD700] via-[#FFC107] to-[#FFB300] 
+            text-[#5a4000] shadow-md border border-[#FFE55C]
+            drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]
         `}>
-            <div className="text-xs opacity-70">🪙</div>
             <span className="tabular-nums">{Math.ceil(nextSpawnIn)}s</span>
         </div>
     );

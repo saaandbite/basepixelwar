@@ -215,14 +215,29 @@ function AIGamePage() {
                                 frenzyEndTime={uiState.player.frenzyEndTime}
                             />
 
-                            {/* Game Canvas - Now uses Ref */}
-                            <GameCanvas
-                                gameStateRef={gameStateRef}
-                                onResize={handleResize}
-                                onPlayerInput={handlePlayerInput}
-                                onInkBombPreview={setInkBombPreview}
-                                onUpdate={handleUpdate}
-                            />
+                            {/* Game Canvas Container with Golden Timer Overlay */}
+                            <div className="relative flex-1 min-h-0">
+                                <GameCanvas
+                                    gameStateRef={gameStateRef}
+                                    onResize={handleResize}
+                                    onPlayerInput={handlePlayerInput}
+                                    onInkBombPreview={setInkBombPreview}
+                                    onUpdate={handleUpdate}
+                                />
+
+                                {/* Golden Timer - Top Right Corner (next to red cannon) */}
+                                {uiState.gameActive && (
+                                    <div className="absolute top-2 right-2 z-10 pointer-events-none">
+                                        <GoldenPixelIndicator
+                                            goldenPixel={uiState.goldenPixel}
+                                            timeLeft={uiState.timeLeft}
+                                            lastGoldenPixelSpawn={uiState.lastGoldenPixelSpawn}
+                                            isFrenzy={uiState.player.isFrenzy}
+                                            frenzyEndTime={uiState.player.frenzyEndTime}
+                                        />
+                                    </div>
+                                )}
+                            </div>
 
 
 
@@ -280,27 +295,22 @@ function AIGamePage() {
             {/* Dashboard / Controls Panel - Only visible during active gameplay */}
             {showControlPanel && (
                 <div className="w-full max-w-[420px] p-2 pt-0 shrink-0 z-20">
-                    <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 p-3 flex flex-col gap-3 ring-1 ring-slate-200/80">
-                        {/* 1. Ink Bar (Top) */}
-                        <div className="w-full">
-                            <InkBar
-                                ink={uiState.player.ink}
-                                maxInk={uiState.player.maxInk}
-                                isFrenzy={uiState.player.isFrenzy}
-                                frenzyEndTime={uiState.player.frenzyEndTime}
-                            />
-                        </div>
+                    <div className="bg-white rounded-b-2xl shadow-lg border-x-[6px] border-b-[6px] border-white/90 px-3 py-2 flex flex-col gap-2 ring-1 ring-slate-200/80">
+                        {/* 1. Ink Bar (Top) - Compact */}
+                        <InkBar
+                            ink={uiState.player.ink}
+                            maxInk={uiState.player.maxInk}
+                            isFrenzy={uiState.player.isFrenzy}
+                            frenzyEndTime={uiState.player.frenzyEndTime}
+                        />
 
-                        {/* 2. Weapon Selector (Middle) */}
-                        <div className="w-full flex justify-center">
-                            <WeaponSelector
-                                currentMode={uiState.player.weaponMode}
-                                ink={uiState.player.ink}
-                                isFrenzy={uiState.player.isFrenzy}
-                                onSelectMode={setWeaponMode}
-                            />
-                        </div>
-
+                        {/* 2. Weapon Selector (Bottom) */}
+                        <WeaponSelector
+                            currentMode={uiState.player.weaponMode}
+                            ink={uiState.player.ink}
+                            isFrenzy={uiState.player.isFrenzy}
+                            onSelectMode={setWeaponMode}
+                        />
                     </div>
                 </div>
             )}

@@ -31,28 +31,6 @@ export function GameNavbar({
     const nextSpawnIn = Math.max(0, GOLDEN_PIXEL_SPAWN_INTERVAL - timeSinceLastSpawn);
     const frenzyTimeLeft = isFrenzy ? Math.max(0, (frenzyEndTime - Date.now()) / 1000) : 0;
 
-    // Determine status badge content
-    let statusBadge = null;
-    if (isFrenzy) {
-        statusBadge = (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-[#FF6B35] to-[#ff9500] text-white animate-pulse">
-                ⚡ {frenzyTimeLeft.toFixed(1)}s
-            </div>
-        );
-    } else if (goldenPixel?.active) {
-        statusBadge = (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-[#FFD700] to-[#ffc107] text-[#7c5800] animate-pulse">
-                🪙 CAPTURE!
-            </div>
-        );
-    } else {
-        statusBadge = (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                🪙 {Math.ceil(nextSpawnIn)}s
-            </div>
-        );
-    }
-
     return (
         <div className="w-full flex items-center justify-between px-3 py-2 bg-white/90 backdrop-blur-sm shadow-sm shrink-0 border-b border-slate-100">
             {/* Left: Blue Score */}
@@ -66,12 +44,11 @@ export function GameNavbar({
                 </div>
             </div>
 
-            {/* Center: Timer + Status */}
-            <div className="flex flex-col items-center gap-1">
+            {/* Center: Timer */}
+            <div className="flex flex-col items-center">
                 <div className="bg-slate-800 text-white font-mono font-bold text-lg px-3 py-0.5 rounded-md shadow">
                     {timeString}
                 </div>
-                {statusBadge}
             </div>
 
             {/* Right: Red Score */}
