@@ -39,6 +39,42 @@ export interface SyncPowerup {
     type: 'shield' | 'frenzy';
 }
 
+// Particle for visual effects
+export interface SyncParticle {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    life: number;
+    size: number;
+    color: string;
+    glow?: boolean;
+}
+
+// Territory batch effect
+export interface SyncTerritoryBatch {
+    x: number;
+    y: number;
+    radius: number;
+    color: string;
+    opacity: number;
+}
+
+// Combo effect
+export interface SyncComboEffect {
+    team: 'blue' | 'red';
+    streak: number;
+    x: number;
+    y: number;
+}
+
+// Powerup effect
+export interface SyncPowerupEffect {
+    type: 'shield' | 'frenzy';
+    x: number;
+    y: number;
+}
+
 // Full game state for a room
 export interface PvPGameState {
     roomId: string;
@@ -51,6 +87,13 @@ export interface PvPGameState {
     status: 'waiting' | 'countdown' | 'playing' | 'ended';
     scores: { blue: number; red: number };
     lastPowerupSpawn: number; // For spawning logic
+
+    // Visual Effects (for multiplayer parity with single player)
+    particles: SyncParticle[];
+    territoryBatches: SyncTerritoryBatch[];
+    comboEffects: SyncComboEffect[];
+    powerupEffects: SyncPowerupEffect[];
+    screenFlash: number;
 }
 
 // Game constants (Matching Client)
@@ -140,6 +183,13 @@ export function createGameState(roomId: string): PvPGameState {
         status: 'waiting',
         scores: { blue: 0, red: 0 },
         lastPowerupSpawn: 0,
+
+        // Visual Effects
+        particles: [],
+        territoryBatches: [],
+        comboEffects: [],
+        powerupEffects: [],
+        screenFlash: 0,
     };
 
     gameStates.set(roomId, state);
@@ -347,6 +397,37 @@ function updateGameState(roomId: string) {
             // EXPLODE!
             paintRadius(state.grid, ex, ey, 5, p.team); // Big explosion
 
+            // Create visual effects for explosion
+            // Add particles
+            for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                const speed = 2 + Math.random() * 3;
+                const color = p.team === 'blue' ? '#3B82F6' : '#EF4444'; // Use team colors
+
+                state.particles.push({
+                    x: ex,
+                    y: ey,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 0.8,
+                    size: 4,
+                    color: color,
+                    glow: true,
+                });
+            }
+
+            // Add territory batch effect
+            state.territoryBatches.push({
+                x: Math.floor(ex / GRID_SIZE),
+                y: Math.floor(ey / GRID_SIZE),
+                radius: 5,
+                color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
+                opacity: 1.0,
+            });
+
+            // Add screen flash effect
+            state.screenFlash = 0.3;
+
             // Note: We don't continue to next loop, we let it be destroyed by not adding to newProjectiles if we wanted.
             // But here we need to ensure we don't double add or double destroy.
             // If we handled it here, we `continue` to not add it to newProjectiles (destroying it).
@@ -375,6 +456,41 @@ function updateGameState(roomId: string) {
                 // Paint current cell
                 if (state.grid[gx][gy] !== p.team) {
                     state.grid[gx][gy] = p.team;
+
+                    // Create visual effects for impact
+                    // Add particles
+                    const particleCount = p.type === 'shotgun' ? 10 : 5;
+                    for (let i = 0; i < particleCount; i++) {
+                        const angle = (i / particleCount) * Math.PI * 2;
+                        const speed = 1 + Math.random() * 2;
+                        const color = p.team === 'blue' ? '#3B82F6' : '#EF4444'; // Use team colors
+
+                        state.particles.push({
+                            x: p.x,
+                            y: p.y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 0.6,
+                            size: p.type === 'shotgun' ? 3 : 4,
+                            color: color,
+                            glow: false,
+                        });
+                    }
+
+                    // Add territory batch effect
+                    state.territoryBatches.push({
+                        x: gx,
+                        y: gy,
+                        radius: p.type === 'shotgun' ? 2 : 1,
+                        color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
+                        opacity: 1.0,
+                    });
+
+                    // Add screen flash effect (smaller for normal bullets)
+                    if (state.screenFlash < 0.1) {
+                        state.screenFlash = 0.1;
+                    }
+
                     // Destroy projectile on impact
                     continue;
                 }
@@ -485,9 +601,23 @@ function updateGameState(roomId: string) {
                     // Let's assume we store it in the state map separately or use 'any'.
                     (player as any).frenzyEndTime = Date.now() + 5000;
                     player.ink = INK_MAX; // Refill
+
+                    // Add powerup effect
+                    state.powerupEffects.push({
+                        type: 'frenzy',
+                        x: player.x,
+                        y: player.y,
+                    });
                 } else if (p.type === 'shield') {
                     // Shield logic
                     (player as any).hasShield = true;
+
+                    // Add powerup effect
+                    state.powerupEffects.push({
+                        type: 'shield',
+                        x: player.x,
+                        y: player.y,
+                    });
                 }
             }
         }
@@ -535,6 +665,43 @@ function updateGameState(roomId: string) {
             red: Math.round((red / total) * 100),
         };
     }
+
+    // 6. Update particles (decay life)
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+        const particle = state.particles[i];
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.life -= 0.1; // Decay rate
+
+        if (particle.life <= 0) {
+            state.particles.splice(i, 1);
+        }
+    }
+
+    // 7. Update territory batches (decay radius and opacity)
+    for (let i = state.territoryBatches.length - 1; i >= 0; i--) {
+        const batch = state.territoryBatches[i];
+        batch.radius += 1.5; // Expand
+        batch.opacity -= 0.08; // Fade out
+
+        if (batch.opacity <= 0) {
+            state.territoryBatches.splice(i, 1);
+        }
+    }
+
+    // 8. Update screen flash (decay)
+    if (state.screenFlash > 0) {
+        state.screenFlash *= 0.9; // Decay quickly
+        if (state.screenFlash < 0.05) {
+            state.screenFlash = 0;
+        }
+    }
+
+    // 9. Clear combo effects (they're temporary)
+    state.comboEffects = [];
+
+    // 10. Clear powerup effects (they're temporary)
+    state.powerupEffects = [];
 }
 
 // Helper: Paint Radius
@@ -566,6 +733,13 @@ function broadcastGameState(roomId: string) {
         powerups: state.powerups, // Broadcast powerups
         timeLeft: state.timeLeft,
         scores: state.scores,
+
+        // Visual Effects
+        particles: state.particles,
+        territoryBatches: state.territoryBatches,
+        comboEffects: state.comboEffects,
+        powerupEffects: state.powerupEffects,
+        screenFlash: state.screenFlash,
     });
 }
 

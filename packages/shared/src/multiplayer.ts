@@ -118,6 +118,66 @@ export interface SyncedPlayerState {
     weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
 }
 
+// Particle for visual effects
+export interface SyncedParticle {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    life: number;
+    size: number;
+    color: string;
+    glow?: boolean;
+}
+
+// Territory batch effect
+export interface SyncedTerritoryBatch {
+    x: number;
+    y: number;
+    radius: number;
+    color: string;
+    opacity: number;
+}
+
+// Combo effect
+export interface SyncedComboEffect {
+    team: 'blue' | 'red';
+    streak: number;
+    x: number;
+    y: number;
+}
+
+// Powerup effect
+export interface SyncedPowerupEffect {
+    type: 'shield' | 'frenzy';
+    x: number;
+    y: number;
+}
+
+export interface SyncedGameState {
+    timeLeft: number;
+
+    // Grid State (direct array for simplicity)
+    grid: ('blue' | 'red')[][];
+
+    // Scores
+    scores: { blue: number; red: number };
+
+    // Player States
+    player1: SyncedPlayerState; // Blue team (bottom)
+    player2: SyncedPlayerState; // Red team (top)
+
+    // Projectiles
+    projectiles: SyncedProjectile[];
+
+    // Visual Effects (for multiplayer parity with single player)
+    particles?: SyncedParticle[];
+    territoryBatches?: SyncedTerritoryBatch[];
+    comboEffects?: SyncedComboEffect[];
+    powerupEffects?: SyncedPowerupEffect[];
+    screenFlash?: number;
+}
+
 export interface SyncedProjectile {
     id: number;
     x: number;

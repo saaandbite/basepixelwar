@@ -6,12 +6,15 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, INK_MAX } from '../lib/constants';
 import type { SyncedGameState } from '@repo/shared/multiplayer';
-import type { Projectile, Cannon } from '../types';
+import type { Projectile, Cannon, Particle, TerritoryBatch } from '../types';
 import {
     drawBackground,
     drawGrid,
     drawProjectiles,
-    drawCannon
+    drawCannon,
+    drawParticles,
+    drawTerritoryBatches,
+    drawScreenFlash,
 } from '../lib/renderer';
 
 interface PvPGameCanvasProps {
@@ -33,7 +36,7 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const { grid, player1, player2, projectiles } = gameState;
+        const { grid, player1, player2, projectiles, particles, territoryBatches, screenFlash } = gameState;
 
         // Clear canvas
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -51,7 +54,7 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         // 2. Draw Grid
         // Grid from server is simple array. drawGrid expects ('blue' | 'red')[][]
         if (grid && grid.length > 0 && grid[0]) {
-            // Need forceRedraw=true often because we don't cache grid hash in pvp component yet, 
+            // Need forceRedraw=true often because we don't cache grid hash in pvp component yet,
             // or let renderer handle caching (it has internal cache).
             // But renderer cache depends on "lastCols" etc.
             drawGrid(ctx, grid as ('blue' | 'red')[][], grid.length, grid[0].length);
@@ -68,7 +71,33 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         }));
         drawProjectiles(ctx, renderProjectiles);
 
-        // 4. Draw Cannons
+        // 4. Draw Particles (Visual Effects)
+        if (particles && particles.length > 0) {
+            // Map SyncedParticle to Particle
+            const renderParticles: Particle[] = particles.map(p => ({
+                ...p,
+                glow: p.glow || false,
+            }));
+            drawParticles(ctx, renderParticles);
+        }
+
+        // 5. Draw Territory Batches (Visual Effects)
+        if (territoryBatches && territoryBatches.length > 0) {
+            // Map SyncedTerritoryBatch to TerritoryBatch
+            const renderTerritoryBatches: TerritoryBatch[] = territoryBatches.map(tb => ({
+                ...tb,
+                color: tb.color,
+                opacity: tb.opacity,
+            }));
+            drawTerritoryBatches(ctx, renderTerritoryBatches);
+        }
+
+        // 6. Draw Screen Flash (Visual Effects)
+        if (screenFlash && screenFlash > 0) {
+            drawScreenFlash(ctx, screenFlash, GAME_WIDTH, GAME_HEIGHT);
+        }
+
+        // 7. Draw Cannons
         // Map SyncedPlayerState to Cannon compatible object
         const p1Cannon: Cannon = {
             ...player1,
