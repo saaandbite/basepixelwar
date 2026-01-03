@@ -279,22 +279,40 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, projectiles: Proj
         ctx.save();
         ctx.translate(p.x, p.y);
 
-        // Bullet with glow
-        const bulletColor = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+        const isInkBomb = p.type === 'inkBomb' || p.isInkBomb;
+        const isShotgun = p.type === 'shotgun';
+
+        // Bullet Color
+        let bulletColor: string = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
+        if (isInkBomb) bulletColor = COLORS.inkBomb;
+
+        // Size
+        const size = isInkBomb ? 12 : isShotgun ? 4 : 6;
+
+        // Glow
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size + 4);
         gradient.addColorStop(0, bulletColor);
         gradient.addColorStop(1, `${bulletColor}40`);
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
         ctx.fill();
 
         // Core
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = isInkBomb ? '#000000' : '#FFFFFF';
         ctx.beginPath();
-        ctx.arc(0, 0, 3, 0, Math.PI * 2);
+        ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
         ctx.fill();
+
+        // Bomb Icon/Detail
+        if (isInkBomb) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('💣', 0, 1);
+        }
 
         ctx.restore();
     });

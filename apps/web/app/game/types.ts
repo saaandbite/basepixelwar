@@ -11,6 +11,7 @@ export interface Projectile {
     vy: number;
     team: 'blue' | 'red' | 'neutral';
     active: boolean;
+    type?: 'normal' | 'shotgun' | 'inkBomb';
 
     isInkBomb?: boolean;
     target?: { x: number; y: number };

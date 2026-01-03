@@ -16,9 +16,12 @@ const InkBarMemo = memo(InkBarComponent);
 
 export const InkBar = InkBarMemo;
 
-function InkBarComponent({ ink, maxInk, isFrenzy, frenzyEndTime }: InkBarProps) {
+function InkBarComponent({ ink, maxInk,
+    isFrenzy,
+    // frenzyEndTime // Unused
+}: InkBarProps) {
     const percentage = (ink / maxInk) * 100;
-    const frenzyTimeLeft = isFrenzy ? Math.max(0, (frenzyEndTime - Date.now()) / 1000) : 0;
+    // const frenzyTimeLeft = isFrenzy ? Math.max(0, (frenzyEndTime - Date.now()) / 1000) : 0; // Usage removed
 
     return (
         <div className="w-full flex items-center gap-2">

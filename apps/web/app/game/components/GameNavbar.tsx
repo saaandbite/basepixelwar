@@ -1,4 +1,4 @@
-import { GOLDEN_PIXEL_SPAWN_INTERVAL, GAME_DURATION } from '../lib/constants';
+// import { GOLDEN_PIXEL_SPAWN_INTERVAL, GAME_DURATION } from '../lib/constants'; // Unused
 import type { GoldenPixel } from '../types';
 
 interface GameNavbarProps {
@@ -15,21 +15,22 @@ export function GameNavbar({
     scoreBlue,
     scoreRed,
     timeLeft,
-    goldenPixel,
-    lastGoldenPixelSpawn = 0,
-    isFrenzy = false,
-    frenzyEndTime = 0,
+    // Unused props commented out to fix lint
+    // goldenPixel,
+    // lastGoldenPixelSpawn,
+    // isFrenzy,
+    // frenzyEndTime
 }: GameNavbarProps) {
     // Format time mm:ss
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
     const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-    // Golden Pixel countdown
-    const elapsedTime = GAME_DURATION - timeLeft;
-    const timeSinceLastSpawn = elapsedTime - lastGoldenPixelSpawn;
-    const nextSpawnIn = Math.max(0, GOLDEN_PIXEL_SPAWN_INTERVAL - timeSinceLastSpawn);
-    const frenzyTimeLeft = isFrenzy ? Math.max(0, (frenzyEndTime - Date.now()) / 1000) : 0;
+    // Unused variables commented out
+    // const elapsedTime = GAME_DURATION - timeLeft;
+    // const timeSinceLastSpawn = elapsedTime - lastGoldenPixelSpawn;
+    // const nextSpawnIn = Math.max(0, GOLDEN_PIXEL_SPAWN_INTERVAL - timeSinceLastSpawn);
+    // const frenzyTimeLeft = isFrenzy ? Math.max(0, (frenzyEndTime - Date.now()) / 1000) : 0;
 
     return (
         <div className="w-full flex items-center justify-between px-3 py-2 bg-white/90 backdrop-blur-sm shadow-sm shrink-0 border-b border-slate-100">

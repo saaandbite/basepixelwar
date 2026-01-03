@@ -17,7 +17,7 @@ import {
 interface PvPGameCanvasProps {
     gameState: SyncedGameState | null;
     myTeam: 'blue' | 'red';
-    onPlayerInput: (angle: number, firing: boolean) => void;
+    onPlayerInput: (angle: number, firing: boolean, targetPos?: { x: number; y: number }) => void;
 }
 
 export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanvasProps) {
@@ -144,7 +144,7 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         const dy = cy - myCannon.y;
         const angle = Math.atan2(dy, dx);
 
-        onPlayerInput(angle, isDown);
+        onPlayerInput(angle, isDown, { x: cx, y: cy });
     }, [gameState, myTeam, isFlipped, onPlayerInput]);
 
     return (
@@ -162,11 +162,11 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
             }}
             onMouseDown={(e) => handleInput(e, true)}
             onMouseMove={(e) => e.buttons === 1 && handleInput(e, true)}
-            onMouseUp={() => onPlayerInput(0, false)}
-            onMouseLeave={() => onPlayerInput(0, false)}
+            onMouseUp={() => onPlayerInput(0, false, undefined)}
+            onMouseLeave={() => onPlayerInput(0, false, undefined)}
             onTouchStart={(e) => { e.preventDefault(); handleInput(e, true); }}
             onTouchMove={(e) => { e.preventDefault(); handleInput(e, true); }}
-            onTouchEnd={() => onPlayerInput(0, false)}
+            onTouchEnd={() => onPlayerInput(0, false, undefined)}
         />
     );
 }
