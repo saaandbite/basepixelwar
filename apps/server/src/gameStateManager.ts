@@ -11,6 +11,7 @@ export interface PvPCannon {
     isFiring: boolean;
     ink: number;
     weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
+    cooldown: number; // Frame-based cooldown like single player
     targetPos?: { x: number; y: number }; // Added for ballistic targeting
     frenzyEndTime?: number;
     hasShield?: boolean;
@@ -25,10 +26,12 @@ export interface SyncProjectile {
     vy: number;
     team: 'blue' | 'red';
     type: 'normal' | 'shotgun' | 'inkBomb';
+    paintRadius: number; // Paint radius for impact
     gravity?: number; // For ink bomb
     explodeTime?: number; // Flight time frame count
     lifetime: number;
     target?: { x: number; y: number }; // For explosion snapping
+    maxLifetime?: number; // For shotgun short range
 }
 
 // Powerup State
@@ -114,28 +117,28 @@ const CANVAS_WIDTH_CLIENT = 390; // Approx match for logic scaling if needed
 const GOLDEN_PIXEL_SPAWN_INTERVAL = 15000;
 const GOLDEN_PIXEL_CAPTURE_RADIUS = 20;
 
-// Weapon Definitions (EXACTLY Matching Client Constants)
+// Weapon Definitions (Matching Client Constants - Frame-based like SP)
 const WEAPON_MODES = {
     machineGun: {
         cost: 1,
-        speed: 6, // Slower (was 8)
-        damageRadius: 1,
-        fireInterval: 150, // ~9 frames @ 60fps = 150ms
+        speed: 6,
+        paintRadius: 1,
+        fireRate: 5, // 5 frames @ 30fps = ~6 shots/sec (better pacing, not laser-like)
     },
     shotgun: {
         cost: 5,
-        speed: 5.5, // Slower (was 7)
-        damageRadius: 2,
-        spread: [-0.3, 0, 0.3], // Radians (approx -0.2 in client but 0.3 here for feeling)
-        spreadAngles: [-0.2, 0, 0.2], // Client uses this
-        fireInterval: 416, // ~25 frames @ 60fps = 416ms
+        speed: 5.5,
+        paintRadius: 2,
+        fireRate: 8, // ~4 shots/sec at 30fps (matching SP 25 frames @ 60fps)
+        spreadAngles: [-0.2, 0, 0.2],
+        maxLifetime: 30, // Frames for short range (30fps server)
     },
     inkBomb: {
         cost: 20,
-        speed: 9, // (was 10)
-        damageRadius: 5, // Explosion radius
-        gravity: 0.08, // Lower gravity (was 0.15)
-        fireInterval: 833, // ~50 frames @ 60fps = 833ms
+        speed: 9,
+        paintRadius: 5,
+        fireRate: 15, // ~2 shots/sec at 30fps
+        gravity: 0.08,
     }
 } as const;
 
@@ -175,6 +178,7 @@ export function createGameState(roomId: string): PvPGameState {
             isFiring: false,
             ink: INK_MAX,
             weaponMode: 'machineGun',
+            cooldown: 0,
         },
         player2: {
             x: GAME_WIDTH / 2,
@@ -183,6 +187,7 @@ export function createGameState(roomId: string): PvPGameState {
             isFiring: false,
             ink: INK_MAX,
             weaponMode: 'machineGun',
+            cooldown: 0,
         },
         projectiles: [],
         powerups: [],
@@ -345,10 +350,12 @@ function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machin
         vy,
         team,
         type: type === 'machineGun' ? 'normal' : type,
+        paintRadius: mode.paintRadius,
         gravity,
         explodeTime, // Frames until explosion
         lifetime: 0,
         target: type === 'inkBomb' ? cannon.targetPos : undefined,
+        maxLifetime: type === 'shotgun' ? WEAPON_MODES.shotgun.maxLifetime : undefined,
     };
 }
 
@@ -381,23 +388,133 @@ function updateGameState(roomId: string) {
         const gx = Math.floor(p.x / GRID_SIZE);
         const gy = Math.floor(p.y / GRID_SIZE);
 
-        // Check collision with grid (ground/enemy ink)
+        // === INK BOMB SPECIAL LOGIC ===
+        // Ink Bomb flies over territory and only explodes based on:
+        // 1. explodeTime (ballistic solver flight time)
+        // 2. Falling and on grid (legacy fallback)
+        // 3. Hitting floor
+        if (p.type === 'inkBomb') {
+            const isFalling = p.vy > 0; // Positive vy = moving down
+            const isOnGrid = gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS;
+            const maxLifetimeReached = p.lifetime > 200;
+            const hitFloor = p.y > GAME_HEIGHT - 30;
+
+            let shouldExplode = false;
+
+            if (p.explodeTime) {
+                // Ballistic Targeting: Explode when flight time is reached
+                if (p.lifetime >= p.explodeTime) {
+                    shouldExplode = true;
+                }
+            } else {
+                // Legacy fallback: explode when falling and on grid
+                shouldExplode = (isFalling && isOnGrid && p.lifetime > 10) || maxLifetimeReached;
+            }
+
+            // Force explode if hitting floor
+            if (hitFloor) shouldExplode = true;
+
+            if (shouldExplode) {
+                // Explosion center - snap to target if available
+                let explosionX = p.x;
+                let explosionY = p.y;
+                if (p.target) {
+                    explosionX = p.target.x;
+                    explosionY = p.target.y;
+                }
+
+                const explosionGx = Math.floor(explosionX / GRID_SIZE);
+                const explosionGy = Math.floor(explosionY / GRID_SIZE);
+
+                // BIG explosion (radius 5 like single player)
+                paintRadius(state.grid, explosionX, explosionY, 5, p.team);
+
+                // Visual Effects - explosion particles
+                for (let i = 0; i < 20; i++) {
+                    const angle = (i / 20) * Math.PI * 2;
+                    const speed = 2 + Math.random() * 3;
+                    state.particles.push({
+                        x: explosionX,
+                        y: explosionY,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 0.8,
+                        size: 4,
+                        color: p.team === 'blue' ? '#3B82F6' : '#EF4444',
+                        glow: true
+                    });
+                }
+
+                // Territory Batch Effect (large)
+                state.territoryBatches.push({
+                    x: explosionGx,
+                    y: explosionGy,
+                    radius: 8,
+                    color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
+                    opacity: 1.0
+                });
+
+                // Screen Flash (big for ink bomb)
+                state.screenFlash = 0.3;
+
+                // Destroy projectile
+                continue;
+            }
+
+            // Ink bomb keeps flying (NOT destroyed on grid collision)
+            newProjectiles.push(p);
+            continue;
+        }
+
+        // === NORMAL BULLETS (machineGun, shotgun) ===
+
+        // Check shotgun maxLifetime for short range (like single player)
+        if (p.maxLifetime && p.lifetime >= p.maxLifetime) {
+            // Shotgun bullet expires - paint where it is
+            if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
+                const radius = p.paintRadius || 1;
+                paintRadius(state.grid, p.x, p.y, radius, p.team);
+
+                // Visual effects
+                for (let i = 0; i < 5; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 1 + Math.random() * 2;
+                    state.particles.push({
+                        x: p.x,
+                        y: p.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 0.4,
+                        size: 2,
+                        color: p.team === 'blue' ? '#3B82F6' : '#EF4444',
+                        glow: false
+                    });
+                }
+
+                state.territoryBatches.push({
+                    x: gx,
+                    y: gy,
+                    radius: radius + 1,
+                    color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
+                    opacity: 0.8
+                });
+            }
+            continue; // Destroy projectile
+        }
+
+        // Check collision with grid (enemy territory)
         if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
             const currentCellColor = state.grid[gx][gy];
 
-            // If we hit something that is NOT our team (neutral or enemy), we explode and stop.
-            // If it IS our team, we fly over it (unless shotgun max lifetime handled separately, but standard bullet logic applies).
+            // If we hit enemy territory, explode and stop
             if (currentCellColor !== p.team) {
                 // Impact!
 
-                // 1. Paint Grid
-                // Basic paint of current cell + radius?
-                // For parity with SP 'paintGrid' which uses a radius:
-                const radius = p.type === 'shotgun' ? 2 : 1;
+                // 1. Paint Grid (using paintRadius from projectile)
+                const radius = p.paintRadius || 1;
                 paintRadius(state.grid, p.x, p.y, radius, p.team);
 
                 // 2. Visual Effects (Explosion)
-                // Particles
                 const particleCount = p.type === 'shotgun' ? 8 : 4;
                 for (let i = 0; i < particleCount; i++) {
                     const angle = Math.random() * Math.PI * 2;
@@ -426,7 +543,7 @@ function updateGameState(roomId: string) {
                 // Screen Flash (small)
                 if (state.screenFlash < 0.1) state.screenFlash = 0.1;
 
-                // 3. Destroy Projectile (Stop here, do not add to newProjectiles)
+                // 3. Destroy Projectile
                 continue;
             }
         }
@@ -435,69 +552,44 @@ function updateGameState(roomId: string) {
     }
     state.projectiles = newProjectiles;
 
-    // 2. Handle Firing
+    // 2. Handle Firing (Frame-based cooldown like single player)
     const now = Date.now();
 
-    // Helper to fire
+    // Helper to handle weapon firing
     const handleFire = (player: PvPCannon, team: 'blue' | 'red') => {
-        if (!player.isFiring) return;
-
         const mode = player.weaponMode;
         const weaponData = WEAPON_MODES[mode];
 
-        // Fire Rate Check (Simple modulo or timer?)
-        // Let's use a cooldown timer approach if we had one, but we don't in the state interface yet.
-        // For now, we fire EVERY TICK if ink covers it? No, that's too fast.
-        // Let's limit fire rate. 30fps.
-        // MG: Every 3 frames (~10 shots/sec)
-        // SG: Every 15 frames (~2 shots/sec)
-        // IB: Every 30 frames (1 shot/sec)
+        // Decrement cooldown each tick (runs at 30fps)
+        if (player.cooldown > 0) {
+            player.cooldown--;
+        }
 
-        // We need a lastFireTime in state.
-        // Since we didn't add it to interface yet, let's rely on random chance or just "every N ticks" using a local counter or timestamp stored in memory?
-        // We can't easily add fields to Interface without updating Shared.
-        // The Client interface `SyncedPlayerState` doesn't have cooldown.
-        // BUT the `PvPPlayer` interface in shared isn't the full state.
-        // `PvPCannon` in gameStateManager IS local to server. We can add fields there!
+        // Check if firing and can fire
+        if (!player.isFiring) return;
+        if (player.cooldown > 0) return;
 
-        // Let's verify PvPCannon definition in this file.
-        // It's defined at top of file. I can add `lastFire` to it.
+        // Check ink (unless in frenzy)
+        const isFrenzy = player.frenzyEndTime && now < player.frenzyEndTime;
+        const inkCost = isFrenzy ? 0 : weaponData.cost;
 
-        // Temporarily, I will assume a throttle based on `ink` for simplicity if I can't change state structure easily.
-        // actually `PvPCannon` is defined in this file. I CAN Change it.
-
-        // Check fire rate limit
-        const now = Date.now();
-        const fireInterval = mode === 'machineGun' ? 100 : mode === 'shotgun' ? 500 : 1000;
-
-        // We need to store lastFire. 
-        // I will add `lastFire: number` to PvPCannon in the interface update step or just cast it for now to avoid breaking types.
-        // Let's assume passed player object has it, or add it to the type definition in previous lines.
-        // Wait, I can't edit the type definition in this tool call easily if it's far up.
-        // I'll stick to ink cost limiting for now, or just reasonable simple throttling.
-
-        if (player.ink < weaponData.cost) return; // Not enough ink
-
-        // Simple throttle: Random chance based on fire rate? Unreliable.
-        // Let's use the modulus of time? slightly buggy.
-        // Better: We really need `lastFire` timestamp.
-        // I'll assume I can add it to the object dynamically for now as any.
-        const pAny = player as any;
-        if (pAny.lastFire && now - pAny.lastFire < fireInterval) return;
+        if (player.ink < inkCost) return; // Not enough ink
 
         // FIRE!
-        pAny.lastFire = now;
+        // Set cooldown based on weapon fireRate
+        player.cooldown = weaponData.fireRate;
 
-        // Deduct ink unless in frenzy
-        if (!player.frenzyEndTime || now > player.frenzyEndTime) {
+        // Deduct ink
+        if (!isFrenzy) {
             player.ink -= weaponData.cost;
         } else {
-            // In frenzy, maybe refill?
+            // In frenzy, keep ink full
             player.ink = INK_MAX;
         }
 
+        // Create projectiles based on weapon type
         if (mode === 'shotgun') {
-            WEAPON_MODES.shotgun.spread.forEach(angleOffset => {
+            WEAPON_MODES.shotgun.spreadAngles.forEach((angleOffset: number) => {
                 state.projectiles.push(createProjectile(player, team, 'shotgun', angleOffset));
             });
         } else if (mode === 'inkBomb') {

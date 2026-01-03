@@ -203,7 +203,10 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}
             onMouseDown={(e) => handleInput(e, true)}
-            onMouseMove={(e) => e.buttons === 1 && handleInput(e, true)}
+            onMouseMove={(e) => {
+                const isFiring = e.buttons === 1;
+                handleInput(e, isFiring);
+            }}
             onMouseUp={() => onPlayerInput(0, false, undefined)}
             onMouseLeave={() => onPlayerInput(0, false, undefined)}
             onTouchStart={(e) => { e.preventDefault(); handleInput(e, true); }}
