@@ -193,15 +193,15 @@ export default function RoomPage() {
                             </div>
                             <div className="flex justify-center items-center gap-4 pt-4">
                                 <div className="text-center">
-                                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold mb-1">
-                                        🔵
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold mb-1 ${myTeam === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`}>
+                                        {myTeam === 'blue' ? '🔵' : '🔴'}
                                     </div>
                                     <span className="text-xs text-slate-400">You</span>
                                 </div>
                                 <span className="text-2xl text-slate-500">VS</span>
                                 <div className="text-center">
-                                    <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center text-white font-bold mb-1">
-                                        🔴
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold mb-1 ${myTeam === 'blue' ? 'bg-red-500' : 'bg-blue-500'}`}>
+                                        {myTeam === 'blue' ? '🔴' : '🔵'}
                                     </div>
                                     <span className="text-xs text-slate-400">{opponent?.name}</span>
                                 </div>

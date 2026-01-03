@@ -93,10 +93,13 @@ export function usePvPGame() {
         });
 
         socket.on('match_found', ({ roomId, opponent }) => {
+            // Determine my team based on opponent's team
+            const inferredTeam: 'blue' | 'red' = opponent.team === 'red' ? 'blue' : 'red';
             setState(prev => ({
                 ...prev,
                 roomId,
                 opponentName: opponent.name,
+                myTeam: inferredTeam, // Set team early for countdown display
                 gameOverResult: null, // Reset previous game over
             }));
             playSound('powerup');

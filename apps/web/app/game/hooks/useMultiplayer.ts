@@ -119,10 +119,13 @@ export function useMultiplayer() {
 
         socket.on('match_found', ({ roomId, opponent }) => {
             console.log('[Multiplayer] Match found!', roomId, opponent);
+            // Determine my team based on opponent's team
+            const inferredTeam: 'blue' | 'red' = opponent.team === 'red' ? 'blue' : 'red';
             setState(prev => ({
                 ...prev,
                 matchmakingStatus: 'found',
                 opponent,
+                myTeam: inferredTeam, // Set team early for countdown display
                 // Create a minimal room object so we can access roomId
                 room: {
                     id: roomId,
