@@ -28,6 +28,7 @@ export interface SyncProjectile {
     gravity?: number; // For ink bomb
     explodeTime?: number; // Flight time frame count
     lifetime: number;
+    target?: { x: number; y: number }; // For explosion snapping
 }
 
 // Powerup State
@@ -288,6 +289,7 @@ function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machin
         gravity,
         explodeTime, // Frames until explosion
         lifetime: 0,
+        target: type === 'inkBomb' ? cannon.targetPos : undefined,
     };
 }
 
@@ -322,31 +324,60 @@ function updateGameState(roomId: string) {
         const gy = Math.floor(p.y / GRID_SIZE);
 
         // Check for InkBomb Detonation
-        if (p.type === 'inkBomb' && p.explodeTime !== undefined) {
-            if (p.lifetime >= p.explodeTime) {
-                // EXPLODE!
-                paintRadius(state.grid, p.x, p.y, 5, p.team); // Big explosion
-                // Note: We don't continue to next loop, we let it be destroyed by not adding to newProjectiles if we wanted.
-                // But for now, let's say it "dies" on explosion.
-                continue; // Do NOT add to newProjectiles (destroy)
-            }
-            // While flying, do we paint? Maybe small trail or nothing?
-            // Client logic paints trail.
-            // Let's paint small trail
-            if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) state.grid[gx][gy] = p.team;
+        let shouldExplode = false;
 
-            newProjectiles.push(p);
+        // 1. Time-based (Ballistic)
+        if (p.type === 'inkBomb' && p.explodeTime !== undefined) {
+            if (p.lifetime >= p.explodeTime) shouldExplode = true;
+        }
+
+        // 2. Floor Check (Safety)
+        if (p.type === 'inkBomb' && p.y > GAME_HEIGHT - 30) shouldExplode = true;
+
+        if (shouldExplode) {
+            // FORCE SNAP TO TARGET for explosion center
+            let ex = p.x;
+            let ey = p.y;
+
+            if (p.target) {
+                ex = p.target.x;
+                ey = p.target.y;
+            }
+
+            // EXPLODE!
+            paintRadius(state.grid, ex, ey, 5, p.team); // Big explosion
+
+            // Note: We don't continue to next loop, we let it be destroyed by not adding to newProjectiles if we wanted.
+            // But here we need to ensure we don't double add or double destroy.
+            // If we handled it here, we `continue` to not add it to newProjectiles (destroying it).
             continue;
         }
 
-        // Standard collision/painting for non-timed projectiles
-        if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
-            // Paint current cell
-            if (state.grid[gx][gy] !== p.team) {
-                state.grid[gx][gy] = p.team;
-                // Destroy projectile on impact (unless it's an ink bomb which has special logic)
-                // This prevents the "laser" effect where it cuts through everything
-                continue;
+        // Ink Bomb Trail Painting (Single Player paints trail but does NOT destroy)
+        // Only paint trail if flying
+        if (p.type === 'inkBomb') {
+            // Paint trail logic (small radius) - CLIENT does this for visuals, server just needs to track territory? 
+            // Single Player `paintGrid` is called for `p`? 
+            // Wait, Single Player does NOT paint grid for ink bomb while flying in `useGameState`.
+            // It only paints when `shouldExplode`.
+            // Single Player `gameLogic` `createWeaponBullet` says `isInkBomb: true`.
+            // `useGameState`:
+            // if (p.isInkBomb) { ... handle explosion ... } else { ... handle normal bullet ... }
+            // Normal bullet logic is where painting happens.
+            // SO INK BOMB DOES NOT PAINT TRAIL ON SERVER GRID in Single Player logic I read?
+            // Let's check `useGameState` again. 
+            // It says: if (p.isInkBomb) { ... } else { // Normal bullet ... }
+            // So Ink Bomb DOES NOT paint while flying in SP.
+            // So I should NOT paint trail here either to match SP.
+        } else {
+            // Standard collision/painting for non-iInkBomb projectiles
+            if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
+                // Paint current cell
+                if (state.grid[gx][gy] !== p.team) {
+                    state.grid[gx][gy] = p.team;
+                    // Destroy projectile on impact
+                    continue;
+                }
             }
         }
 
@@ -556,7 +587,12 @@ function endGame(roomId: string) {
     ioInstance.to(roomId).emit('game_over', {
         winner: state.scores.blue > state.scores.red ? 'blue' :
             state.scores.red > state.scores.blue ? 'red' : 'draw',
-        scores: state.scores,
+        finalScore: state.scores,
+        stats: {
+            totalShots: { blue: 0, red: 0 },
+            powerupsCollected: { blue: 0, red: 0 },
+            goldenPixelsCaptured: { blue: 0, red: 0 }
+        }
     });
 
     console.log(`[GameStateManager] Game ended for room ${roomId}`);

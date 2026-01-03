@@ -36,6 +36,9 @@ export interface PvPState {
     // Scores
     scores: { blue: number; red: number };
     timeLeft: number;
+
+    // Game Over 
+    gameOverResult: { winner: 'blue' | 'red' | 'draw', scores: { blue: number; red: number } } | null;
 }
 
 export function usePvPGame() {
@@ -52,6 +55,7 @@ export function usePvPGame() {
         gameState: null,
         scores: { blue: 50, red: 50 },
         timeLeft: 120,
+        gameOverResult: null,
     });
 
     // Connect to server
@@ -83,11 +87,12 @@ export function usePvPGame() {
                 ...prev,
                 roomId,
                 opponentName: opponent.name,
+                gameOverResult: null, // Reset previous game over
             }));
         });
 
         socket.on('game_countdown', (seconds) => {
-            setState(prev => ({ ...prev, countdown: seconds }));
+            setState(prev => ({ ...prev, countdown: seconds, gameOverResult: null }));
         });
 
         socket.on('game_start', (data: GameStartData) => {
@@ -99,6 +104,8 @@ export function usePvPGame() {
                 isPlaying: true,
                 countdown: 0,
                 opponentName: data.opponent.name,
+                gameOverResult: null,
+                scores: { blue: 50, red: 50 }, // Reset scores
             }));
         });
 
@@ -116,8 +123,13 @@ export function usePvPGame() {
             console.log('[PvP] Game over', result);
             setState(prev => ({
                 ...prev,
-                isPlaying: false,
-                scores: result.finalScore || prev.scores,
+                // Keep isPlaying TRUE so we see the canvas under the modal!
+                // isPlaying: false, 
+                gameOverResult: {
+                    winner: result.winner as 'blue' | 'red' | 'draw',
+                    scores: result.finalScore
+                },
+                scores: result.finalScore,
             }));
         });
 
@@ -144,6 +156,7 @@ export function usePvPGame() {
             gameState: null,
             scores: { blue: 50, red: 50 },
             timeLeft: 120,
+            gameOverResult: null,
         });
     }, []);
 

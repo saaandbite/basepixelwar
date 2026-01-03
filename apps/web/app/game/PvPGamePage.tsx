@@ -7,6 +7,7 @@ import { usePvPGame } from './hooks/usePvPGame';
 import { PvPGameCanvas } from './components/PvPGameCanvas';
 import { PvPGameNavbar } from './components/PvPGameNavbar';
 import { PvPGameControls } from './components/PvPGameControls';
+import { PvPGameOverModal } from './components/PvPGameOverModal';
 import './game.css';
 
 export function PvPGamePage() {
@@ -56,8 +57,8 @@ export function PvPGamePage() {
         else myInk = pvp.gameState.player2.ink;
     }
 
-    // Waiting for game
-    if (!pvp.isPlaying) {
+    // Waiting for game (Only if NOT playing AND NOT Game Over)
+    if (!pvp.isPlaying && !pvp.gameOverResult) {
         return (
             <div className="game-container bg-slate-50">
                 <div className="flex flex-col items-center justify-center h-screen gap-6">
@@ -99,6 +100,14 @@ export function PvPGamePage() {
         );
     }
 
+    const handleExit = () => {
+        // Clear session and return to room selection
+        sessionStorage.removeItem('pvp_mode');
+        sessionStorage.removeItem('pvp_room_id');
+        sessionStorage.removeItem('pvp_team');
+        window.location.href = '/room';
+    };
+
     return (
         <div className="game-container bg-slate-50 h-[100dvh] flex flex-col overflow-hidden">
             <div className="max-w-[420px] mx-auto w-full h-full flex flex-col bg-white shadow-2xl relative">
@@ -120,6 +129,15 @@ export function PvPGamePage() {
                             onPlayerInput={handlePlayerInput}
                         />
                     </div>
+
+                    {/* Game Over Modal Overlay */}
+                    {pvp.gameOverResult && (
+                        <PvPGameOverModal
+                            myTeam={pvp.myTeam!}
+                            scores={pvp.gameOverResult.scores}
+                            onExit={handleExit}
+                        />
+                    )}
                 </div>
 
                 {/* Controls - Fixed at bottom */}
