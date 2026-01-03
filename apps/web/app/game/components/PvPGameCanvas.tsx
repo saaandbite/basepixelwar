@@ -28,6 +28,7 @@ interface PvPGameCanvasProps {
 
 export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: PvPGameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const lastAngleRef = useRef<number>(0); // Track last angle for mouseUp/Leave
 
     const isFlipped = myTeam === 'red';
 
@@ -186,6 +187,9 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
         const dy = cy - myCannon.y;
         const angle = Math.atan2(dy, dx);
 
+        // Save angle for use in mouseUp/Leave events
+        lastAngleRef.current = angle;
+
         onPlayerInput(angle, isDown, { x: cx, y: cy });
     }, [gameState, myTeam, isFlipped, onPlayerInput]);
 
@@ -207,11 +211,11 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
                 const isFiring = e.buttons === 1;
                 handleInput(e, isFiring);
             }}
-            onMouseUp={() => onPlayerInput(0, false, undefined)}
-            onMouseLeave={() => onPlayerInput(0, false, undefined)}
+            onMouseUp={() => onPlayerInput(lastAngleRef.current, false, undefined)}
+            onMouseLeave={() => onPlayerInput(lastAngleRef.current, false, undefined)}
             onTouchStart={(e) => { e.preventDefault(); handleInput(e, true); }}
             onTouchMove={(e) => { e.preventDefault(); handleInput(e, true); }}
-            onTouchEnd={() => onPlayerInput(0, false, undefined)}
+            onTouchEnd={() => onPlayerInput(lastAngleRef.current, false, undefined)}
         />
     );
 }

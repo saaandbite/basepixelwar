@@ -128,10 +128,10 @@ const WEAPON_MODES = {
     shotgun: {
         cost: 5,
         speed: 5.5,
-        paintRadius: 2,
-        fireRate: 8, // ~4 shots/sec at 30fps (matching SP 25 frames @ 60fps)
-        spreadAngles: [-0.2, 0, 0.2],
-        maxLifetime: 30, // Frames for short range (30fps server)
+        paintRadius: 1, // Same as MG (was 2)
+        fireRate: 8, // ~4 shots/sec at 30fps
+        spreadAngles: [-0.2, 0, 0.2], // Keep 3-bullet spread
+        // maxLifetime removed - unlimited range like MG
     },
     inkBomb: {
         cost: 20,
@@ -355,7 +355,7 @@ function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machin
         explodeTime, // Frames until explosion
         lifetime: 0,
         target: type === 'inkBomb' ? cannon.targetPos : undefined,
-        maxLifetime: type === 'shotgun' ? WEAPON_MODES.shotgun.maxLifetime : undefined,
+        // maxLifetime removed - shotgun now has unlimited range like MG
     };
 }
 
