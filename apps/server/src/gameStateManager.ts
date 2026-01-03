@@ -377,168 +377,56 @@ function updateGameState(roomId: string) {
             continue;
         }
 
-        // Grid Painting
-        const GRID_SIZE = 10;
+        // Grid Coordinates
         const gx = Math.floor(p.x / GRID_SIZE);
         const gy = Math.floor(p.y / GRID_SIZE);
 
-        // Check for InkBomb Detonation
-        let shouldExplode = false;
+        // Check collision with grid (ground/enemy ink)
+        if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
+            const currentCellColor = state.grid[gx][gy];
 
-        // 1. Time-based (Ballistic)
-        if (p.type === 'inkBomb' && p.explodeTime !== undefined) {
-            if (p.lifetime >= p.explodeTime) shouldExplode = true;
-        }
+            // If we hit something that is NOT our team (neutral or enemy), we explode and stop.
+            // If it IS our team, we fly over it (unless shotgun max lifetime handled separately, but standard bullet logic applies).
+            if (currentCellColor !== p.team) {
+                // Impact!
 
-        // 2. Floor Check (Safety)
-        if (p.type === 'inkBomb' && p.y > GAME_HEIGHT - 30) shouldExplode = true;
+                // 1. Paint Grid
+                // Basic paint of current cell + radius?
+                // For parity with SP 'paintGrid' which uses a radius:
+                const radius = p.type === 'shotgun' ? 2 : 1;
+                paintRadius(state.grid, p.x, p.y, radius, p.team);
 
-        if (shouldExplode) {
-            // FORCE SNAP TO TARGET for explosion center
-            let ex = p.x;
-            let ey = p.y;
-
-            if (p.target) {
-                ex = p.target.x;
-                ey = p.target.y;
-            }
-
-            // EXPLODE!
-            paintRadius(state.grid, ex, ey, 5, p.team); // Big explosion
-
-            // Create visual effects for explosion
-            // Add particles
-            for (let i = 0; i < 20; i++) {
-                const angle = (i / 20) * Math.PI * 2;
-                const speed = 2 + Math.random() * 3;
-                const color = p.team === 'blue' ? '#3B82F6' : '#EF4444'; // Use team colors
-
-                state.particles.push({
-                    x: ex,
-                    y: ey,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    life: 0.8,
-                    size: 4,
-                    color: color,
-                    glow: true,
-                });
-            }
-
-            // Add territory batch effect
-            state.territoryBatches.push({
-                x: Math.floor(ex / GRID_SIZE),
-                y: Math.floor(ey / GRID_SIZE),
-                radius: 5,
-                color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
-                opacity: 1.0,
-            });
-
-            // Add screen flash effect
-            state.screenFlash = 0.3;
-
-            // Note: We don't continue to next loop, we let it be destroyed by not adding to newProjectiles if we wanted.
-            // But here we need to ensure we don't double add or double destroy.
-            // If we handled it here, we `continue` to not add it to newProjectiles (destroying it).
-            continue;
-        }
-
-        // Ink Bomb Trail Painting (Single Player paints trail but does NOT destroy)
-        // Only paint trail if flying
-        if (p.type === 'inkBomb') {
-            // Paint trail logic (small radius) - CLIENT does this for visuals, server just needs to track territory? 
-            // Single Player `paintGrid` is called for `p`? 
-            // Wait, Single Player does NOT paint grid for ink bomb while flying in `useGameState`.
-            // It only paints when `shouldExplode`.
-            // Single Player `gameLogic` `createWeaponBullet` says `isInkBomb: true`.
-            // `useGameState`:
-            // if (p.isInkBomb) { ... handle explosion ... } else { ... handle normal bullet ... }
-            // Normal bullet logic is where painting happens.
-            // SO INK BOMB DOES NOT PAINT TRAIL ON SERVER GRID in Single Player logic I read?
-            // Let's check `useGameState` again. 
-            // It says: if (p.isInkBomb) { ... } else { // Normal bullet ... }
-            // So Ink Bomb DOES NOT paint while flying in SP.
-            // So I should NOT paint trail here either to match SP.
-        } else {
-            // Standard collision/painting for non-iInkBomb projectiles
-            if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
-                // Paint current cell
-                if (state.grid[gx][gy] !== p.team) {
-                    state.grid[gx][gy] = p.team;
-
-                }
-
-                // Check Golden Pixel Capture
-                if (state.goldenPixel && state.goldenPixel.active) {
-                    // Projectile is at p.x, p.y (pixels)
-                    // Golden Pixel is at state.goldenPixel.x, y (grid coords)
-                    const gpX = state.goldenPixel.x * GRID_SIZE + GRID_SIZE / 2;
-                    const gpY = state.goldenPixel.y * GRID_SIZE + GRID_SIZE / 2;
-                    const dist = Math.hypot(p.x - gpX, p.y - gpY);
-
-                    if (dist < GOLDEN_PIXEL_CAPTURE_RADIUS) {
-                        // Captured!
-                        state.goldenPixel.active = false;
-                        state.goldenPixel = null; // Remove it
-
-                        // Activate Frenzy
-                        const player = p.team === 'blue' ? state.player1 : state.player2;
-                        // Need to cast to any if frenzyEndTime is missing in strict definition, but we updated PvPCannon interface earlier? NO we didn't update definitions at top of file, only logic.
-                        // PvPCannon interface has optional frenzyEndTime
-                        (player as any).frenzyEndTime = Date.now() + 5000;
-                        player.ink = INK_MAX;
-                        (player as any).isFrenzy = true; // Use isFrenzy flag if available. Wait, PvPCannon interface has it?
-                        // Checking PvPCannon interface: "frenzyEndTime?: number;" "hasShield?: boolean;"
-                        // Wait, does it have "isFrenzy"? No. I only saw "frenzyEndTime".
-                        // I should add "isFrenzy" if I used it in other logic, or rely on time check.
-                        // Client uses `isFrenzy` boolean.
-                        // I'll set `frenzyEndTime` and rely on that or add `isFrenzy` property dynamically.
-                        (player as any).isFrenzy = true; // Cast for safety
-
-                        // Add powerup effect
-                        state.powerupEffects.push({
-                            type: 'frenzy',
-                            x: gpX,
-                            y: gpY,
-                        });
-                    }
-                }
-
-                // Create visual effects for impact
-                // Add particles
-                const particleCount = p.type === 'shotgun' ? 10 : 5;
+                // 2. Visual Effects (Explosion)
+                // Particles
+                const particleCount = p.type === 'shotgun' ? 8 : 4;
                 for (let i = 0; i < particleCount; i++) {
-                    const angle = (i / particleCount) * Math.PI * 2;
+                    const angle = Math.random() * Math.PI * 2;
                     const speed = 1 + Math.random() * 2;
-                    const color = p.team === 'blue' ? '#3B82F6' : '#EF4444'; // Use team colors
-
                     state.particles.push({
                         x: p.x,
                         y: p.y,
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed,
-                        life: 0.6,
-                        size: p.type === 'shotgun' ? 3 : 4,
-                        color: color,
-                        glow: false,
+                        life: 0.5,
+                        size: 3,
+                        color: p.team === 'blue' ? '#3B82F6' : '#EF4444',
+                        glow: false
                     });
                 }
 
-                // Add territory batch effect
+                // Territory Batch Effect
                 state.territoryBatches.push({
                     x: gx,
                     y: gy,
-                    radius: p.type === 'shotgun' ? 2 : 1,
+                    radius: radius + 2,
                     color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
-                    opacity: 1.0,
+                    opacity: 1.0
                 });
 
-                // Add screen flash effect (smaller for normal bullets)
-                if (state.screenFlash < 0.1) {
-                    state.screenFlash = 0.1;
-                }
+                // Screen Flash (small)
+                if (state.screenFlash < 0.1) state.screenFlash = 0.1;
 
-                // Destroy projectile on impact
+                // 3. Destroy Projectile (Stop here, do not add to newProjectiles)
                 continue;
             }
         }
