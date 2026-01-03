@@ -35,11 +35,12 @@ export function PvPGamePage() {
     }, []);
 
     // Handle player input
-    const handlePlayerInput = useCallback((angle: number, firing: boolean) => {
+    const handlePlayerInput = useCallback((angle: number, firing: boolean, targetPos?: { x: number; y: number }) => {
         pvp.sendInput({
             angle,
             firing,
             weaponMode,
+            targetPos,
         });
     }, [pvp, weaponMode]);
 

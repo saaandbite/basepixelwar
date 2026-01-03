@@ -29,7 +29,18 @@ export default function GamePage() {
     useEffect(() => {
         setMounted(true);
         const pvpMode = sessionStorage.getItem('pvp_mode') === 'true';
-        setIsPvP(pvpMode);
+        const roomId = sessionStorage.getItem('pvp_room_id');
+
+        // Strict check: Must have mode AND room ID to be in PvP
+        if (pvpMode && roomId) {
+            setIsPvP(true);
+        } else {
+            // Default to AI and clean up potential stale state
+            setIsPvP(false);
+            sessionStorage.removeItem('pvp_mode');
+            sessionStorage.removeItem('pvp_room_id');
+            sessionStorage.removeItem('pvp_team');
+        }
     }, []);
 
     if (!mounted) {

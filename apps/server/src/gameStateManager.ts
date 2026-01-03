@@ -11,6 +11,7 @@ export interface PvPCannon {
     isFiring: boolean;
     ink: number;
     weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
+    targetPos?: { x: number; y: number }; // Added for ballistic targeting
 }
 
 // Projectile for sync
@@ -22,6 +23,9 @@ export interface SyncProjectile {
     vy: number;
     team: 'blue' | 'red';
     type: 'normal' | 'shotgun' | 'inkBomb';
+    gravity?: number; // For ink bomb
+    explodeTime?: number; // Flight time frame count
+    lifetime: number;
 }
 
 // Full game state for a room
@@ -108,7 +112,7 @@ export function getGameState(roomId: string): PvPGameState | undefined {
 export function updatePlayerInput(
     roomId: string,
     team: 'blue' | 'red',
-    input: { angle: number; firing: boolean; weaponMode: string }
+    input: { angle: number; firing: boolean; weaponMode: string; targetPos?: { x: number; y: number } }
 ) {
     const state = gameStates.get(roomId);
     if (!state) return;
@@ -117,6 +121,7 @@ export function updatePlayerInput(
     player.angle = input.angle;
     player.isFiring = input.firing;
     player.weaponMode = input.weaponMode as 'machineGun' | 'shotgun' | 'inkBomb';
+    player.targetPos = input.targetPos;
 }
 
 // Start game loop for a room
@@ -179,13 +184,77 @@ const WEAPON_MODES = {
     }
 } as const;
 
+// Calculate ballistic velocity (Ported from gameLogic.ts)
+function calculateBallisticVelocity(
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number,
+    speed: number,
+    gravity: number
+): { vx: number; vy: number; flightTime: number } | null {
+    const dx = targetX - sourceX;
+    const dy = targetY - sourceY;
+    let bestSol: { vx: number; vy: number; flightTime: number } | null = null;
+    let minSpeedDiff = Infinity;
+
+    // Search flight times (frames)
+    // Server runs at ~30fps, assume target frames 10-150
+    for (let t = 10; t <= 150; t += 1) {
+        const vx = dx / t;
+        // v0 = dy/t - 0.5*g*(t+1)
+        const vy = (dy / t) - 0.5 * gravity * (t + 1);
+
+        const launchSpeed = Math.hypot(vx, vy);
+        const diff = Math.abs(launchSpeed - speed);
+
+        if (diff < minSpeedDiff) {
+            minSpeedDiff = diff;
+            bestSol = { vx, vy, flightTime: t };
+        }
+    }
+
+    if (bestSol && minSpeedDiff < speed * 0.5) {
+        return bestSol;
+    }
+    return null;
+}
+
 function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machineGun' | 'shotgun' | 'inkBomb', spreadAngleOffset = 0): SyncProjectile {
     const mode = WEAPON_MODES[type];
-    const angle = cannon.angle + spreadAngleOffset;
 
-    // Initial velocity
-    let vx = Math.cos(angle) * mode.speed;
-    let vy = Math.sin(angle) * mode.speed;
+    // Default linear velocity
+    let vx = Math.cos(cannon.angle + spreadAngleOffset) * mode.speed;
+    let vy = Math.sin(cannon.angle + spreadAngleOffset) * mode.speed;
+
+    let gravity = 0;
+    let explodeTime: number | undefined = undefined;
+
+    if (type === 'inkBomb' && cannon.targetPos) {
+        const bombMode = WEAPON_MODES.inkBomb;
+        // Use Ballistic Targeting
+        const solution = calculateBallisticVelocity(
+            cannon.x,
+            cannon.y,
+            cannon.targetPos.x,
+            cannon.targetPos.y,
+            bombMode.speed,
+            bombMode.gravity
+        );
+
+        if (solution) {
+            vx = solution.vx;
+            vy = solution.vy;
+            gravity = bombMode.gravity;
+            explodeTime = solution.flightTime;
+        } else {
+            // Fallback linear with gravity arc simulated (e.g. fire slightly up)
+            // or just linear + gravity drop. 
+            // Let's use simple arc fallback like single player
+            gravity = bombMode.gravity;
+            vy -= 4; // loft
+        }
+    }
 
     return {
         id: nextProjectileId++,
@@ -194,7 +263,10 @@ function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machin
         vx,
         vy,
         team,
-        type: type === 'machineGun' ? 'normal' : type, // 'normal' maps to machineGun visual
+        type: type === 'machineGun' ? 'normal' : type,
+        gravity,
+        explodeTime, // Frames until explosion
+        lifetime: 0,
     };
 }
 
@@ -211,66 +283,47 @@ function updateGameState(roomId: string) {
         // Apply physics
         p.x += p.vx;
         p.y += p.vy;
+        p.lifetime++; // Count frames
 
         // Gravity for Ink Bomb
-        if (p.type === 'inkBomb') {
-            // Gravity affects Y based on team direction? 
-            // Actually, for simplicity in top-down view, better to have "arcing" visual but linear physics 
-            // OR strictly linear for PvP reliability.
-            // Let's stick to linear for now to ensure hit registration is predictable, 
-            // but maybe slow down slightly?
-            // Re-reading logic: The client has gravity constant. 
-            // Let's ADD gravity if it's an ink bomb to simulate the arc logic.
-            // Blue team fires UP (negative Y), Red team fires DOWN (positive Y).
-            // However, simple 2D top-down usually doesn't have gravity unless it's "height".
-            // Let's keep it linear for PvP stability for now as per "simple" server logic, 
-            // unless user asked for exact physics copy. User said "penyesuaian gameplay".
-            // Let's stick to linear but high usage cost.
+        if (p.type === 'inkBomb' && p.gravity) {
+            p.vy += p.gravity;
         }
 
-        // Bounds check
-        if (p.x < 0 || p.x > GAME_WIDTH || p.y < 0 || p.y > GAME_HEIGHT) {
+        // Bounds check (looser for ballistic arc)
+        if (p.x < -100 || p.x > GAME_WIDTH + 100 || p.y < -100 || p.y > GAME_HEIGHT + 100) {
             continue;
         }
 
         // Grid Painting
+        const GRID_SIZE = 10;
         const gx = Math.floor(p.x / GRID_SIZE);
         const gy = Math.floor(p.y / GRID_SIZE);
 
-        let hit = false;
-
-        // Check grid bounds
-        if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
-            // Paint logic
-            if (p.type === 'inkBomb') {
-                // Explode if it hits center range (or perhaps timer based?)
-                // For now, let's make ink bomb explode on IMPACT or end of range?
-                // Let's make it paint a TRAIL for now, but big paint at end?
-                // No, standard logic: Paint trail for machine gun.
+        // Check for InkBomb Detonation
+        if (p.type === 'inkBomb' && p.explodeTime !== undefined) {
+            if (p.lifetime >= p.explodeTime) {
+                // EXPLODE!
+                paintRadius(state.grid, p.x, p.y, 5, p.team); // Big explosion
+                // Note: We don't continue to next loop, we let it be destroyed by not adding to newProjectiles if we wanted.
+                // But for now, let's say it "dies" on explosion.
+                continue; // Do NOT add to newProjectiles (destroy)
             }
+            // While flying, do we paint? Maybe small trail or nothing?
+            // Client logic paints trail.
+            // Let's paint small trail
+            if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) state.grid[gx][gy] = p.team;
 
+            newProjectiles.push(p);
+            continue;
+        }
+
+        // Standard collision/painting for non-timed projectiles
+        if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
             // Paint current cell
             if (state.grid[gx][gy] !== p.team) {
                 state.grid[gx][gy] = p.team;
-                // Don't destroy on simple paint, only on wall/enemy collision usually?
-                // In Pixel War, usually bullets paint as they travel.
             }
-        }
-
-        // Handling Ink Bomb Explosion trigger? 
-        // Let's look at the client concept. It usually explodes at target.
-        // Server doesn't know target pos yet. 
-        // For this iteration: Ink Bomb paints a FAT trail.
-        // Shotgun paints 3 trails.
-
-        if (p.type === 'inkBomb') {
-            paintRadius(state.grid, p.x, p.y, 2, p.team);
-        } else if (p.type === 'shotgun') {
-            // Standard trail
-            if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) state.grid[gx][gy] = p.team;
-        } else {
-            // Machine Gun
-            if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) state.grid[gx][gy] = p.team;
         }
 
         newProjectiles.push(p);

@@ -139,7 +139,13 @@ export default function RoomPage() {
 
                             {/* Or Play Solo */}
                             <button
-                                onClick={() => router.push('/game')}
+                                onClick={() => {
+                                    // FORCE Clear PvP session data
+                                    sessionStorage.removeItem('pvp_mode');
+                                    sessionStorage.removeItem('pvp_room_id');
+                                    sessionStorage.removeItem('pvp_team');
+                                    router.push('/game');
+                                }}
                                 className="w-full bg-white/5 hover:bg-white/10 border border-white/20 text-slate-300 py-3 px-6 rounded-xl transition-all"
                             >
                                 Play vs AI Instead
