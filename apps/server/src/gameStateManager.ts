@@ -53,11 +53,12 @@ export interface PvPGameState {
 }
 
 // Game constants (Matching Client)
-const GRID_COLS = 35;
-const GRID_ROWS = 55;
+// Game constants (Matching Client)
+const GRID_COLS = 26; // 390 / 15
+const GRID_ROWS = 43; // 645 / 15
 const GAME_DURATION = 90; // Matched client
-const GAME_WIDTH = 350;
-const GAME_HEIGHT = 700;
+const GAME_WIDTH = 390;
+const GAME_HEIGHT = 645;
 const INK_MAX = 100;
 const CANVAS_WIDTH_CLIENT = 390; // Approx match for logic scaling if needed
 // We use 350 for server logic width, close enough to 390 client (client scales)
@@ -296,7 +297,7 @@ function updateGameState(roomId: string) {
     if (!state || state.status !== 'playing') return;
 
     // 1. Handle Projectiles
-    const GRID_SIZE = 10;
+    const GRID_SIZE = 15;
     const newProjectiles: SyncProjectile[] = [];
 
     for (const p of state.projectiles) {
@@ -343,6 +344,9 @@ function updateGameState(roomId: string) {
             // Paint current cell
             if (state.grid[gx][gy] !== p.team) {
                 state.grid[gx][gy] = p.team;
+                // Destroy projectile on impact (unless it's an ink bomb which has special logic)
+                // This prevents the "laser" effect where it cuts through everything
+                continue;
             }
         }
 
@@ -504,7 +508,7 @@ function updateGameState(roomId: string) {
 
 // Helper: Paint Radius
 function paintRadius(grid: ('blue' | 'red')[][], cx: number, cy: number, radius: number, team: 'blue' | 'red') {
-    const GRID_SIZE = 10; // Must match above
+    const GRID_SIZE = 15; // Must match above
     const gx = Math.floor(cx / GRID_SIZE);
     const gy = Math.floor(cy / GRID_SIZE);
 
