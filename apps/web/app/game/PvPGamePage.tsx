@@ -127,6 +127,7 @@ export function PvPGamePage() {
                             gameState={pvp.gameState}
                             myTeam={pvp.myTeam || 'blue'}
                             onPlayerInput={handlePlayerInput}
+                            localAngle={pvp.localAngle}
                         />
                     </div>
 

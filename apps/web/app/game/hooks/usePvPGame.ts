@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useAudio } from './useAudio'; // Import useAudio
 import type {
     ClientToServerEvents,
     ServerToClientEvents,
@@ -44,6 +45,13 @@ export interface PvPState {
 export function usePvPGame() {
     const socketRef = useRef<GameSocket | null>(null);
 
+    // Audio
+    const { playSound, initAudio } = useAudio();
+    const lastGameStateRef = useRef<SyncedGameState | null>(null);
+
+    // Client-Side Prediction
+    const [localAngle, setLocalAngle] = useState<number | null>(null);
+
     const [state, setState] = useState<PvPState>({
         isConnected: false,
         playerId: null,
@@ -61,6 +69,8 @@ export function usePvPGame() {
     // Connect to server
     const connect = useCallback(() => {
         if (socketRef.current?.connected) return;
+
+        initAudio(); // Initialize audio context on connection start (user action) or assume called from UI
 
         const socket: GameSocket = io(SERVER_URL, {
             transports: ['websocket'],
@@ -89,10 +99,12 @@ export function usePvPGame() {
                 opponentName: opponent.name,
                 gameOverResult: null, // Reset previous game over
             }));
+            playSound('powerup');
         });
 
         socket.on('game_countdown', (seconds) => {
             setState(prev => ({ ...prev, countdown: seconds, gameOverResult: null }));
+            if (seconds > 0 && seconds <= 3) playSound('shoot'); // Simple beep for countdown
         });
 
         socket.on('game_start', (data: GameStartData) => {
@@ -107,10 +119,41 @@ export function usePvPGame() {
                 gameOverResult: null,
                 scores: { blue: 50, red: 50 }, // Reset scores
             }));
+            playSound('combo'); // Game start sound
         });
 
         // Main game state sync from server
         socket.on('game_state', (gameState) => {
+            // Audio Triggers based on State Diff
+            // Cast to any because shared types might be outdated regarding FX fields
+            const current = gameState as any;
+            const prev = lastGameStateRef.current as any;
+
+            if (prev) {
+                // Check for new projectiles (Shooting sound)
+                if (current.projectiles && prev.projectiles && current.projectiles.length > prev.projectiles.length) {
+                    playSound('shoot');
+                }
+
+                // Check for explosions (Territory Batches / Particles)
+                if (current.screenFlash !== undefined && prev.screenFlash !== undefined) {
+                    if (current.screenFlash > 0.1 && prev.screenFlash <= 0.1) {
+                        playSound('explosion');
+                    }
+                }
+                // Fallback: check territory batches
+                else if (current.territoryBatches && prev.territoryBatches && current.territoryBatches.length > prev.territoryBatches.length) {
+                    // Check if it's a significant batch (likely explosion)
+                    playSound('explosion');
+                }
+
+                // Powerup collected
+                if (current.powerups && prev.powerups && current.powerups.length < prev.powerups.length) {
+                    playSound('powerup');
+                }
+            }
+            lastGameStateRef.current = gameState;
+
             setState(prev => ({
                 ...prev,
                 gameState,
@@ -121,6 +164,7 @@ export function usePvPGame() {
 
         socket.on('game_over', (result) => {
             console.log('[PvP] Game over', result);
+            playSound('gameOver');
             setState(prev => ({
                 ...prev,
                 // Keep isPlaying TRUE so we see the canvas under the modal!
@@ -139,7 +183,7 @@ export function usePvPGame() {
         });
 
         socketRef.current = socket;
-    }, []);
+    }, [playSound, initAudio]);
 
     // Disconnect
     const disconnect = useCallback(() => {
@@ -158,12 +202,14 @@ export function usePvPGame() {
             timeLeft: 120,
             gameOverResult: null,
         });
+        setLocalAngle(null);
     }, []);
 
     // Join matchmaking queue
     const joinQueue = useCallback(() => {
         socketRef.current?.emit('join_queue');
-    }, []);
+        initAudio(); // Ensure audio context is ready
+    }, [initAudio]);
 
     // Leave queue
     const leaveQueue = useCallback(() => {
@@ -173,7 +219,8 @@ export function usePvPGame() {
     // Set player ready
     const setReady = useCallback(() => {
         socketRef.current?.emit('player_ready');
-    }, []);
+        initAudio(); // Ensure audio context is ready
+    }, [initAudio]);
 
     // Send player input to server
     const sendInput = useCallback((input: {
@@ -182,6 +229,9 @@ export function usePvPGame() {
         weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
         targetPos?: { x: number; y: number };
     }) => {
+        // Optimistic update for local responsiveness
+        setLocalAngle(input.angle);
+
         socketRef.current?.emit('player_input', {
             ...input,
             timestamp: Date.now(),
@@ -198,6 +248,7 @@ export function usePvPGame() {
 
     return {
         ...state,
+        localAngle, // Expose local angle for optimistic rendering
         connect,
         disconnect,
         joinQueue,

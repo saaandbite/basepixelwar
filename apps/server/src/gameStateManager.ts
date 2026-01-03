@@ -88,6 +88,10 @@ export interface PvPGameState {
     scores: { blue: number; red: number };
     lastPowerupSpawn: number; // For spawning logic
 
+    // Golden Pixel
+    goldenPixel: { x: number; y: number; active: boolean; spawnTime: number } | null;
+    lastGoldenPixelSpawn: number;
+
     // Visual Effects (for multiplayer parity with single player)
     particles: SyncParticle[];
     territoryBatches: SyncTerritoryBatch[];
@@ -98,6 +102,7 @@ export interface PvPGameState {
 
 // Game constants (Matching Client)
 // Game constants (Matching Client)
+const GRID_SIZE = 15;
 const GRID_COLS = 26; // 390 / 15
 const GRID_ROWS = 43; // 645 / 15
 const GAME_DURATION = 90; // Matched client
@@ -106,6 +111,8 @@ const GAME_HEIGHT = 645;
 const INK_MAX = 100;
 const CANVAS_WIDTH_CLIENT = 390; // Approx match for logic scaling if needed
 // We use 350 for server logic width, close enough to 390 client (client scales)
+const GOLDEN_PIXEL_SPAWN_INTERVAL = 15000;
+const GOLDEN_PIXEL_CAPTURE_RADIUS = 20;
 
 // Weapon Definitions (EXACTLY Matching Client Constants)
 const WEAPON_MODES = {
@@ -183,6 +190,8 @@ export function createGameState(roomId: string): PvPGameState {
         status: 'waiting',
         scores: { blue: 0, red: 0 },
         lastPowerupSpawn: 0,
+        goldenPixel: null,
+        lastGoldenPixelSpawn: 0,
 
         // Visual Effects
         particles: [],
@@ -457,43 +466,80 @@ function updateGameState(roomId: string) {
                 if (state.grid[gx][gy] !== p.team) {
                     state.grid[gx][gy] = p.team;
 
-                    // Create visual effects for impact
-                    // Add particles
-                    const particleCount = p.type === 'shotgun' ? 10 : 5;
-                    for (let i = 0; i < particleCount; i++) {
-                        const angle = (i / particleCount) * Math.PI * 2;
-                        const speed = 1 + Math.random() * 2;
-                        const color = p.team === 'blue' ? '#3B82F6' : '#EF4444'; // Use team colors
+                }
 
-                        state.particles.push({
-                            x: p.x,
-                            y: p.y,
-                            vx: Math.cos(angle) * speed,
-                            vy: Math.sin(angle) * speed,
-                            life: 0.6,
-                            size: p.type === 'shotgun' ? 3 : 4,
-                            color: color,
-                            glow: false,
+                // Check Golden Pixel Capture
+                if (state.goldenPixel && state.goldenPixel.active) {
+                    // Projectile is at p.x, p.y (pixels)
+                    // Golden Pixel is at state.goldenPixel.x, y (grid coords)
+                    const gpX = state.goldenPixel.x * GRID_SIZE + GRID_SIZE / 2;
+                    const gpY = state.goldenPixel.y * GRID_SIZE + GRID_SIZE / 2;
+                    const dist = Math.hypot(p.x - gpX, p.y - gpY);
+
+                    if (dist < GOLDEN_PIXEL_CAPTURE_RADIUS) {
+                        // Captured!
+                        state.goldenPixel.active = false;
+                        state.goldenPixel = null; // Remove it
+
+                        // Activate Frenzy
+                        const player = p.team === 'blue' ? state.player1 : state.player2;
+                        // Need to cast to any if frenzyEndTime is missing in strict definition, but we updated PvPCannon interface earlier? NO we didn't update definitions at top of file, only logic.
+                        // PvPCannon interface has optional frenzyEndTime
+                        (player as any).frenzyEndTime = Date.now() + 5000;
+                        player.ink = INK_MAX;
+                        (player as any).isFrenzy = true; // Use isFrenzy flag if available. Wait, PvPCannon interface has it?
+                        // Checking PvPCannon interface: "frenzyEndTime?: number;" "hasShield?: boolean;"
+                        // Wait, does it have "isFrenzy"? No. I only saw "frenzyEndTime".
+                        // I should add "isFrenzy" if I used it in other logic, or rely on time check.
+                        // Client uses `isFrenzy` boolean.
+                        // I'll set `frenzyEndTime` and rely on that or add `isFrenzy` property dynamically.
+                        (player as any).isFrenzy = true; // Cast for safety
+
+                        // Add powerup effect
+                        state.powerupEffects.push({
+                            type: 'frenzy',
+                            x: gpX,
+                            y: gpY,
                         });
                     }
-
-                    // Add territory batch effect
-                    state.territoryBatches.push({
-                        x: gx,
-                        y: gy,
-                        radius: p.type === 'shotgun' ? 2 : 1,
-                        color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
-                        opacity: 1.0,
-                    });
-
-                    // Add screen flash effect (smaller for normal bullets)
-                    if (state.screenFlash < 0.1) {
-                        state.screenFlash = 0.1;
-                    }
-
-                    // Destroy projectile on impact
-                    continue;
                 }
+
+                // Create visual effects for impact
+                // Add particles
+                const particleCount = p.type === 'shotgun' ? 10 : 5;
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (i / particleCount) * Math.PI * 2;
+                    const speed = 1 + Math.random() * 2;
+                    const color = p.team === 'blue' ? '#3B82F6' : '#EF4444'; // Use team colors
+
+                    state.particles.push({
+                        x: p.x,
+                        y: p.y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 0.6,
+                        size: p.type === 'shotgun' ? 3 : 4,
+                        color: color,
+                        glow: false,
+                    });
+                }
+
+                // Add territory batch effect
+                state.territoryBatches.push({
+                    x: gx,
+                    y: gy,
+                    radius: p.type === 'shotgun' ? 2 : 1,
+                    color: p.team === 'blue' ? '#72C4FF' : '#FF8888',
+                    opacity: 1.0,
+                });
+
+                // Add screen flash effect (smaller for normal bullets)
+                if (state.screenFlash < 0.1) {
+                    state.screenFlash = 0.1;
+                }
+
+                // Destroy projectile on impact
+                continue;
             }
         }
 
@@ -629,7 +675,7 @@ function updateGameState(roomId: string) {
     if (state.player1.ink < INK_MAX) state.player1.ink = Math.min(INK_MAX, state.player1.ink + 0.5);
     if (state.player2.ink < INK_MAX) state.player2.ink = Math.min(INK_MAX, state.player2.ink + 0.5);
 
-    // 4. Powerups Spawning
+    // 4. Powerups & Golden Pixel Spawning
     // Throttle spawn checks (e.g. every 1 sec check)
     if (!state.lastPowerupSpawn || now - state.lastPowerupSpawn > 1000) {
         // logic to spawn
@@ -647,6 +693,26 @@ function updateGameState(roomId: string) {
             });
             state.lastPowerupSpawn = now;
         }
+    }
+
+    // Golden Pixel Spawning
+    if (!state.goldenPixel && (!state.lastGoldenPixelSpawn || now - state.lastGoldenPixelSpawn > GOLDEN_PIXEL_SPAWN_INTERVAL)) {
+        // Spawn in center-ish area (middle 50% of map)
+        const marginX = GAME_WIDTH * 0.25;
+        const marginY = GAME_HEIGHT * 0.25;
+        const x = marginX + Math.random() * (GAME_WIDTH - 2 * marginX);
+        const y = marginY + Math.random() * (GAME_HEIGHT - 2 * marginY);
+
+        state.goldenPixel = {
+            x: Math.floor(x / GRID_SIZE), // Store grid coord or pixel? Client uses grid. But server SyncPixel needs pixel?
+            // Client gameLogic `createGoldenPixel` returns grid coords (x,y) as integers.
+            // Client `useGameState` renders it using `gx - goldenPixel.x`.
+            // So we should store GRID coordinates.
+            y: Math.floor(y / GRID_SIZE),
+            active: true,
+            spawnTime: now
+        };
+        state.lastGoldenPixelSpawn = now;
     }
 
     // 5. Calculate Scores
@@ -731,6 +797,7 @@ function broadcastGameState(roomId: string) {
         player2: state.player2,
         projectiles: state.projectiles,
         powerups: state.powerups, // Broadcast powerups
+        goldenPixel: state.goldenPixel, // Broadcast Golden Pixel
         timeLeft: state.timeLeft,
         scores: state.scores,
 

@@ -15,15 +15,18 @@ import {
     drawParticles,
     drawTerritoryBatches,
     drawScreenFlash,
+    drawGoldenPixel,
+    drawFrenzyOverlay,
 } from '../lib/renderer';
 
 interface PvPGameCanvasProps {
     gameState: SyncedGameState | null;
     myTeam: 'blue' | 'red';
     onPlayerInput: (angle: number, firing: boolean, targetPos?: { x: number; y: number }) => void;
+    localAngle: number | null; // New prop for client-side prediction
 }
 
-export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanvasProps) {
+export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: PvPGameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const isFlipped = myTeam === 'red';
@@ -36,7 +39,7 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const { grid, player1, player2, projectiles, particles, territoryBatches, screenFlash } = gameState;
+        const { grid, player1, player2, projectiles, particles, territoryBatches, screenFlash, goldenPixel } = gameState as any;
 
         // Clear canvas
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -97,10 +100,19 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
             drawScreenFlash(ctx, screenFlash, GAME_WIDTH, GAME_HEIGHT);
         }
 
-        // 7. Draw Cannons
-        // Map SyncedPlayerState to Cannon compatible object
+        // 7. Draw Golden Pixel
+        if (gameState.goldenPixel) {
+            drawGoldenPixel(ctx, gameState.goldenPixel);
+        }
+
+        // 8. Draw Cannons
+        // Client-side prediction: Override angle for my cannon
+        const p1Angle = myTeam === 'blue' && localAngle !== null ? localAngle : player1.angle;
+        const p2Angle = myTeam === 'red' && localAngle !== null ? localAngle : player2.angle;
+
         const p1Cannon: Cannon = {
             ...player1,
+            angle: p1Angle,
             cooldown: 0,
             powerups: { shield: 0 },
             isFrenzy: false,
@@ -110,6 +122,7 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         };
         const p2Cannon: Cannon = {
             ...player2,
+            angle: p2Angle,
             cooldown: 0,
             powerups: { shield: 0 },
             isFrenzy: false,
