@@ -11,6 +11,8 @@ interface GoldenPixelIndicatorProps {
     lastGoldenPixelSpawn: number;
     isFrenzy: boolean;
     frenzyEndTime: number;
+    enemyFrenzy?: boolean;
+    enemyFrenzyEndTime?: number;
 }
 
 export function GoldenPixelIndicator({
@@ -19,13 +21,25 @@ export function GoldenPixelIndicator({
     lastGoldenPixelSpawn,
     isFrenzy,
     frenzyEndTime,
+    enemyFrenzy,
+    enemyFrenzyEndTime,
 }: GoldenPixelIndicatorProps) {
     const elapsedTime = GAME_DURATION - timeLeft;
-    const timeSinceLastSpawn = elapsedTime - lastGoldenPixelSpawn;
-    const nextSpawnIn = Math.max(0, GOLDEN_PIXEL_SPAWN_INTERVAL - timeSinceLastSpawn);
-    const frenzyTimeLeft = isFrenzy ? Math.max(0, (frenzyEndTime - Date.now()) / 1000) : 0;
 
-    // Show frenzy mode indicator
+    // Check if lastGoldenPixelSpawn is a timestamp (Multiplayer) or elapsed seconds (Single Player)
+    // Timestamps are > 1,000,000. Game elapsed time is usually < 1000.
+    const isTimestamp = lastGoldenPixelSpawn > 1000000;
+    const timeSinceLastSpawn = isTimestamp
+        ? (Date.now() - lastGoldenPixelSpawn) / 1000
+        : elapsedTime - lastGoldenPixelSpawn;
+
+    const nextSpawnIn = Math.max(0, GOLDEN_PIXEL_SPAWN_INTERVAL - timeSinceLastSpawn);
+
+    const frenzyTimeLeft = isFrenzy
+        ? Math.max(0, (frenzyEndTime - Date.now()) / 1000)
+        : (enemyFrenzy && enemyFrenzyEndTime ? Math.max(0, (enemyFrenzyEndTime - Date.now()) / 1000) : 0);
+
+    // Show MY frenzy mode indicator
     if (isFrenzy) {
         return (
             <div className={`
@@ -36,6 +50,24 @@ export function GoldenPixelIndicator({
                 <div className="flex flex-col leading-[1.1]">
                     <span className="text-[11px] uppercase tracking-wider">FRENZY!</span>
                     <span className="text-sm font-bold">{frenzyTimeLeft.toFixed(1)}s</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Show ENEMY frenzy mode indicator
+    if (enemyFrenzy) {
+        return (
+            <div className={`
+                flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold text-white
+                bg-gradient-to-r from-[#ef4444] to-[#b91c1c]
+                shadow-[0_0_10px_rgba(239,68,68,0.5)]
+                animate-pulse ring-1 ring-white/30
+            `}>
+                <span className="text-lg">⚠️</span>
+                <div className="flex flex-col items-start leading-none">
+                    <span className="text-[10px] uppercase tracking-wide opacity-90 mb-0.5">DANGER</span>
+                    <span className="text-xs">ENEMY FRENZY {frenzyTimeLeft.toFixed(1)}s</span>
                 </div>
             </div>
         );

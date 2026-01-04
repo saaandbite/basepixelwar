@@ -8,6 +8,7 @@ import { PvPGameCanvas } from './components/PvPGameCanvas';
 import { PvPGameNavbar } from './components/PvPGameNavbar';
 import { PvPGameControls } from './components/PvPGameControls';
 import { PvPGameOverModal } from './components/PvPGameOverModal';
+import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
 import './game.css';
 
 export function PvPGamePage() {
@@ -107,7 +108,6 @@ export function PvPGamePage() {
         <div className="game-container bg-slate-50 h-[100dvh] flex flex-col overflow-hidden">
             <div className="max-w-[420px] mx-auto w-full h-full flex flex-col bg-white shadow-2xl relative">
 
-                {/* Navbar */}
                 <PvPGameNavbar
                     scoreBlue={pvp.scores.blue}
                     scoreRed={pvp.scores.red}
@@ -117,6 +117,31 @@ export function PvPGamePage() {
 
                 {/* Game Area - Flex Grow to take available space */}
                 <div className="flex-1 relative bg-slate-100 overflow-hidden">
+                    {/* Golden Pixel / Frenzy Indicator */}
+                    <div className="absolute top-4 right-4 z-10 pointer-events-none">
+                        {pvp.gameState && (
+                            <GoldenPixelIndicator
+                                goldenPixel={pvp.gameState.goldenPixel ? { ...pvp.gameState.goldenPixel, pulsePhase: 0 } : null}
+                                timeLeft={pvp.timeLeft}
+                                lastGoldenPixelSpawn={pvp.gameState.lastGoldenPixelSpawn || 0}
+                                isFrenzy={
+                                    (pvp.myTeam === 'blue' && !!pvp.gameState.player1.isFrenzy) ||
+                                    (pvp.myTeam === 'red' && !!pvp.gameState.player2.isFrenzy)
+                                }
+                                frenzyEndTime={
+                                    (pvp.myTeam === 'blue' ? pvp.gameState.player1.frenzyEndTime : pvp.gameState.player2.frenzyEndTime) || 0
+                                }
+                                enemyFrenzy={
+                                    (pvp.myTeam === 'blue' && !!pvp.gameState.player2.isFrenzy) ||
+                                    (pvp.myTeam === 'red' && !!pvp.gameState.player1.isFrenzy)
+                                }
+                                enemyFrenzyEndTime={
+                                    (pvp.myTeam === 'blue' ? pvp.gameState.player2.frenzyEndTime : pvp.gameState.player1.frenzyEndTime) || 0
+                                }
+                            />
+                        )}
+                    </div>
+
                     <div className="absolute inset-0">
                         <PvPGameCanvas
                             gameState={pvp.gameState}

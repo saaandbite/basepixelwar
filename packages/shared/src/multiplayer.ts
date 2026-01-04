@@ -166,6 +166,7 @@ export interface SyncedGameState {
 
     // Golden Pixel & Powerups
     goldenPixel: SyncedGoldenPixel | null;
+    lastGoldenPixelSpawn: number; // For client-side timer
     powerups: SyncedPowerup[]; // Added powerups
 }
 

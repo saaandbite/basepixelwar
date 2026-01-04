@@ -715,9 +715,13 @@ function updateGameState(roomId: string) {
     checkCollection(state.player1);
     checkCollection(state.player2);
 
-    // 3. Refill Ink
-    if (state.player1.ink < INK_MAX) state.player1.ink = Math.min(INK_MAX, state.player1.ink + 0.5);
-    if (state.player2.ink < INK_MAX) state.player2.ink = Math.min(INK_MAX, state.player2.ink + 0.5);
+    // 3. Refill Ink (Only when not firing)
+    if (!state.player1.isFiring && state.player1.ink < INK_MAX) {
+        state.player1.ink = Math.min(INK_MAX, state.player1.ink + 0.35);
+    }
+    if (!state.player2.isFiring && state.player2.ink < INK_MAX) {
+        state.player2.ink = Math.min(INK_MAX, state.player2.ink + 0.35);
+    }
 
     // 4. Powerups & Golden Pixel Spawning
     // Throttle spawn checks (e.g. every 1 sec check)
@@ -844,6 +848,7 @@ function broadcastGameState(roomId: string, includeGrid: boolean = false) {
         projectiles: state.projectiles,
         powerups: state.powerups, // Broadcast powerups
         goldenPixel: state.goldenPixel, // Broadcast Golden Pixel
+        lastGoldenPixelSpawn: state.lastGoldenPixelSpawn, // For client timer
         timeLeft: state.timeLeft,
         scores: state.scores,
 
