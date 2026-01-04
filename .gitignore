@@ -74,5 +74,4 @@ yarn-error.log*
 # Direktori dependensi
 node_modules/
 vendor/
-
-# File yang
+openzeppelin-contracts/
