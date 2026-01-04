@@ -27,7 +27,7 @@ export const MAX_POWERUPS_ON_SCREEN = 3;
 export const BULLET_SPEED = 5; // Reduced global baseline
 
 export const GAME_WIDTH = 390; // Exactly 26 columns (15px * 26)
-export const GAME_HEIGHT = 645; // Exactly 43 rows (15px * 43)
+export const GAME_HEIGHT = 660; // Exactly 44 rows (15px * 44)
 
 
 // ============================================

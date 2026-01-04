@@ -165,7 +165,7 @@ export function usePvPGame() {
             }
             // Optimization: If grid is missing (throttled), use previous grid
             const incomingState = gameState as any; // Cast to access potentially missing properties if types are strict
-            const newGrid = incomingState.grid || prev.gameState?.grid;
+            const newGrid = incomingState.grid || prev?.grid || [];
 
             const fullGameState = {
                 ...gameState,

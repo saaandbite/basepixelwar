@@ -108,10 +108,10 @@ export interface PvPGameState {
 // Game constants (Matching Client)
 const GRID_SIZE = 15;
 const GRID_COLS = 26; // 390 / 15
-const GRID_ROWS = 43; // 645 / 15
+const GRID_ROWS = 44; // 660 / 15
 const GAME_DURATION = 90; // Matched client
 const GAME_WIDTH = 390;
-const GAME_HEIGHT = 645;
+const GAME_HEIGHT = 660;
 const INK_MAX = 100;
 const CANVAS_WIDTH_CLIENT = 390; // Approx match for logic scaling if needed
 // We use 350 for server logic width, close enough to 390 client (client scales)
@@ -165,7 +165,7 @@ export function createGameState(roomId: string): PvPGameState {
         grid[x] = [];
         for (let y = 0; y < GRID_ROWS; y++) {
             // Bottom half blue, top half red
-            grid[x][y] = y > GRID_ROWS / 2 ? 'blue' : 'red';
+            grid[x][y] = y >= GRID_ROWS / 2 ? 'blue' : 'red';
         }
     }
 
