@@ -5,7 +5,7 @@ import { createServer } from 'http';
 import { initializeSocketServer } from './socketServer';
 import { getStats } from './roomManager';
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3000;
 
 // Create HTTP server
 const httpServer = createServer((req, res) => {

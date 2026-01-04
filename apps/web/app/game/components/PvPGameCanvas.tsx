@@ -118,8 +118,8 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
             angle: p1Angle,
             cooldown: 0,
             powerups: { shield: 0 },
-            isFrenzy: false,
-            frenzyEndTime: 0,
+            isFrenzy: player1.isFrenzy || false,
+            frenzyEndTime: player1.frenzyEndTime || 0,
             lastFireTime: 0,
             maxInk: INK_MAX,
         };
@@ -128,11 +128,23 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
             angle: p2Angle,
             cooldown: 0,
             powerups: { shield: 0 },
-            isFrenzy: false,
-            frenzyEndTime: 0,
+            isFrenzy: player2.isFrenzy || false,
+            frenzyEndTime: player2.frenzyEndTime || 0,
             lastFireTime: 0,
             maxInk: INK_MAX,
         };
+
+        // Draw Frenzy Overlay (if my team is in frenzy)
+        const myPlayer = myTeam === 'blue' ? p1Cannon : p2Cannon;
+        if (myPlayer.isFrenzy && myPlayer.frenzyEndTime) {
+            // Calculate intensity
+            const remaining = myPlayer.frenzyEndTime - Date.now();
+            if (remaining > 0) {
+                // Fade out in last 1 second
+                const intensity = remaining < 1000 ? remaining / 1000 : 1;
+                drawFrenzyOverlay(ctx, GAME_WIDTH, GAME_HEIGHT, intensity);
+            }
+        }
 
         drawCannon(ctx, p1Cannon, COLORS.bulletStrokeBlue, true); // Player 1 is Blue (server-side constant)
         drawCannon(ctx, p2Cannon, COLORS.bulletStrokeRed, false); // Player 2 is Red

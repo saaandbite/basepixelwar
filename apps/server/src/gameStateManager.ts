@@ -14,6 +14,7 @@ export interface PvPCannon {
     cooldown: number; // Frame-based cooldown like single player
     targetPos?: { x: number; y: number }; // Added for ballistic targeting
     frenzyEndTime?: number;
+    isFrenzy?: boolean;
     hasShield?: boolean;
 }
 
@@ -366,6 +367,22 @@ function updateGameState(roomId: string) {
 
     const now = Date.now(); // Timestamp for this update tick
 
+    // 0. Update Player States (Cooldowns & Buffs)
+    const updatePlayer = (player: PvPCannon) => {
+        // Frenzy Expiration
+        if (player.frenzyEndTime) {
+            if (now < player.frenzyEndTime) {
+                player.isFrenzy = true;
+                player.ink = INK_MAX; // Use constant if possible, or 100
+            } else {
+                player.isFrenzy = false;
+                player.frenzyEndTime = undefined;
+            }
+        }
+    };
+    updatePlayer(state.player1);
+    updatePlayer(state.player2);
+
     // 1. Handle Projectiles
     const GRID_SIZE = 15;
     const newProjectiles: SyncProjectile[] = [];
@@ -524,9 +541,29 @@ function updateGameState(roomId: string) {
             continue; // Destroy projectile
         }
 
-        // Check collision with grid (enemy territory)
+        // Check collision with grid
         if (gx >= 0 && gx < GRID_COLS && gy >= 0 && gy < GRID_ROWS) {
             const currentCellColor = state.grid[gx][gy];
+
+            // 0. Check Golden Pixel Capture (Anywhere)
+            if (state.goldenPixel) {
+                const gpDist = Math.hypot(gx - state.goldenPixel.x, gy - state.goldenPixel.y);
+                if (gpDist <= GOLDEN_PIXEL_CAPTURE_RADIUS) {
+                    // Captured! Give frenzy to capturing team
+                    const capturingPlayer = p.team === 'blue' ? state.player1 : state.player2;
+                    capturingPlayer.frenzyEndTime = now + 5000; // 5 seconds frenzy
+                    capturingPlayer.ink = INK_MAX; // Refill ink
+
+                    // Add powerup effect for visual feedback
+                    state.powerupEffects.push({
+                        type: 'frenzy',
+                        x: state.goldenPixel.x * GRID_SIZE + GRID_SIZE / 2,
+                        y: state.goldenPixel.y * GRID_SIZE + GRID_SIZE / 2,
+                    });
+
+                    state.goldenPixel = null; // Remove Golden Pixel
+                }
+            }
 
             // If we hit enemy territory, explode and stop
             if (currentCellColor !== p.team) {
@@ -536,25 +573,7 @@ function updateGameState(roomId: string) {
                 const radius = p.paintRadius || 1;
                 paintRadius(state.grid, p.x, p.y, radius, p.team);
 
-                // 1.5 Check Golden Pixel Capture
-                if (state.goldenPixel) {
-                    const gpDist = Math.hypot(gx - state.goldenPixel.x, gy - state.goldenPixel.y);
-                    if (gpDist <= GOLDEN_PIXEL_CAPTURE_RADIUS) {
-                        // Captured! Give frenzy to capturing team
-                        const capturingPlayer = p.team === 'blue' ? state.player1 : state.player2;
-                        capturingPlayer.frenzyEndTime = now + 5000; // 5 seconds frenzy
-                        capturingPlayer.ink = INK_MAX; // Refill ink
 
-                        // Add powerup effect for visual feedback
-                        state.powerupEffects.push({
-                            type: 'frenzy',
-                            x: state.goldenPixel.x * GRID_SIZE + GRID_SIZE / 2,
-                            y: state.goldenPixel.y * GRID_SIZE + GRID_SIZE / 2,
-                        });
-
-                        state.goldenPixel = null; // Remove Golden Pixel
-                    }
-                }
 
                 // 2. Visual Effects (Explosion)
                 const particleCount = p.type === 'shotgun' ? 8 : 4;

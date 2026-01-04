@@ -15,7 +15,15 @@ import type {
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-const SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3002';
+const getServerUrl = () => {
+    if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
+    if (typeof window !== 'undefined') {
+        return `http://${window.location.hostname}:3000`;
+    }
+    return 'http://localhost:3000';
+};
+
+const SERVER_URL = getServerUrl();
 
 export interface PvPState {
     // Connection

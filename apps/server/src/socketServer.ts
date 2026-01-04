@@ -27,8 +27,9 @@ let io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, So
 export function initializeSocketServer(httpServer: HTTPServer): Server {
     io = new Server(httpServer, {
         cors: {
-            origin: process.env.CLIENT_URL || 'http://localhost:3000',
+            origin: process.env.CLIENT_URL || ['http://localhost:5173', 'http://localhost:3000', '*'],
             methods: ['GET', 'POST'],
+            credentials: true
         },
         pingTimeout: 60000,
         pingInterval: 25000,
