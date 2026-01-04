@@ -9,6 +9,7 @@ import { PvPGameNavbar } from './components/PvPGameNavbar';
 import { PvPGameControls } from './components/PvPGameControls';
 import { PvPGameOverModal } from './components/PvPGameOverModal';
 import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
+import { ComboEffect } from './components/ComboEffect';
 import './game.css';
 
 export function PvPGamePage() {
@@ -56,6 +57,11 @@ export function PvPGamePage() {
     const [stats, setStats] = useState({ currentTiles: 0, totalCaptured: 0 });
     // Ref to store previous grid state for change detection
     const prevGridRef = React.useRef<string[][] | null>(null);
+
+    // Combo Tracking (Client-Side)
+    const [comboStreak, setComboStreak] = useState(0);
+    const lastCaptureTimeRef = React.useRef<number>(0);
+    const lastComboIncrementTimeRef = React.useRef<number>(0);
 
     useEffect(() => {
         if (!pvp.gameState || !pvp.myTeam) return;
@@ -125,6 +131,29 @@ export function PvPGamePage() {
             currentTiles: currentCount,
             totalCaptured: prev.totalCaptured + newCaptures
         }));
+
+        // 3.5 Update Combo Streak
+        if (newCaptures > 0) {
+            const now = Date.now();
+            const timeDiff = now - lastCaptureTimeRef.current;
+
+            if (timeDiff < 1500) { // 1.5s window to keep streak ALIVE
+                // But only increment number if enough time passed (Throttle)
+                if (now - lastComboIncrementTimeRef.current > 500) {
+                    setComboStreak(prev => prev + 1);
+                    lastComboIncrementTimeRef.current = now;
+                }
+            } else {
+                // Streak broken or started
+                setComboStreak(1);
+                lastComboIncrementTimeRef.current = now;
+            }
+            // Always update last capture time to keep "alive"
+            lastCaptureTimeRef.current = now;
+        } else if (Date.now() - lastCaptureTimeRef.current > 1500 && comboStreak > 0) {
+            // Reset combo if too much time passed (checked on grid update)
+            setComboStreak(0);
+        }
 
         // 4. Update Ref (Clone)
         // We can just map safe rows
@@ -219,6 +248,11 @@ export function PvPGamePage() {
                                 }
                             />
                         )}
+                    </div>
+
+                    {/* Combo Effect Notification */}
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                        <ComboEffect show={comboStreak >= 2} comboStreak={comboStreak} />
                     </div>
 
                     <div className="absolute inset-0">
