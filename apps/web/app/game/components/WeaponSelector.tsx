@@ -122,7 +122,7 @@ function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode }: W
                         key={mode}
                         className={`
                             relative flex flex-col items-center justify-between flex-1
-                            aspect-square max-h-[68px] rounded-lg transition-all duration-200 ease-out
+                            aspect-square max-h-[56px] sm:max-h-[68px] rounded-lg transition-all duration-200 ease-out
                             ${isActive
                                 ? 'bg-gradient-to-b from-[#E6F7FC] to-[#C5EAFA] border-2 border-[#4CC9F0] shadow-[0_0_12px_rgba(76,201,240,0.5)] scale-[1.02]'
                                 : 'bg-gradient-to-b from-[#F8F9FA] to-[#E9ECEF] border border-slate-200 hover:border-slate-300'
@@ -143,20 +143,20 @@ function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode }: W
                         )}
 
                         {/* Weapon icon */}
-                        <div className="flex-1 flex items-center justify-center pt-1">
+                        <div className="flex-1 flex items-center justify-center pt-1 scale-90 sm:scale-100">
                             {WeaponIcons[mode](isActive)}
                         </div>
 
                         {/* Cost badge */}
                         <div className={`
-                            flex items-center gap-0.5 px-2 py-0.5 mb-1.5 rounded-full text-[10px] font-bold
+                            flex items-center gap-0.5 px-1.5 sm:px-2 py-0.5 mb-1 sm:mb-1.5 rounded-full text-[9px] sm:text-[10px] font-bold
                             transition-colors duration-200
                             ${isActive
                                 ? 'bg-[#4CC9F0]/25 text-[#2B9AB8]'
                                 : 'bg-slate-200/80 text-slate-500'
                             }
                         `}>
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" opacity="0.8">
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" opacity="0.8" className="sm:w-[9px] sm:h-[9px]">
                                 <path d="M12 2C12 2 4 10 4 15C4 19.4 7.6 23 12 23C16.4 23 20 19.4 20 15C20 10 12 2 12 2Z" />
                             </svg>
                             <span>{config.cost}</span>

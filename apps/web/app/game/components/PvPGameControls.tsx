@@ -1,4 +1,4 @@
-    import { Droplets, Flame, Bomb } from 'lucide-react';
+import { Droplets, Flame, Bomb } from 'lucide-react';
 
 interface PvPGameControlsProps {
     weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
@@ -45,21 +45,21 @@ export function PvPGameControls({
     const barColor = myTeam === 'blue' ? 'bg-[#4CC9F0]' : 'bg-[#FF6B6B]';
 
     return (
-        <div className="flex flex-col gap-4 p-4 bg-white/50 backdrop-blur-sm rounded-t-3xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t border-white/50">
+        <div className="flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 bg-white/50 backdrop-blur-sm rounded-t-3xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t border-white/50">
             {/* Ink Bar */}
-            <div className="flex items-center gap-3">
-                <Droplets className="w-5 h-5 text-cyan-500 fill-cyan-500" />
-                <div className="relative flex-1 h-4 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+            <div className="flex items-center gap-2 sm:gap-3">
+                <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-500 fill-cyan-500" />
+                <div className="relative flex-1 h-3 sm:h-4 bg-slate-200 rounded-full overflow-hidden shadow-inner">
                     <div
                         className={`absolute top-0 left-0 h-full transition-all duration-300 ease-out ${barColor}`}
                         style={{ width: `${inkLevel}%` }}
                     />
                 </div>
-                <span className="font-bold text-slate-600 w-8 text-right text-sm">{Math.round(inkLevel)}</span>
+                <span className="font-bold text-slate-600 w-6 sm:w-8 text-right text-xs sm:text-sm">{Math.round(inkLevel)}</span>
             </div>
 
             {/* Weapon Cards */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {WEAPONS.map((w) => {
                     const isSelected = weaponMode === w.id;
                     const Icon = w.icon;
@@ -71,7 +71,7 @@ export function PvPGameControls({
                             onClick={() => setWeaponMode(w.id as 'machineGun' | 'shotgun' | 'inkBomb')}
                             disabled={!canAfford}
                             className={`
-                                relative flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl border-2 transition-all duration-200
+                                relative flex flex-col items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                                 ${isSelected
                                     ? `${w.bgColor} ${w.selectedBorder} shadow-md scale-105 z-10`
                                     : 'bg-white border-slate-100 hover:border-slate-200'
@@ -80,10 +80,10 @@ export function PvPGameControls({
                             `}
                         >
                             <Icon
-                                className={`w-6 h-6 ${isSelected ? w.color : 'text-slate-400'} ${isSelected ? 'fill-current' : ''}`}
+                                className={`w-5 h-5 sm:w-6 sm:h-6 ${isSelected ? w.color : 'text-slate-400'} ${isSelected ? 'fill-current' : ''}`}
                             />
-                            <div className="flex items-center gap-1 text-xs font-bold text-slate-500">
-                                <span className="text-[10px]">💧</span>
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-bold text-slate-500">
+                                <span className="text-[9px] sm:text-[10px]">💧</span>
                                 {w.cost}
                             </div>
                         </button>
