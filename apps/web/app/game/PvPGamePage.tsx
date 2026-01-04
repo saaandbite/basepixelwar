@@ -2,7 +2,7 @@
 
 // PvP Game Page - Separate from AI mode for cleaner architecture
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { usePvPGame } from './hooks/usePvPGame';
 import { PvPGameCanvas } from './components/PvPGameCanvas';
 import { PvPGameNavbar } from './components/PvPGameNavbar';
@@ -19,7 +19,6 @@ export function PvPGamePage() {
     useEffect(() => {
         pvp.connect();
 
-        // Check for session storage data from /room page
         // Check for session storage data from /room page (commented out for persistence)
         // const team = sessionStorage.getItem('pvp_team') as 'blue' | 'red' | null;
         // if (team) { ... }
@@ -52,6 +51,86 @@ export function PvPGamePage() {
         if (pvp.myTeam === 'blue') myInk = pvp.gameState.player1.ink;
         else myInk = pvp.gameState.player2.ink;
     }
+
+    // Track Stats
+    const [stats, setStats] = useState({ currentTiles: 0, totalCaptured: 0 });
+    // Ref to store previous grid state for change detection
+    const prevGridRef = React.useRef<string[][] | null>(null);
+
+    useEffect(() => {
+        if (!pvp.gameState || !pvp.myTeam) return;
+
+        const currentGrid = pvp.gameState.grid;
+        // Safety check: grid must exist
+        if (!currentGrid) return;
+
+        const myTeam = pvp.myTeam;
+        const prevGrid = prevGridRef.current;
+
+        // 1. Initialize Ref if first run
+        if (!prevGrid) {
+            // Create a deep copy for the ref
+            // Use safe iteration
+            const initialCopy: string[][] = [];
+            let initialCount = 0;
+
+            for (let x = 0; x < currentGrid.length; x++) {
+                const row = currentGrid[x];
+                if (!row) {
+                    initialCopy.push([]);
+                    continue;
+                }
+
+                // Copy row
+                initialCopy.push([...row]);
+
+                for (let y = 0; y < row.length; y++) {
+                    if (row[y] === myTeam) initialCount++;
+                }
+            }
+
+            setStats(prev => ({ ...prev, currentTiles: initialCount }));
+            prevGridRef.current = initialCopy;
+            return;
+        }
+
+        // 2. Compare Grids (Calculate Delta & Current)
+        let newCaptures = 0;
+        let currentCount = 0;
+
+        for (let x = 0; x < currentGrid.length; x++) {
+            const currentRow = currentGrid[x];
+            if (!currentRow) continue;
+
+            const prevRow = prevGrid[x];
+
+            for (let y = 0; y < currentRow.length; y++) {
+                const cellColor = currentRow[y];
+
+                // Count current owned
+                if (cellColor === myTeam) {
+                    currentCount++;
+                }
+
+                // Detect Capture: Was NOT mine, now IS mine
+                // explicit check for prevRow existence and element check
+                if (prevRow && prevRow[y] !== myTeam && cellColor === myTeam) {
+                    newCaptures++;
+                }
+            }
+        }
+
+        // 3. Update State
+        setStats(prev => ({
+            currentTiles: currentCount,
+            totalCaptured: prev.totalCaptured + newCaptures
+        }));
+
+        // 4. Update Ref (Clone)
+        // We can just map safe rows
+        prevGridRef.current = currentGrid.map(col => col ? [...col] : []);
+
+    }, [pvp.gameState, pvp.myTeam]);
 
     // Waiting for game (Only if NOT playing AND NOT Game Over)
     if (!pvp.isPlaying && !pvp.gameOverResult) {
@@ -156,6 +235,10 @@ export function PvPGamePage() {
                         <PvPGameOverModal
                             myTeam={pvp.myTeam!}
                             scores={pvp.gameOverResult.scores}
+                            stats={{
+                                currentTilesOwned: stats.currentTiles,
+                                totalTilesCaptured: stats.totalCaptured
+                            }}
                             onExit={handleExit}
                         />
                     )}

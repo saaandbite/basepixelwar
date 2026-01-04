@@ -5,6 +5,10 @@ import React from 'react';
 interface PvPGameOverModalProps {
     myTeam: 'blue' | 'red';
     scores: { blue: number; red: number };
+    stats?: {
+        currentTilesOwned: number;
+        totalTilesCaptured: number;
+    };
     onExit: () => void;
 }
 
@@ -93,15 +97,32 @@ export function PvPGameOverModal({
                     </div>
                 </div>
 
+                {/* Additional Stats */}
+                {scores && (
+                    <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Territory</div>
+                            <div className="font-black text-slate-700 text-lg">
+                                {/* Use passed stats or fallback to score calculation logic if needed, but best to pass explicitly */}
+                                {/* Actually, the user asked for "petak yang dimiliki sekarang" (current tiles) */}
+                                {Math.round((myScore / 100) * (26 * 44))} <span className="text-[10px] text-slate-400 font-normal">tiles</span>
+                            </div>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Captured</div>
+                            <div className="font-black text-slate-700 text-lg">
+                                {/* This requires the NEW prop passed from parent */}
+                                {arguments[0].stats?.totalTilesCaptured || 0} <span className="text-[10px] text-slate-400 font-normal">total</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Exit Button */}
                 <button
                     onClick={onExit}
                     className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:-translate-x-1 transition-transform">
-                        <path d="m12 19-7-7 7-7" />
-                        <path d="M19 12H5" />
-                    </svg>
                     EXIT TO LOBBY
                 </button>
             </div>

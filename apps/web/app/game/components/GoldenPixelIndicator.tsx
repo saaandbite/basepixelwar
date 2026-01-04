@@ -64,10 +64,9 @@ export function GoldenPixelIndicator({
                 shadow-[0_0_10px_rgba(239,68,68,0.5)]
                 animate-pulse ring-1 ring-white/30
             `}>
-                <span className="text-lg">⚠️</span>
                 <div className="flex flex-col items-start leading-none">
-                    <span className="text-[10px] uppercase tracking-wide opacity-90 mb-0.5">DANGER</span>
-                    <span className="text-xs">ENEMY FRENZY {frenzyTimeLeft.toFixed(1)}s</span>
+                    <span className="text-[9px] uppercase tracking-wide mb-0.5">ENEMY</span>
+                    <span className="text-xs">FRENZY {frenzyTimeLeft.toFixed(1)}s</span>
                 </div>
             </div>
         );

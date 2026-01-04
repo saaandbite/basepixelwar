@@ -455,7 +455,8 @@ function updateGameState(roomId: string) {
                 // Check Golden Pixel Capture (Ink Bomb explosion)
                 if (state.goldenPixel) {
                     const gpDist = Math.hypot(explosionGx - state.goldenPixel.x, explosionGy - state.goldenPixel.y);
-                    if (gpDist <= GOLDEN_PIXEL_CAPTURE_RADIUS) {
+                    // Requirement: Must own the territory under the Golden Pixel to capture it
+                    if (gpDist <= GOLDEN_PIXEL_CAPTURE_RADIUS && state.grid[state.goldenPixel.x][state.goldenPixel.y] === p.team) {
                         // Captured! Give frenzy to capturing team
                         const capturingPlayer = p.team === 'blue' ? state.player1 : state.player2;
                         capturingPlayer.frenzyEndTime = now + 5000; // 5 seconds frenzy
@@ -552,7 +553,8 @@ function updateGameState(roomId: string) {
             // 0. Check Golden Pixel Capture (Anywhere)
             if (state.goldenPixel) {
                 const gpDist = Math.hypot(gx - state.goldenPixel.x, gy - state.goldenPixel.y);
-                if (gpDist <= GOLDEN_PIXEL_CAPTURE_RADIUS) {
+                // Requirement: Must own the territory under the Golden Pixel to capture it
+                if (gpDist <= GOLDEN_PIXEL_CAPTURE_RADIUS && state.grid[state.goldenPixel.x][state.goldenPixel.y] === p.team) {
                     // Captured! Give frenzy to capturing team
                     const capturingPlayer = p.team === 'blue' ? state.player1 : state.player2;
                     capturingPlayer.frenzyEndTime = now + 5000; // 5 seconds frenzy
