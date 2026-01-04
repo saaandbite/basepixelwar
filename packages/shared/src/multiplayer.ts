@@ -92,22 +92,7 @@ export interface GameStartData {
     startTime: number;
 }
 
-export interface SyncedGameState {
-    timeLeft: number;
 
-    // Grid State (direct array for simplicity)
-    grid: ('blue' | 'red')[][];
-
-    // Scores
-    scores: { blue: number; red: number };
-
-    // Player States
-    player1: SyncedPlayerState; // Blue team (bottom)
-    player2: SyncedPlayerState; // Red team (top)
-
-    // Projectiles
-    projectiles: SyncedProjectile[];
-}
 
 export interface SyncedPlayerState {
     x: number;
@@ -160,7 +145,7 @@ export interface SyncedGameState {
     timeLeft: number;
 
     // Grid State (direct array for simplicity)
-    grid: ('blue' | 'red')[][];
+    grid?: ('blue' | 'red')[][];
 
     // Scores
     scores: { blue: number; red: number };

@@ -163,11 +163,20 @@ export function usePvPGame() {
                     playSound('powerup');
                 }
             }
-            lastGameStateRef.current = gameState;
+            // Optimization: If grid is missing (throttled), use previous grid
+            const incomingState = gameState as any; // Cast to access potentially missing properties if types are strict
+            const newGrid = incomingState.grid || prev.gameState?.grid;
+
+            const fullGameState = {
+                ...gameState,
+                grid: newGrid
+            };
+
+            lastGameStateRef.current = fullGameState;
 
             setState(prev => ({
                 ...prev,
-                gameState,
+                gameState: fullGameState,
                 scores: gameState.scores,
                 timeLeft: gameState.timeLeft,
             }));

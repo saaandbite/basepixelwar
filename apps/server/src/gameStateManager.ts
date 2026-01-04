@@ -247,9 +247,13 @@ export function startGameLoop(roomId: string) {
     state.status = 'playing';
 
     // Game loop runs at ~30fps (33ms)
+    let tick = 0;
     const loopInterval = setInterval(() => {
+        tick++;
         updateGameState(roomId);
-        broadcastGameState(roomId);
+        // Optimize: Only send full grid every 30 ticks (approx 1 sec) or initial frames
+        const shouldSendGrid = tick % 30 === 0 || tick < 5;
+        broadcastGameState(roomId, shouldSendGrid);
     }, 33);
 
     gameLoops.set(roomId, loopInterval);
@@ -827,12 +831,12 @@ function paintRadius(grid: ('blue' | 'red')[][], cx: number, cy: number, radius:
 }
 
 // Broadcast game state to room
-function broadcastGameState(roomId: string) {
+function broadcastGameState(roomId: string, includeGrid: boolean = false) {
     const state = gameStates.get(roomId);
     if (!state || !ioInstance) return;
 
     ioInstance.to(roomId).emit('game_state', {
-        grid: state.grid,
+        grid: includeGrid ? state.grid : undefined,
         player1: state.player1,
         player2: state.player2,
         projectiles: state.projectiles,
