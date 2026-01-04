@@ -1,6 +1,6 @@
 {
-    "name": "Chroma Duel - Territory Conquest",
-    "short_name": "Chroma Duel",
+    "name": "PixelWar - Territory Conquest",
+    "short_name": "PixelWar",
     "description": "Fast-paced territory conquest game",
     "start_url": "/game",
     "display": "standalone",

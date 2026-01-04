@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMultiplayer } from '../game/hooks/useMultiplayer';
+import { PaintBucket, Zap, Crown, Swords, Loader2 } from 'lucide-react';
 import '../game/game.css';
 
 export default function RoomPage() {
@@ -68,151 +69,146 @@ export default function RoomPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col items-center justify-center p-4">
-            {/* Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-red-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-            </div>
-
-            {/* Main Card */}
-            <div className="relative z-10 w-full max-w-md">
-                {/* Title */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-glow">
-                        ⚔️ Chroma Duel
-                    </h1>
-                    <p className="text-slate-400">Player vs Player Arena</p>
+        <div className="min-h-screen bg-gradient-to-b from-purple-900 to-violet-950 flex flex-col items-center justify-center p-6 bg-grid-pattern">
+            <div className="max-w-md w-full relative z-10">
+                {/* Logo Section */}
+                <div className="flex flex-col items-center mb-8">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Swords className="text-emerald-400" size={32} />
+                        <h1 className="text-3xl font-extrabold text-white tracking-tight">PixelWar</h1>
+                    </div>
+                    <p className="text-purple-200 text-center text-sm sm:text-base">Player vs Player Arena</p>
                 </div>
 
-                {/* Connection Status Card */}
-                <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 shadow-2xl">
-                    {/* Status Indicator */}
-                    <div className="flex items-center justify-center gap-2 mb-6">
-                        <div className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' :
-                            connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
-                                'bg-red-400'
-                            }`} />
-                        <span className="text-sm text-slate-300">
-                            {connectionStatus === 'connected' ? 'Connected to Server' :
-                                connectionStatus === 'connecting' ? 'Connecting...' :
-                                    'Disconnected'}
-                        </span>
+                {/* Server Status */}
+                <div className="flex items-center justify-center gap-2 mb-6">
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-400' :
+                            connectionStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
+                        }`}></div>
+                    <span className="text-purple-300 text-sm">
+                        {connectionStatus === 'connected' ? 'Connected to Server' :
+                            connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                    </span>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6 text-red-300 text-sm text-center">
+                        {error}
                     </div>
+                )}
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 mb-4 text-red-200 text-sm text-center">
-                            {error}
-                        </div>
-                    )}
+                {/* Input & Buttons (Main Card) */}
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-purple-700 shadow-2xl">
 
-                    {/* Main Content based on status */}
                     {!isConnected ? (
-                        // Not Connected
-                        <div className="text-center">
-                            <p className="text-slate-400 mb-4">Connecting to game server...</p>
-                            <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                        <div className="flex flex-col items-center justify-center py-8 gap-3">
+                            <Loader2 className="animate-spin text-purple-300" size={32} />
+                            <p className="text-purple-200">Connecting to server...</p>
                         </div>
                     ) : matchmakingStatus === 'idle' ? (
-                        // Ready to Queue
-                        <div className="space-y-4">
-                            {/* Player Name Input */}
-                            <div>
-                                <label className="text-sm text-slate-400 mb-1 block">Your Name (optional)</label>
+                        <>
+                            <div className="mb-4">
+                                <label className="block text-purple-300 text-sm mb-1">Your Name (optional)</label>
                                 <input
                                     type="text"
                                     value={playerName}
                                     onChange={(e) => setPlayerName(e.target.value)}
                                     placeholder={`Player_${playerId?.substring(0, 6) || '???'}`}
-                                    className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400 transition-colors"
+                                    className="w-full bg-purple-800/50 border border-purple-700 rounded-lg px-4 py-2 text-white placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm transition-all"
                                 />
                             </div>
 
-                            {/* Find Match Button */}
                             <button
                                 onClick={handleJoinQueue}
-                                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-purple-500/25"
+                                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 rounded-xl mb-3 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
                             >
-                                🎮 Find Match
+                                <Zap className="text-yellow-300" size={20} />
+                                <span className="text-sm sm:text-base">Find Match</span>
                             </button>
 
-                            {/* Or Play Solo */}
                             <button
                                 onClick={() => {
-                                    // FORCE Clear PvP session data
                                     sessionStorage.removeItem('pvp_mode');
                                     sessionStorage.removeItem('pvp_room_id');
                                     sessionStorage.removeItem('pvp_team');
                                     router.push('/game');
                                 }}
-                                className="w-full bg-white/5 hover:bg-white/10 border border-white/20 text-slate-300 py-3 px-6 rounded-xl transition-all"
+                                className="w-full border-2 border-purple-500 hover:border-emerald-400 text-purple-300 hover:text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300"
                             >
-                                Play vs AI Instead
+                                <Crown size={20} />
+                                <span className="text-sm sm:text-base">Play vs AI Instead</span>
                             </button>
-                        </div>
+                        </>
                     ) : matchmakingStatus === 'queue' ? (
-                        // In Queue
-                        <div className="text-center space-y-4">
-                            <div className="relative w-24 h-24 mx-auto">
-                                <div className="absolute inset-0 border-4 border-blue-500/30 rounded-full" />
-                                <div className="absolute inset-0 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                                <div className="absolute inset-4 bg-blue-500/20 rounded-full flex items-center justify-center">
+                        <div className="flex flex-col items-center py-6 gap-4">
+                            <div className="relative">
+                                <div className="w-16 h-16 border-4 border-purple-500/30 rounded-full"></div>
+                                <div className="absolute inset-0 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+                                <div className="absolute inset-0 flex items-center justify-center">
                                     <span className="text-2xl">🔍</span>
                                 </div>
                             </div>
-
-                            <div>
-                                <p className="text-xl font-semibold text-white">Finding Opponent...</p>
-                                <p className="text-slate-400 mt-1">Queue Position: #{queuePosition}</p>
+                            <div className="text-center">
+                                <p className="text-white font-medium text-lg">Finding Opponent...</p>
+                                <p className="text-purple-300 text-sm mt-1">Queue Position: #{queuePosition}</p>
                             </div>
-
                             <button
                                 onClick={leaveQueue}
-                                className="text-red-400 hover:text-red-300 text-sm underline transition-colors"
+                                className="mt-2 text-red-400 hover:text-red-300 text-sm hover:underline transition-colors"
                             >
                                 Cancel Search
                             </button>
                         </div>
                     ) : matchmakingStatus === 'found' ? (
-                        // Match Found
-                        <div className="text-center space-y-4">
-                            <div className="text-5xl mb-2">⚔️</div>
-                            <p className="text-xl font-bold text-green-400">Match Found!</p>
-                            <p className="text-slate-300">
-                                Opponent: <span className="font-semibold text-white">{opponent?.name}</span>
-                            </p>
-                            <p className="text-sm text-slate-400">Starting game...</p>
+                        <div className="flex flex-col items-center py-6 gap-4">
+                            <Swords className="text-emerald-400 animate-bounce" size={48} />
+                            <div className="text-center">
+                                <p className="text-emerald-400 font-bold text-xl">Match Found!</p>
+                                <p className="text-purple-200 mt-2">
+                                    Opponent: <span className="text-white font-semibold">{opponent?.name || 'Unknown'}</span>
+                                </p>
+                            </div>
                         </div>
                     ) : matchmakingStatus === 'countdown' ? (
-                        // Countdown
-                        <div className="text-center space-y-4">
-                            <p className="text-slate-400">Game Starting In</p>
-                            <div className="text-7xl font-bold text-white animate-pulse">
+                        <div className="flex flex-col items-center py-4 gap-4">
+                            <p className="text-purple-300 text-sm uppercase tracking-widest">Game Starting In</p>
+                            <div className="text-7xl font-extrabold text-white animate-pulse drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">
                                 {countdown}
                             </div>
-                            <div className="flex justify-center items-center gap-4 pt-4">
-                                <div className="text-center">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold mb-1 ${myTeam === 'blue' ? 'bg-blue-500' : 'bg-red-500'}`}>
-                                        {myTeam === 'blue' ? '🔵' : '🔴'}
+                            <div className="flex items-center gap-6 mt-4 opacity-80">
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-blue-500' : 'bg-red-500'} text-white`}>
+                                        {myTeam === 'blue' ? 'YOU' : 'VS'}
                                     </div>
-                                    <span className="text-xs text-slate-400">You</span>
+                                    <span className="text-xs text-purple-300">You</span>
                                 </div>
-                                <span className="text-2xl text-slate-500">VS</span>
-                                <div className="text-center">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold mb-1 ${myTeam === 'blue' ? 'bg-red-500' : 'bg-blue-500'}`}>
-                                        {myTeam === 'blue' ? '🔴' : '🔵'}
+                                <Swords size={24} className="text-purple-400" />
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-red-500' : 'bg-blue-500'} text-white`}>
+                                        {myTeam === 'blue' ? 'VS' : 'YOU'}
                                     </div>
-                                    <span className="text-xs text-slate-400">{opponent?.name}</span>
+                                    <span className="text-xs text-purple-300">{opponent?.name}</span>
                                 </div>
                             </div>
                         </div>
                     ) : null}
                 </div>
 
-                {/* Footer Info */}
-                <div className="text-center mt-6 text-slate-500 text-sm">
-                    <p>🎯 Paint the arena • 💣 Use power-ups • 👑 Capture golden pixels</p>
+                {/* Game Features */}
+                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                    <div className="flex flex-col items-center p-3 rounded-xl hover:bg-white/5 transition-colors duration-300">
+                        <PaintBucket className="text-blue-400 mb-2 drop-shadow-md" size={24} />
+                        <span className="text-purple-300 text-xs sm:text-sm font-medium">Paint the arena</span>
+                    </div>
+                    <div className="flex flex-col items-center p-3 rounded-xl hover:bg-white/5 transition-colors duration-300">
+                        <Zap className="text-yellow-400 mb-2 drop-shadow-md" size={24} />
+                        <span className="text-purple-300 text-xs sm:text-sm font-medium">Use power-ups</span>
+                    </div>
+                    <div className="flex flex-col items-center p-3 rounded-xl hover:bg-white/5 transition-colors duration-300">
+                        <Crown className="text-amber-400 mb-2 drop-shadow-md" size={24} />
+                        <span className="text-purple-300 text-xs sm:text-sm font-medium">Capture golden pixels</span>
+                    </div>
                 </div>
             </div>
         </div>

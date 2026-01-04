@@ -25,7 +25,7 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Chroma Duel - Territory Conquest Game",
+  title: "PixelWar - Territory Conquest Game",
   description: "Fast-paced territory conquest game. Shoot, capture, and dominate the battlefield!",
   icons: {
     icon: "/icon.svg",
