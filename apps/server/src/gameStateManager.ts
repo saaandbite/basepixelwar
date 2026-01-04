@@ -116,12 +116,12 @@ const INK_MAX = 100;
 const CANVAS_WIDTH_CLIENT = 390; // Approx match for logic scaling if needed
 // We use 350 for server logic width, close enough to 390 client (client scales)
 const GOLDEN_PIXEL_SPAWN_INTERVAL = 15000;
-const GOLDEN_PIXEL_CAPTURE_RADIUS = 20;
+const GOLDEN_PIXEL_CAPTURE_RADIUS = 2;
 
 // Weapon Definitions (Matching Client Constants - Frame-based like SP)
 const WEAPON_MODES = {
     machineGun: {
-        cost: 1,
+        cost: 2.5,
         speed: 6,
         paintRadius: 1,
         fireRate: 5, // 5 frames @ 30fps = ~6 shots/sec (better pacing, not laser-like)
@@ -715,13 +715,9 @@ function updateGameState(roomId: string) {
     checkCollection(state.player1);
     checkCollection(state.player2);
 
-    // 3. Refill Ink (Only when not firing)
-    if (!state.player1.isFiring && state.player1.ink < INK_MAX) {
-        state.player1.ink = Math.min(INK_MAX, state.player1.ink + 0.35);
-    }
-    if (!state.player2.isFiring && state.player2.ink < INK_MAX) {
-        state.player2.ink = Math.min(INK_MAX, state.player2.ink + 0.35);
-    }
+    // 3. Refill Ink
+    if (state.player1.ink < INK_MAX) state.player1.ink = Math.min(INK_MAX, state.player1.ink + 0.35);
+    if (state.player2.ink < INK_MAX) state.player2.ink = Math.min(INK_MAX, state.player2.ink + 0.35);
 
     // 4. Powerups & Golden Pixel Spawning
     // Throttle spawn checks (e.g. every 1 sec check)
