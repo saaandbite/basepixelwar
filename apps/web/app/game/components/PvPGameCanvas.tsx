@@ -6,7 +6,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, INK_MAX } from '../lib/constants';
 import type { SyncedGameState } from '@repo/shared/multiplayer';
-import type { Projectile, Cannon, Particle, TerritoryBatch } from '../types';
+import type { Projectile, Cannon, Particle, TerritoryBatch, GoldenPixel } from '../types';
 import {
     drawBackground,
     drawGrid,
@@ -40,7 +40,8 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const { grid, player1, player2, projectiles, particles, territoryBatches, screenFlash, goldenPixel } = gameState as any;
+        // No need for 'as any' anymore, we use the proper SyncedGameState type
+        const { grid, player1, player2, projectiles, particles, territoryBatches, screenFlash } = gameState;
 
         // Clear canvas
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -58,26 +59,22 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
         // 2. Draw Grid
         // Grid from server is simple array. drawGrid expects ('blue' | 'red')[][]
         if (grid && grid.length > 0 && grid[0]) {
-            // Need forceRedraw=true often because we don't cache grid hash in pvp component yet,
-            // or let renderer handle caching (it has internal cache).
-            // But renderer cache depends on "lastCols" etc.
             drawGrid(ctx, grid as ('blue' | 'red')[][], grid.length, grid[0].length);
         }
 
         // 3. Draw Projectiles
-        // Map SyncedProjectile to Projectile compatible object
         // Synced: { id, x, y, vx, vy, team, type }
-        // Renderer: { x, y, team, type, ... }
         const renderProjectiles: Projectile[] = projectiles.map(p => ({
             ...p,
             active: true,
             lifetime: 1.0, // Default lifetime for rendering
+            // Map SyncedProjectile type to Renderer Projectile type
+            type: p.type === 'normal' ? 'normal' : p.type as any // Cast safe due to shared constants usually
         }));
         drawProjectiles(ctx, renderProjectiles);
 
         // 4. Draw Particles (Visual Effects)
         if (particles && particles.length > 0) {
-            // Map SyncedParticle to Particle
             const renderParticles: Particle[] = particles.map(p => ({
                 ...p,
                 glow: p.glow || false,
@@ -87,7 +84,6 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
 
         // 5. Draw Territory Batches (Visual Effects)
         if (territoryBatches && territoryBatches.length > 0) {
-            // Map SyncedTerritoryBatch to TerritoryBatch
             const renderTerritoryBatches: TerritoryBatch[] = territoryBatches.map(tb => ({
                 ...tb,
                 color: tb.color,
@@ -102,8 +98,14 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
         }
 
         // 7. Draw Golden Pixel
+        // Map SyncedGoldenPixel (server/multiplayer) to GoldenPixel (client/renderer)
         if (gameState.goldenPixel) {
-            drawGoldenPixel(ctx, gameState.goldenPixel);
+            // Need to convert SyncedGoldenPixel to GoldenPixel (which has pulsePhase)
+            const clientGoldenPixel: GoldenPixel = {
+                ...gameState.goldenPixel,
+                pulsePhase: 0, // Default value for client-side visual state
+            };
+            drawGoldenPixel(ctx, clientGoldenPixel);
         }
 
         // 8. Draw Cannons

@@ -116,6 +116,8 @@ export interface SyncedPlayerState {
     isFiring: boolean;
     ink: number;
     weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
+    frenzyEndTime?: number;
+    isFrenzy?: boolean;
 }
 
 // Particle for visual effects
@@ -176,6 +178,24 @@ export interface SyncedGameState {
     comboEffects?: SyncedComboEffect[];
     powerupEffects?: SyncedPowerupEffect[];
     screenFlash?: number;
+
+    // Golden Pixel & Powerups
+    goldenPixel: SyncedGoldenPixel | null;
+    powerups: SyncedPowerup[]; // Added powerups
+}
+
+export interface SyncedGoldenPixel {
+    x: number; // Grid x position
+    y: number; // Grid y position
+    active: boolean;
+    spawnTime: number;
+}
+
+export interface SyncedPowerup {
+    id: number;
+    x: number;
+    y: number;
+    type: 'shield' | 'frenzy';
 }
 
 export interface SyncedProjectile {
