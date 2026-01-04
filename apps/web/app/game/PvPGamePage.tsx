@@ -45,11 +45,6 @@ export function PvPGamePage() {
         });
     }, [pvp, weaponMode]);
 
-    // Calculate score percentage
-    const score = pvp.scores;
-    const myScore = pvp.myTeam === 'blue' ? score.blue : score.red;
-    const enemyScore = pvp.myTeam === 'blue' ? score.red : score.blue;
-
     // Get My Ink Level
     let myInk = 0;
     if (pvp.gameState && pvp.myTeam) {
@@ -114,8 +109,8 @@ export function PvPGamePage() {
 
                 {/* Navbar */}
                 <PvPGameNavbar
-                    scoreBlue={myScore}
-                    scoreRed={enemyScore}
+                    scoreBlue={pvp.scores.blue}
+                    scoreRed={pvp.scores.red}
                     timeLeft={pvp.timeLeft}
                     myTeam={pvp.myTeam || 'blue'}
                 />
