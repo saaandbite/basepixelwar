@@ -823,8 +823,10 @@ function paintRadius(grid: ('blue' | 'red')[][], cx: number, cy: number, radius:
     for (let x = gx - radius; x <= gx + radius; x++) {
         for (let y = gy - radius; y <= gy + radius; y++) {
             if (x >= 0 && x < GRID_COLS && y >= 0 && y < GRID_ROWS) {
-                // Circular brush? Square for now is faster.
-                grid[x][y] = team;
+                // Circular brush check
+                if (Math.hypot(x - gx, y - gy) <= radius) {
+                    grid[x][y] = team;
+                }
             }
         }
     }
