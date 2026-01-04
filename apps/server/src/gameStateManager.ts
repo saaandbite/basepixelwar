@@ -743,6 +743,11 @@ function updateGameState(roomId: string) {
         }
     }
 
+    // Golden Pixel Expiration (5s lifetime)
+    if (state.goldenPixel && state.goldenPixel.active && now - state.goldenPixel.spawnTime > 5000) {
+        state.goldenPixel = null;
+    }
+
     // Golden Pixel Spawning
     if (!state.goldenPixel && (!state.lastGoldenPixelSpawn || now - state.lastGoldenPixelSpawn > GOLDEN_PIXEL_SPAWN_INTERVAL)) {
         // Spawn in center-ish area (middle 50% of map)
