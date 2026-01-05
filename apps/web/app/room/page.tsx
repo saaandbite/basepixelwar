@@ -5,7 +5,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMultiplayer } from '../game/hooks/useMultiplayer';
-import { PaintBucket, Zap, Crown, Swords, Loader2 } from 'lucide-react';
+import { useWallet, formatAddress, isCorrectChain } from '../contexts/WalletContext';
+import { useGameVault, GameMode } from '../hooks/useGameVault';
+import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle } from 'lucide-react';
 import '../game/game.css';
 
 export default function RoomPage() {
@@ -18,24 +20,44 @@ export default function RoomPage() {
         queuePosition,
         countdown,
         myTeam,
-        error,
-        isConnected,
+        error: multiplayerError,
+        isConnected: isServerConnected,
         isPlaying,
-        connect,
-        disconnect,
+        connect: connectToServer,
+        disconnect: disconnectFromServer,
         joinQueue,
         leaveQueue,
         setReady,
         room,
     } = useMultiplayer();
 
-    const [playerName, setPlayerName] = useState('');
+    // Wallet state
+    const {
+        address: walletAddress,
+        isConnected: isWalletConnected,
+        isConnecting: isWalletConnecting,
+        chainId,
+        error: walletError,
+        connect: connectWallet,
+        switchToBase,
+    } = useWallet();
 
-    // Auto-connect on mount
+    // Game vault for transactions
+    const {
+        isLoading: isTransactionLoading,
+        error: transactionError,
+        createGame,
+        getBidAmount,
+    } = useGameVault();
+
+    const [playerName, setPlayerName] = useState('');
+    const isOnCorrectChain = isCorrectChain(chainId);
+
+    // Auto-connect to server on mount
     useEffect(() => {
-        connect();
-        return () => disconnect();
-    }, [connect, disconnect]);
+        connectToServer();
+        return () => disconnectFromServer();
+    }, [connectToServer, disconnectFromServer]);
 
     // Redirect to game when match starts
     useEffect(() => {
@@ -50,9 +72,13 @@ export default function RoomPage() {
             }
             sessionStorage.setItem('pvp_team', myTeam || 'blue');
             sessionStorage.setItem('pvp_mode', 'true');
+            // Store wallet address for in-game transactions
+            if (walletAddress) {
+                sessionStorage.setItem('wallet_address', walletAddress);
+            }
             router.push('/game');
         }
-    }, [isPlaying, myTeam, router, room]);
+    }, [isPlaying, myTeam, router, room, walletAddress]);
 
     // Auto ready when match found
     useEffect(() => {
@@ -61,12 +87,37 @@ export default function RoomPage() {
         }
     }, [matchmakingStatus, opponent, setReady]);
 
-    const handleJoinQueue = () => {
+    const handleJoinQueue = async () => {
+        if (!isWalletConnected) {
+            await connectWallet();
+            return;
+        }
+
+        if (!isOnCorrectChain) {
+            await switchToBase();
+            return;
+        }
+
         if (playerName.trim()) {
             sessionStorage.setItem('player_name', playerName);
         }
+
+        // Store wallet address for game
+        if (walletAddress) {
+            sessionStorage.setItem('wallet_address', walletAddress);
+        }
+
+        // TODO: Create on-chain game when smart contract is deployed
+        // try {
+        //     await createGame(GameMode.OneVsOne);
+        // } catch (err) {
+        //     console.error('Failed to create on-chain game:', err);
+        // }
+
         joinQueue();
     };
+
+    const error = multiplayerError || walletError || transactionError;
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-purple-900 to-violet-950 flex flex-col items-center justify-center p-6 bg-grid-pattern">
@@ -80,16 +131,45 @@ export default function RoomPage() {
                     <p className="text-purple-200 text-center text-sm sm:text-base">Player vs Player Arena</p>
                 </div>
 
-                {/* Server Status */}
-                <div className="flex items-center justify-center gap-2 mb-6">
-                    <div className={`w-3 h-3 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-400' :
+                {/* Wallet Status */}
+                <div className="flex items-center justify-center gap-4 mb-4">
+                    {/* Server Status */}
+                    <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-400' :
                             connectionStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
-                        }`}></div>
-                    <span className="text-purple-300 text-sm">
-                        {connectionStatus === 'connected' ? 'Connected to Server' :
-                            connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
-                    </span>
+                            }`}></div>
+                        <span className="text-purple-300 text-xs">
+                            {connectionStatus === 'connected' ? 'Server' :
+                                connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+                        </span>
+                    </div>
+
+                    {/* Wallet Status */}
+                    <div className="flex items-center gap-2">
+                        <Wallet className={`w-4 h-4 ${isWalletConnected ? 'text-emerald-400' : 'text-red-400'}`} />
+                        <span className="text-purple-300 text-xs">
+                            {isWalletConnected && walletAddress
+                                ? formatAddress(walletAddress)
+                                : 'Not Connected'}
+                        </span>
+                    </div>
                 </div>
+
+                {/* Chain Warning */}
+                {isWalletConnected && !isOnCorrectChain && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4 flex items-center gap-3">
+                        <AlertTriangle className="text-yellow-400 flex-shrink-0" size={20} />
+                        <div className="flex-1">
+                            <p className="text-yellow-300 text-sm">Wrong network detected</p>
+                            <button
+                                onClick={switchToBase}
+                                className="text-yellow-400 hover:text-yellow-300 text-xs underline mt-1"
+                            >
+                                Switch to Base
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Error Message */}
                 {error && (
@@ -101,13 +181,26 @@ export default function RoomPage() {
                 {/* Input & Buttons (Main Card) */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-purple-700 shadow-2xl">
 
-                    {!isConnected ? (
+                    {!isServerConnected ? (
                         <div className="flex flex-col items-center justify-center py-8 gap-3">
                             <Loader2 className="animate-spin text-purple-300" size={32} />
                             <p className="text-purple-200">Connecting to server...</p>
                         </div>
                     ) : matchmakingStatus === 'idle' ? (
                         <>
+                            {/* Wallet Connection Required Notice */}
+                            {!isWalletConnected && (
+                                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Wallet className="text-purple-400" size={20} />
+                                        <span className="text-purple-200 font-medium text-sm">Wallet Required</span>
+                                    </div>
+                                    <p className="text-purple-300 text-xs">
+                                        Connect your wallet to play and earn rewards. Entry fee: {getBidAmount()}
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="mb-4">
                                 <label className="block text-purple-300 text-sm mb-1">Your Name (optional)</label>
                                 <input
@@ -121,10 +214,35 @@ export default function RoomPage() {
 
                             <button
                                 onClick={handleJoinQueue}
-                                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 rounded-xl mb-3 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                                disabled={isWalletConnecting || isTransactionLoading}
+                                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 rounded-xl mb-3 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Zap className="text-yellow-300" size={20} />
-                                <span className="text-sm sm:text-base">Find Match</span>
+                                {isWalletConnecting ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={20} />
+                                        <span className="text-sm sm:text-base">Connecting Wallet...</span>
+                                    </>
+                                ) : isTransactionLoading ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={20} />
+                                        <span className="text-sm sm:text-base">Processing...</span>
+                                    </>
+                                ) : !isWalletConnected ? (
+                                    <>
+                                        <Wallet size={20} />
+                                        <span className="text-sm sm:text-base">Connect Wallet to Play</span>
+                                    </>
+                                ) : !isOnCorrectChain ? (
+                                    <>
+                                        <AlertTriangle size={20} />
+                                        <span className="text-sm sm:text-base">Switch to Base Network</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Zap className="text-yellow-300" size={20} />
+                                        <span className="text-sm sm:text-base">Find Match</span>
+                                    </>
+                                )}
                             </button>
 
                             <button
@@ -152,6 +270,11 @@ export default function RoomPage() {
                             <div className="text-center">
                                 <p className="text-white font-medium text-lg">Finding Opponent...</p>
                                 <p className="text-purple-300 text-sm mt-1">Queue Position: #{queuePosition}</p>
+                                {walletAddress && (
+                                    <p className="text-emerald-400 text-xs mt-2">
+                                        Wallet: {formatAddress(walletAddress)}
+                                    </p>
+                                )}
                             </div>
                             <button
                                 onClick={leaveQueue}

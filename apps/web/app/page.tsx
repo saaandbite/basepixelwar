@@ -1,25 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import styles from "./page.module.css";
+import { useWallet, formatAddress, isCorrectChain } from "./contexts/WalletContext";
 
 export default function Home() {
-  const [isConnecting, setIsConnecting] = useState(false);
+  const {
+    address,
+    isConnected,
+    isConnecting,
+    chainId,
+    error,
+    connect,
+    disconnect,
+    switchToBase,
+  } = useWallet();
 
   const handleConnectWallet = async () => {
-    setIsConnecting(true);
-    // TODO: Implement wallet connection logic
-    try {
-      // Placeholder for wallet connection
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Wallet connected!");
-    } catch (error) {
-      console.error("Failed to connect wallet:", error);
-    } finally {
-      setIsConnecting(false);
-    }
+    await connect();
   };
+
+  const handleDisconnect = () => {
+    disconnect();
+  };
+
+  const isOnCorrectChain = isCorrectChain(chainId);
 
   return (
     <div className={styles.landingPage}>
@@ -40,21 +45,64 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className={styles.errorMessage}>
+            {error}
+          </div>
+        )}
+
+        {/* Chain Warning */}
+        {isConnected && !isOnCorrectChain && (
+          <div className={styles.warningMessage}>
+            <span>⚠️ Wrong network detected. Please switch to Base.</span>
+            <button onClick={switchToBase} className={styles.switchButton}>
+              Switch to Base
+            </button>
+          </div>
+        )}
+
         {/* Buttons */}
         <div className={styles.buttonContainer}>
-          <Link href="/game" className={styles.startButton}>
+          <Link href="/room" className={styles.startButton}>
             <span className={styles.buttonIcon}>🎮</span>
             Start Game
           </Link>
-          <button
-            onClick={handleConnectWallet}
-            disabled={isConnecting}
-            className={styles.walletButton}
-          >
-            <span className={styles.buttonIcon}>🔗</span>
-            {isConnecting ? "Connecting..." : "Connect Wallet"}
-          </button>
+
+          {isConnected && address ? (
+            <button
+              onClick={handleDisconnect}
+              className={styles.walletButtonConnected}
+            >
+              <span className={styles.buttonIcon}>✅</span>
+              {formatAddress(address)}
+            </button>
+          ) : (
+            <button
+              onClick={handleConnectWallet}
+              disabled={isConnecting}
+              className={styles.walletButton}
+            >
+              <span className={styles.buttonIcon}>🔗</span>
+              {isConnecting ? "Connecting..." : "Connect Wallet"}
+            </button>
+          )}
         </div>
+
+        {/* Connected Info */}
+        {isConnected && address && (
+          <div className={styles.connectedInfo}>
+            <div className={styles.walletBadge}>
+              <span className={styles.walletDot} />
+              <span>Wallet Connected</span>
+            </div>
+            {isOnCorrectChain && (
+              <div className={styles.chainBadge}>
+                <span>🔵 Base Network</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Features */}
         <div className={styles.features}>
