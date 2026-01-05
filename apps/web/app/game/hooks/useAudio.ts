@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 
-type SoundName = 'shoot' | 'meteor' | 'powerup' | 'explosion' | 'combo' | 'gameOver';
+type SoundName = 'shoot' | 'powerup' | 'explosion' | 'combo' | 'gameOver';
 
 export function useAudio() {
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -50,15 +50,7 @@ export function useAudio() {
                     osc.stop(context.currentTime + 0.1);
                     break;
 
-                case 'meteor':
-                    osc.type = 'triangle';
-                    osc.frequency.value = 200 * randomFactor;
-                    gain.gain.value = 0.18 + Math.random() * 0.04; // 0.18 to 0.22
-                    osc.start();
-                    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.5);
-                    osc.frequency.exponentialRampToValueAtTime(100 * randomFactor, context.currentTime + 0.5);
-                    osc.stop(context.currentTime + 0.5);
-                    break;
+
 
                 case 'powerup':
                     osc.type = 'sine';

@@ -1,7 +1,7 @@
 // Game Logic Functions
 
 import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon, GoldenPixel, WeaponMode } from '../types';
-import { GRID_SIZE, COLORS, BULLET_SPEED, WEAPON_MODES, GOLDEN_PIXEL_SIZE } from './constants';
+import { GRID_SIZE, COLORS, BULLET_SPEED, WEAPON_MODES } from './constants';
 
 // Initialize grid with half red (top) and half blue (bottom)
 export function initializeGrid(cols: number, rows: number): ('blue' | 'red')[][] {
@@ -24,41 +24,111 @@ export function createBullet(
 ): Projectile[] {
     const bullets: Projectile[] = [];
 
-    // Check for burst shot powerup
-    if (source.powerups && source.powerups.burstShot > 0) {
-        const angles = [-0.2, 0, 0.2];
-        angles.forEach((angleOffset) => {
-            const angle = source.angle + angleOffset;
-            bullets.push({
-                x: source.x,
-                y: source.y,
-                vx: Math.cos(angle) * BULLET_SPEED,
-                vy: Math.sin(angle) * BULLET_SPEED,
-                team,
-                active: true,
-                isMeteor: false,
-                lifetime: 0,
-                paintRadius: 2,
-            });
-        });
-    } else {
-        // Regular shot
-        const angle = source.angle + (Math.random() - 0.5) * spread;
-        bullets.push({
-            x: source.x,
-            y: source.y,
-            vx: Math.cos(angle) * BULLET_SPEED,
-            vy: Math.sin(angle) * BULLET_SPEED,
-            team,
-            active: true,
-            isMeteor: false,
-            lifetime: 0,
-            paintRadius: 2,
-        });
-    }
+    // Regular shot
+    const angle = source.angle + (Math.random() - 0.5) * spread;
+    bullets.push({
+        x: source.x,
+        y: source.y,
+        vx: Math.cos(angle) * BULLET_SPEED,
+        vy: Math.sin(angle) * BULLET_SPEED,
+        team,
+        active: true,
+        lifetime: 0,
+        paintRadius: 2,
+    });
 
     return bullets;
 }
+
+// Calculate ballistic velocity to hit a target
+// Returns { vx, vy, flightTime } or null if unreachable
+export function calculateBallisticVelocity(
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number,
+    speed: number,
+    gravity: number
+): { vx: number; vy: number; flightTime: number } | null {
+    const dx = targetX - sourceX;
+    const dy = targetY - sourceY; // Positive dy is DOWNg (on flat ground, simplified)
+    // R_max = v^2 / g (on flat ground, simplified)
+    // We solving: y = x * tan(theta) + (g * x^2) / (2 * v^2 * cos^2(theta))
+    // But we know v_total is fixed to 'speed' (actually it's not, usually game physics splits vx/vy differently)
+    // Wait, the previous logic was: vx = cos(a)*s, vy = sin(a)*s - 4. 
+    // That means initial speed is actually variable depending on angle because of the -4 z-boost.
+    // Let's assume we want to solve for angle 'theta' such that:
+    // vx = S * cos(theta)
+    // vy = S * sin(theta) - 4
+    // 
+    // It's easier to iterate or approximate since the " - 4" makes the math messy for a direct analytic solution.
+    // However, to keep "Point and Click" simple and robust:
+    // We can assume we want to hit (tx, ty) in 't' frames.
+    // x(t) = sx + vx * t
+    // y(t) = sy + vy * t + 0.5 * g * t^2
+    // 
+    // We have constraints: sqrt(vx^2 + (vy+4)^2) = Speed.
+    // This is hard to solve exactly in real-time efficiently without iterations.
+
+    // ALTERNATIVE: Ignore the "-4" boost for the solver and just apply the physics required to hit the target.
+    // If the required velocity is within the weapon's "power", we use it. 
+    // If not, we clamp it.
+    // BUT the weapon definition in constants says "speed: 8".
+    // If we just calculate the needed vx, vy to hit the target, we might violate the speed constant.
+
+    // Let's try the iterate approach which is robust for this 2D grid:
+    // Try different flight times 't'.
+    // vx = dx / t
+    // vy_needed = (dy - 0.5 * gravity * t * t) / t
+    // Check if sqrt(vx^2 + (vy_needed + 4)^2) <= speed * 1.1 (allow some tolerance)
+    // Minimizing deviation from 'speed'
+
+    let bestSol: { vx: number; vy: number; flightTime: number } | null = null;
+    let minSpeedDiff = Infinity;
+
+    // Search flight times from 10 to 150 frames with smaller increments for better accuracy
+    for (let t = 10; t <= 150; t += 1) { // Changed from increment of 5 to 1 for better accuracy
+        const vx = dx / t;
+
+        // Discrete Physics Correction (Semi-implicit Euler: v+=g, p+=v)
+        // y_n = y_0 + n*v0 + 0.5*g*n*(n+1)
+        // dy = v0*t + 0.5*g*t*(t+1)
+        // v0*t = dy - 0.5*g*t*(t+1)
+        // v0 = dy/t - 0.5*g*(t+1)
+
+        const required_vy_initial = (dy / t) - 0.5 * gravity * (t + 1);
+
+        // In our game physics: newVy = oldVy + gravity.
+        // The required_vy_initial IS the v0 we need to set.
+        // We use it directly.
+
+        // Check if this velocity is plausible given the weapon speed
+        // The game loop usually combines vectors.
+        // We want to ensure we aren't firing super fast just to hit a target.
+        // We compare the magnitude against 'speed'.
+
+        // Note: The original logic had a weird "-4" boost abstraction.
+        // We just check the magnitude of the actual launch vector.
+
+        const launchSpeed = Math.hypot(vx, required_vy_initial);
+        const diff = Math.abs(launchSpeed - speed);
+
+        if (diff < minSpeedDiff) {
+            minSpeedDiff = diff;
+            bestSol = { vx, vy: required_vy_initial, flightTime: t };
+        }
+    }
+
+    // If even the best solution is too far off (unreachable), return null
+    // (e.g. trying to shoot across the map with weak gun)
+    // Reduced tolerance for better accuracy
+    if (bestSol && minSpeedDiff < speed * 0.3) { // Changed from 0.5 to 0.3 for stricter tolerance
+        return bestSol;
+    }
+
+    return null;
+}
+
 
 // Create bullets based on weapon mode (INK ECONOMY)
 export function createWeaponBullet(
@@ -79,7 +149,6 @@ export function createWeaponBullet(
                 vy: Math.sin(source.angle) * modeConfig.speed,
                 team,
                 active: true,
-                isMeteor: false,
                 isInkBomb: false,
                 lifetime: 0,
                 paintRadius: modeConfig.paintRadius,
@@ -98,7 +167,6 @@ export function createWeaponBullet(
                     vy: Math.sin(source.angle + offset) * modeConfig.speed,
                     team,
                     active: true,
-                    isMeteor: false,
                     isInkBomb: false,
                     lifetime: 0,
                     maxLifetime: shotgunConfig.maxLifetime,
@@ -109,27 +177,56 @@ export function createWeaponBullet(
         }
 
         case 'inkBomb': {
-            // Arc trajectory bomb - starts with upward velocity for lobbing effect
+            // Arc trajectory bomb
             const inkBombConfig = WEAPON_MODES.inkBomb;
-            const baseVx = Math.cos(source.angle) * modeConfig.speed;
-            const baseVy = Math.sin(source.angle) * modeConfig.speed;
+
+            let vx, vy;
+            let flightTime: number | undefined;
+
+            // Use Ballistic Targeting if available
+            if (source.targetPos) {
+                const solution = calculateBallisticVelocity(
+                    source.x,
+                    source.y,
+                    source.targetPos.x,
+                    source.targetPos.y,
+                    modeConfig.speed,
+                    inkBombConfig.gravity
+                );
+
+                if (solution) {
+                    vx = solution.vx;
+                    vy = solution.vy;
+                    flightTime = solution.flightTime;
+                }
+            }
+
+            // Fallback if no target or no solution
+            if (vx === undefined || vy === undefined) {
+                const baseVx = Math.cos(source.angle) * modeConfig.speed;
+                const baseVy = Math.sin(source.angle) * modeConfig.speed;
+                vx = baseVx;
+                vy = baseVy - 4;
+            }
 
             bullets.push({
                 x: source.x,
                 y: source.y,
-                vx: baseVx,
-                vy: baseVy - 4, // Strong upward arc boost for lobbing effect
+                vx: vx,
+                vy: vy,
                 team,
                 active: true,
-                isMeteor: false,
                 isInkBomb: true,
                 lifetime: 0,
                 paintRadius: inkBombConfig.paintRadius,
                 gravity: inkBombConfig.gravity,
+                target: source.targetPos,
+                explodeTime: flightTime,
             });
             break;
         }
     }
+
 
     return bullets;
 }
@@ -153,26 +250,7 @@ export function createGoldenPixel(cols: number, rows: number): GoldenPixel {
 }
 
 // Create a meteor projectile
-export function createMeteor(
-    startX: number,
-    startY: number,
-    targetX: number,
-    targetY: number,
-    speed: number = 6
-): Projectile {
-    const angle = Math.atan2(targetY - startY, targetX - startX);
-    return {
-        x: startX,
-        y: startY,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        team: 'neutral',
-        active: true,
-        isMeteor: true,
-        target: { x: targetX, y: targetY },
-        lifetime: 0,
-    };
-}
+
 
 // Paint grid cells in a radius
 export function paintGrid(
@@ -209,38 +287,7 @@ export function paintGrid(
 }
 
 // Explode meteor and flip territory
-export function explodeMeteor(
-    grid: ('blue' | 'red')[][],
-    x: number,
-    y: number,
-    cols: number,
-    rows: number
-): ('blue' | 'red')[][] {
-    const newGrid = grid.map((col) => [...col]);
-    const gx = Math.floor(x / GRID_SIZE);
-    const gy = Math.floor(y / GRID_SIZE);
-    const radius = 9;
 
-    for (let i = -radius; i <= radius; i++) {
-        for (let j = -radius; j <= radius; j++) {
-            const nx = gx + i;
-            const ny = gy + j;
-            if (i * i + j * j <= radius * radius) {
-                if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
-                    const column = newGrid[nx];
-                    if (column) {
-                        const currentCell = column[ny];
-                        if (currentCell !== undefined) {
-                            column[ny] = currentCell === 'blue' ? 'red' : 'blue';
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return newGrid;
-}
 
 // Calculate score percentages
 export function calculateScore(
@@ -341,21 +388,17 @@ export function findLargestTerritory(
 export function createParticles(
     x: number,
     y: number,
-    type: 'blue' | 'red' | 'meteor',
+    type: 'blue' | 'red',
     count: number = 3
 ): Particle[] {
     // Limit particle count for performance
-    const actualCount = Math.min(count, type === 'meteor' ? 8 : 3);
+    const actualCount = Math.min(count, 3);
     const particles: Particle[] = [];
     let baseColor = '#FFFFFF';
-    let glow = false;
+    const glow = false;
 
     if (type === 'blue') baseColor = COLORS.bulletStrokeBlue;
     else if (type === 'red') baseColor = COLORS.bulletStrokeRed;
-    else if (type === 'meteor') {
-        baseColor = COLORS.meteor;
-        glow = true;
-    }
 
     for (let i = 0; i < actualCount; i++) {
         const angle = (i / actualCount) * Math.PI * 2; // Even distribution
@@ -378,23 +421,15 @@ export function createParticles(
 
 // Create powerup at position
 export function createPowerup(gx: number, gy: number): Powerup {
-    const types: ('burst' | 'shield')[] = ['burst', 'shield'];
-    const randomIndex = Math.floor(Math.random() * types.length);
-    const type = types[randomIndex] ?? 'burst';
-
-    const colorMap = {
-        burst: { color: COLORS.powerup.burst, glowColor: 'rgba(157, 78, 221, 0.6)' },
-        shield: { color: COLORS.powerup.shield, glowColor: 'rgba(76, 175, 80, 0.6)' },
-    };
-
     return {
         x: gx * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 20,
         y: gy * GRID_SIZE + GRID_SIZE / 2 - 30,
         vy: 0.5 + Math.random() * 0.5,
         rotation: Math.random() * Math.PI * 2,
-        type,
+        type: 'shield',
         collected: false,
-        ...colorMap[type],
+        color: COLORS.powerup.shield,
+        glowColor: 'rgba(76, 175, 80, 0.6)',
     };
 }
 

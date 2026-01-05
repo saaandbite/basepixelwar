@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Chroma Duel - Play Now",
+    title: "PixelWar - Play Now",
     description: "Fast-paced territory conquest game. Shoot, capture, and dominate the battlefield!",
 };
 

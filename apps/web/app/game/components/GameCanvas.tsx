@@ -4,7 +4,7 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { useGameLoop } from '../hooks/useGameLoop';
-import { COLORS } from '../lib/constants';
+import { COLORS, WEAPON_MODES, GAME_WIDTH, GAME_HEIGHT, GRID_SIZE } from '../lib/constants';
 import {
     drawBackground,
     drawGrid,
@@ -15,45 +15,42 @@ import {
     drawCannon,
     drawTrajectory,
     drawScreenFlash,
-    drawMeteorWarning,
-    drawTargetMarker,
+    drawInkBombPreview,
+
     drawGoldenPixel,
     drawFrenzyOverlay,
+    drawGlobalShieldOverlay,
 } from '../lib/renderer';
+import { calculateBallisticVelocity } from '../lib/gameLogic';
 import type { GameState } from '../types';
 
 interface GameCanvasProps {
-    state: GameState;
+    gameStateRef: React.MutableRefObject<GameState>;
     onResize: (width: number, height: number) => void;
-    onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean) => void;
-    onShieldActivation: () => void;
+    onPlayerInput: (angle: number, isFiring: boolean, isDown: boolean, targetPos?: { x: number; y: number }) => void;
+    onInkBombPreview: (x: number, y: number, active: boolean) => void;
     onUpdate: () => void;
+    flipPerspective?: boolean; // PvP: Flip 180° for red team
 }
 
-export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation, onUpdate }: GameCanvasProps) {
+export function GameCanvas({ gameStateRef, onResize, onPlayerInput, onInkBombPreview, onUpdate, flipPerspective = false }: GameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const effectsCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Canvas resize handler
+    // Initial setup - Enforce FIXED resolution ... (unchanged logic)
     useEffect(() => {
-        const handleResize = () => {
-            if (containerRef.current && canvasRef.current && effectsCanvasRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                canvasRef.current.width = rect.width;
-                canvasRef.current.height = rect.height;
-                effectsCanvasRef.current.width = rect.width;
-                effectsCanvasRef.current.height = rect.height;
-                onResize(rect.width, rect.height);
-            }
-        };
-
-        handleResize();
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        if (canvasRef.current && effectsCanvasRef.current) {
+            canvasRef.current.width = GAME_WIDTH;
+            canvasRef.current.height = GAME_HEIGHT;
+            effectsCanvasRef.current.width = GAME_WIDTH;
+            effectsCanvasRef.current.height = GAME_HEIGHT;
+            onResize(GAME_WIDTH, GAME_HEIGHT);
+        }
     }, [onResize]);
 
-    // Draw function
+
+    // Draw loop with lerp for smooth movement
     const draw = useCallback(() => {
         const canvas = canvasRef.current;
         const effectsCanvas = effectsCanvasRef.current;
@@ -62,6 +59,19 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
         const ctx = canvas.getContext('2d');
         const effectsCtx = effectsCanvas.getContext('2d');
         if (!ctx || !effectsCtx) return;
+
+        // Use ref for current state to avoid closure staleness
+        const state = gameStateRef.current;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Apply flip perspective if needed (for red team in PvP)
+        ctx.save();
+        if (flipPerspective) {
+            ctx.translate(canvas.width, canvas.height);
+            ctx.rotate(Math.PI);
+        }
 
         const width = canvas.width;
         const height = canvas.height;
@@ -81,12 +91,24 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
         }
 
         // Draw trajectory (player only)
-        if (!state.isPaused && state.gameActive) {
+        if (state.gameActive) {
             drawTrajectory(ctx, state.player, width, height);
         }
 
         // Draw territory batches
         drawTerritoryBatches(ctx, state.territoryBatches);
+
+        // Draw Global Shield Overlay if active
+        if (state.globalShield && state.globalShield.active && state.globalShield.team === 'blue') {
+            drawGlobalShieldOverlay(effectsCtx, width, height);
+        }
+
+        // RED Team Global Shield? (Currently visuals are green for 'active' defense)
+        if (state.globalShield && state.globalShield.active && state.globalShield.team === 'red') {
+            // Maybe add a red tinted overlay for enemy shield?
+            // For now, let's just show the same overlay but maybe rely on the text
+            drawGlobalShieldOverlay(effectsCtx, width, height);
+        }
 
         // Draw Golden Pixel (secondary objective)
         if (state.goldenPixel && state.goldenPixel.active) {
@@ -98,6 +120,11 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
 
         // Draw projectiles
         drawProjectiles(ctx, state.projectiles);
+
+        // Draw inkBomb preview if active
+        if (state.player.weaponMode === 'inkBomb' && state.inkBombPreview) {
+            drawInkBombPreview(ctx, state.inkBombPreview, WEAPON_MODES.inkBomb.paintRadius); // Using the inkBomb paint radius
+        }
 
         // Draw particles
         drawParticles(ctx, state.particles);
@@ -114,26 +141,69 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
         // Draw effects overlay
         effectsCtx.clearRect(0, 0, width, height);
         drawScreenFlash(effectsCtx, state.screenFlash, width, height);
-        if (state.showMeteorIndicator) {
-            drawMeteorWarning(effectsCtx, width, height);
-        }
-        // Draw target marker if active
-        if (state.meteorTarget) {
-            drawTargetMarker(effectsCtx, state.meteorTarget.x, state.meteorTarget.y);
-        }
+
         // Draw frenzy mode overlay
         if (state.player.isFrenzy) {
             drawFrenzyOverlay(effectsCtx, width, height, 1);
         }
-    }, [state]);
+    }, [gameStateRef, flipPerspective]);
 
     // Game loop
+    // Dependencies: only onUpdate and draw (stable). Active state read from Ref? 
+    // Wait, useGameLoop takes `isActive` boolean. This comes from PROPS or REF?
+    // It's safer to pass `isActive` from UI state or read from ref inside loop?
+    // `useGameLoop` starts/stops loop based on `isActive`.
+    // We should pass `uiState.gameActive` or `gameStateRef.current.gameActive`?
+    // Since useGameLoop is a Hook, it needs a reactive value to start/stop.
+    // So we need to pass `isActive` as a prop if we want to stop the loop.
+    // HOWEVER, I didn't add `isActive` to props.
+    // The previous code used `state.gameActive`.
+    // `page.tsx` will pass `uiState.gameActive` which is SYNCED. This is fine.
+
+    // NOTE: This assumes `GameCanvas` receives `uiState`? No, it receives Ref.
+    // But `useGameLoop` needs a boolean.
+    // Let's check `useGameLoop` implementation again. It checks `isActive`.
+    // I should probably pass `isActive` and `isPaused` as props to `GameCanvas` to control the loop.
+    // OR read from Ref inside the loop callback?
+    // Loop callback runs every frame. But `requestAnimationFrame` needs to be started/cancelled.
+    // So I strictly need `isActive` and `isPaused` as reactive props.
+
+    // For now, I will use `gameStateRef.current.gameActive` inside `draw`,
+    // BUT `useGameLoop` hook needs reactive props to start/stop.
+    // `page.tsx` will pass `gameStateRef` AND I should probably pass reactive booleans if I want to stop the loop perfectly.
+    // BUT `GameCanvasProps` signature I defined above only has `gameStateRef`.
+    // I should add `isActive` and `isPaused` to props?
+    // Or I can access `gameStateRef.current.gameActive` inside the generic `onUpdate` callback,
+    // but the `useGameLoop` hook manages the `raf` loop based on the boolean passed to it.
+    // If I pass `gameStateRef.current.gameActive` directly to `useGameLoop`, it will only update on RENDER.
+    // Since `page.tsx` re-renders when `uiState.gameActive` changes (via syncUI), this will work!
+    // So I need to read `gameActive` from the ref during render? No, reading ref during render is bad.
+    // Wait, `page.tsx` will pass `uiState.gameActive`. 
+    // I should add `isActive` and `isPaused` to `GameCanvasProps`.
+
+    // Let's modify the Props to include these for Loop Control.
+
+
+    // ... logic continues ...
+
+    // Wait, if I change the Props, I must update `page.tsx` too.
+    // Better to just accept `gameStateRef` and maybe `isActive`, `isPaused` separate?
+    // Or I just assume the parent component handles the loop logic?
+    // No, `GameCanvas` calls `useGameLoop`.
+
+    // Let's assume for this edit I will read `isActive` from props, which means I need to add them to interface.
+    // Let's add `isActive` and `isPaused`.
+
+    // Recalculating...
+    const state = gameStateRef.current; // access for loop control (reactive update from parent re-render)
+    // Note: Parent re-renders when gameActive changes, so this `state` var works for loop toggle.
+
     useGameLoop(
         useCallback(() => {
             onUpdate();
             draw();
         }, [onUpdate, draw]),
-        state.gameActive && !state.isPaused
+        state.gameActive
     );
 
     // Initial draw for non-active state
@@ -143,24 +213,34 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
         }
     }, [state.gameActive, draw]);
 
-    // Input handlers
+    // Input handlers using REF
     const handleInput = useCallback(
         (clientX: number, clientY: number, isDown: boolean) => {
-            if (!state.gameActive || state.isPaused) return;
+            const currentState = gameStateRef.current;
+            if (!canvasRef.current || !currentState.gameActive) return;
 
             const canvas = canvasRef.current;
-            if (!canvas) return;
-
             const rect = canvas.getBoundingClientRect();
-            const cx = clientX - rect.left;
-            const cy = clientY - rect.top;
 
-            // Prevent shooting into UI areas
-            if (cy < 60 || cy > canvas.height - 60) return;
+            // Handle scale (Visual size vs Internal Fixed Resolution)
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
 
-            const dx = cx - state.player.x;
-            const dy = cy - state.player.y;
-            const dist = Math.hypot(dx, dy);
+            let cx = (clientX - rect.left) * scaleX;
+            let cy = (clientY - rect.top) * scaleY;
+
+            // Flip coordinates if perspective is flipped
+            if (flipPerspective) {
+                cx = canvas.width - cx;
+                cy = canvas.height - cy;
+            }
+
+            // Also clamp to canvas bounds to prevent weird off-screen targeting
+            const clampedCx = Math.max(0, Math.min(canvas.width, cx));
+            const clampedCy = Math.max(0, Math.min(canvas.height, cy));
+
+            const dx = clampedCx - currentState.player.x;
+            const dy = clampedCy - currentState.player.y;
 
             // Calculate angle
             let angle = Math.atan2(dy, dx);
@@ -169,16 +249,98 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
             if (angle > 0) angle = angle > Math.PI / 2 ? -Math.PI + 0.2 : 0.2;
             if (angle < -Math.PI) angle = -Math.PI + 0.2;
 
-            // Check for special tap on cannon to activate shield
-            if (isDown && !state.player.isFiring && dist < 30 && state.player.powerups?.shield && state.player.powerups.shield > 0) {
-                // This is a tap on the cannon, activate shield
-                onShieldActivation();
-                return;
+            let targetPos = undefined;
+
+            // Update inkBomb preview if inkBomb weapon is selected
+            if (currentState.player.weaponMode === 'inkBomb') {
+                const modeConfig = WEAPON_MODES.inkBomb;
+                const inkBombConfig = WEAPON_MODES.inkBomb;
+
+                // SNAP TO GRID CENTER for perfect accuracy
+                const gx = Math.max(0, Math.min(Math.floor(clampedCx / GRID_SIZE), currentState.cols - 1));
+                const gy = Math.max(0, Math.min(Math.floor(clampedCy / GRID_SIZE), currentState.rows - 1));
+                const snappedX = gx * GRID_SIZE + GRID_SIZE / 2;
+                const snappedY = gy * GRID_SIZE + GRID_SIZE / 2;
+
+                // Ballistic Targeting Logic
+                const solution = calculateBallisticVelocity(
+                    currentState.player.x,
+                    currentState.player.y,
+                    snappedX, // Target X (Snapped)
+                    snappedY, // Target Y (Snapped)
+                    modeConfig.speed,
+                    inkBombConfig.gravity
+                );
+
+                if (solution) {
+                    // Reachable!
+                    // Only update preview if no ink bomb is currently in flight
+                    if (!currentState.player.inkBombInFlight) {
+                        onInkBombPreview(snappedX, snappedY, true);
+                    }
+                    targetPos = { x: snappedX, y: snappedY };
+
+                    const launchVy = solution.vy + 4; // visual vy
+                    angle = Math.atan2(launchVy, solution.vx);
+                } else {
+                    onInkBombPreview(0, 0, false);
+                }
+
+            } else {
+                onInkBombPreview(0, 0, false);
             }
 
-            onPlayerInput(angle, isDown, isDown);
+            onPlayerInput(angle, isDown, isDown, targetPos);
         },
-        [state.gameActive, state.isPaused, state.player.x, state.player.y, state.player.isFiring, state.player.powerups?.shield, onPlayerInput, onShieldActivation]
+        [gameStateRef, onPlayerInput, onInkBombPreview, flipPerspective]
+    );
+
+    // Handle pointer movement for ink bomb preview
+    const handlePointerMove = useCallback(
+        (clientX: number, clientY: number) => {
+            const currentState = gameStateRef.current;
+            if (!canvasRef.current || !currentState.gameActive || currentState.player.weaponMode !== 'inkBomb' || currentState.player.inkBombInFlight) return;
+
+            const canvas = canvasRef.current;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let cx = (clientX - rect.left) * scaleX;
+            let cy = (clientY - rect.top) * scaleY;
+
+            // Flip coordinates if perspective is flipped
+            if (flipPerspective) {
+                cx = canvas.width - cx;
+                cy = canvas.height - cy;
+            }
+
+            const clampedCx = Math.max(0, Math.min(canvas.width, cx));
+            const clampedCy = Math.max(0, Math.min(canvas.height, cy));
+
+            const modeConfig = WEAPON_MODES.inkBomb;
+            const inkBombConfig = WEAPON_MODES.inkBomb;
+
+            const gx = Math.max(0, Math.min(Math.floor(clampedCx / GRID_SIZE), currentState.cols - 1));
+            const gy = Math.max(0, Math.min(Math.floor(clampedCy / GRID_SIZE), currentState.rows - 1));
+            const snappedX = gx * GRID_SIZE + GRID_SIZE / 2;
+            const snappedY = gy * GRID_SIZE + GRID_SIZE / 2;
+
+            const solution = calculateBallisticVelocity(
+                currentState.player.x,
+                currentState.player.y,
+                snappedX,
+                snappedY,
+                modeConfig.speed,
+                inkBombConfig.gravity
+            );
+
+            if (solution) {
+                onInkBombPreview(snappedX, snappedY, true);
+            } else {
+                onInkBombPreview(0, 0, false);
+            }
+        },
+        [gameStateRef, onInkBombPreview, flipPerspective]
     );
 
     // Mouse events
@@ -192,29 +354,37 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
 
     const handleMouseMove = useCallback(
         (e: React.MouseEvent) => {
+            const currentState = gameStateRef.current;
+            if (currentState.player.weaponMode === 'inkBomb' && !currentState.player.inkBombInFlight) {
+                handlePointerMove(e.clientX, e.clientY);
+            }
+
             if (e.buttons === 1) {
                 handleInput(e.clientX, e.clientY, true);
-            } else if (state.player.isFiring) {
-                onPlayerInput(state.player.angle, false, false);
+            } else if (currentState.player.isFiring) {
+                onPlayerInput(currentState.player.angle, false, false);
             }
             e.preventDefault();
         },
-        [handleInput, state.player.isFiring, state.player.angle, onPlayerInput]
+        [handleInput, handlePointerMove, onPlayerInput, gameStateRef]
     );
 
     const handleMouseUp = useCallback(
         (e: React.MouseEvent) => {
-            onPlayerInput(state.player.angle, false, false);
+            const currentState = gameStateRef.current;
+            onPlayerInput(currentState.player.angle, false, false);
             e.preventDefault();
         },
-        [state.player.angle, onPlayerInput]
+        [onPlayerInput, gameStateRef]
     );
 
     const handleMouseLeave = useCallback(() => {
-        if (state.player.isFiring) {
-            onPlayerInput(state.player.angle, false, false);
+        const currentState = gameStateRef.current;
+        if (currentState.player.isFiring) {
+            onPlayerInput(currentState.player.angle, false, false);
         }
-    }, [state.player.isFiring, state.player.angle, onPlayerInput]);
+        onInkBombPreview(0, 0, false);
+    }, [onPlayerInput, onInkBombPreview, gameStateRef]);
 
     // Touch events
     const handleTouchStart = useCallback(
@@ -233,27 +403,35 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
             e.preventDefault();
             const touch = e.touches[0];
             if (touch) {
+                const currentState = gameStateRef.current;
+                if (currentState.player.weaponMode === 'inkBomb' && !currentState.player.inkBombInFlight) {
+                    handlePointerMove(touch.clientX, touch.clientY);
+                }
                 handleInput(touch.clientX, touch.clientY, true);
             }
         },
-        [handleInput]
+        [handleInput, handlePointerMove, gameStateRef]
     );
 
     const handleTouchEnd = useCallback(
         (e: React.TouchEvent) => {
             e.preventDefault();
-            onPlayerInput(state.player.angle, false, false);
+            const currentState = gameStateRef.current;
+            onPlayerInput(currentState.player.angle, false, false);
         },
-        [state.player.angle, onPlayerInput]
+        [onPlayerInput, gameStateRef]
     );
 
     return (
         <div
             ref={containerRef}
-            className="relative flex-grow bg-gradient-to-b from-slate-100 to-slate-200 w-full overflow-hidden"
+            className="relative w-full h-full min-h-0 bg-gradient-to-b from-slate-100 to-slate-200 overflow-hidden"
+            style={flipPerspective ? { transform: 'rotate(180deg)' } : undefined}
         >
             <canvas
                 ref={canvasRef}
+                className="w-full h-full block"
+                style={{ touchAction: 'none' }}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -262,9 +440,12 @@ export function GameCanvas({ state, onResize, onPlayerInput, onShieldActivation,
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
-                style={{ touchAction: 'none' }}
             />
-            <canvas ref={effectsCanvasRef} id="effectsOverlay" />
+            <canvas
+                ref={effectsCanvasRef}
+                id="effectsOverlay"
+                className="absolute inset-0 pointer-events-none w-full h-full"
+            />
         </div>
     );
 }

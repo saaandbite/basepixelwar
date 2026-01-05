@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@repo/shared": "workspace:*",
+    "socket.io": "^4.7.4",
     "tigerbeetle-node": "^0.15.3"
   },
   "devDependencies": {

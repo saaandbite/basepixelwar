@@ -4,6 +4,21 @@ import type { Projectile, Particle, Powerup, TerritoryBatch, Cannon, GoldenPixel
 import { GRID_SIZE, COLORS, GOLDEN_PIXEL_SIZE } from './constants';
 import { shadeColor } from './gameLogic';
 
+// Helper to adjust brightness of a hex color
+function adjustBrightness(hex: string, factor: number): string {
+    // Parse hex
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+
+    // Adjust brightness
+    const adjust = (c: number) => Math.min(255, Math.max(0, Math.round(c * (1 + factor))));
+
+    // Convert back to hex
+    const toHex = (c: number) => c.toString(16).padStart(2, '0');
+    return `#${toHex(adjust(r))}${toHex(adjust(g))}${toHex(adjust(b))}`;
+}
+
 // Grid cache for performance optimization
 let gridCacheCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 let gridCacheCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
@@ -110,36 +125,38 @@ function drawGridDirect(
     // Clear cache
     ctx.clearRect(0, 0, cols * GRID_SIZE, rows * GRID_SIZE);
 
-    // Batch draw by color for better performance
-    ctx.fillStyle = COLORS.blue;
-    ctx.beginPath();
+    // Draw cells with per-tile color variation for textured look
     for (let i = 0; i < cols; i++) {
         const column = grid[i];
         if (!column) continue;
         for (let j = 0; j < rows; j++) {
-            if (column[j] === 'blue') {
-                ctx.rect(i * GRID_SIZE, j * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
-            }
+            const color = column[j];
+            const x = i * GRID_SIZE;
+            const y = j * GRID_SIZE;
+
+            // Create subtle color variation based on position (seeded variation)
+            const variation = ((i * 7 + j * 13) % 20 - 10) / 100; // -0.1 to +0.1
+
+            // Base color with variation
+            const baseColor = color === 'blue' ? COLORS.blue : COLORS.red;
+            ctx.fillStyle = adjustBrightness(baseColor, variation);
+            ctx.fillRect(x, y, GRID_SIZE, GRID_SIZE);
+
+            // Subtle inner highlight (top-left)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.fillRect(x, y, GRID_SIZE, 1);
+            ctx.fillRect(x, y, 1, GRID_SIZE);
+
+            // Subtle inner shadow (bottom-right)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            ctx.fillRect(x, y + GRID_SIZE - 1, GRID_SIZE, 1);
+            ctx.fillRect(x + GRID_SIZE - 1, y, 1, GRID_SIZE);
         }
     }
-    ctx.fill();
 
-    ctx.fillStyle = COLORS.red;
-    ctx.beginPath();
-    for (let i = 0; i < cols; i++) {
-        const column = grid[i];
-        if (!column) continue;
-        for (let j = 0; j < rows; j++) {
-            if (column[j] === 'red') {
-                ctx.rect(i * GRID_SIZE, j * GRID_SIZE, GRID_SIZE - 1, GRID_SIZE - 1);
-            }
-        }
-    }
-    ctx.fill();
-
-    // Draw borders between territories
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 1;
+    // Draw subtle borders between territories
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
 
     for (let i = 0; i < cols; i++) {
@@ -229,25 +246,6 @@ export function drawPowerups(ctx: CanvasRenderingContext2D, powerups: Powerup[])
         ctx.lineWidth = 2.5;
 
         switch (pu.type) {
-            case 'burst':
-                // Sparkle/star shape
-                ctx.beginPath();
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i * Math.PI) / 4;
-                    const radius = i % 2 === 0 ? 8 : 4;
-                    const x = Math.cos(angle) * radius;
-                    const y = Math.sin(angle) * radius;
-                    if (i === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-                ctx.closePath();
-                ctx.stroke();
-                ctx.fillStyle = pu.color + '40';
-                ctx.fill();
-                break;
             case 'shield':
                 // Shield shape
                 ctx.beginPath();
@@ -281,60 +279,39 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, projectiles: Proj
         ctx.save();
         ctx.translate(p.x, p.y);
 
-        if (p.isMeteor) {
-            // Meteor with trail
-            ctx.fillStyle = COLORS.meteor;
-            ctx.beginPath();
-            ctx.arc(0, 0, 10, 0, Math.PI * 2);
-            ctx.fill();
+        const isInkBomb = p.type === 'inkBomb' || p.isInkBomb;
+        const isShotgun = p.type === 'shotgun';
 
-            // Glowing edge
-            ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+        // Bullet Color
+        let bulletColor: string = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
+        if (isInkBomb) bulletColor = COLORS.inkBomb;
 
-            // Heat trail
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(-p.vx * 3, -p.vy * 3);
-            ctx.strokeStyle = COLORS.meteorTrail;
-            ctx.lineWidth = 4;
-            ctx.stroke();
+        // Size
+        const size = isInkBomb ? 12 : isShotgun ? 4 : 6;
 
-            // Fire particles
-            for (let i = 0; i < 3; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = Math.random() * 15;
-                const size = 2 + Math.random() * 3;
+        // Glow
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size + 4);
+        gradient.addColorStop(0, bulletColor);
+        gradient.addColorStop(1, `${bulletColor}40`);
 
-                ctx.fillStyle = `rgba(249, 199, 79, ${0.7 - i * 0.2})`;
-                ctx.beginPath();
-                ctx.arc(
-                    -p.vx * i * 0.5 + Math.cos(angle) * dist,
-                    -p.vy * i * 0.5 + Math.sin(angle) * dist,
-                    size,
-                    0,
-                    Math.PI * 2
-                );
-                ctx.fill();
-            }
-        } else {
-            // Bullet with glow
-            const bulletColor = p.team === 'blue' ? COLORS.bulletStrokeBlue : COLORS.bulletStrokeRed;
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
-            gradient.addColorStop(0, bulletColor);
-            gradient.addColorStop(1, `${bulletColor}40`);
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.fill();
 
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(0, 0, 6, 0, Math.PI * 2);
-            ctx.fill();
+        // Core
+        ctx.fillStyle = isInkBomb ? '#000000' : '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
 
-            // Core
+        // Bomb Icon/Detail
+        if (isInkBomb) {
             ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.arc(0, 0, 3, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('💣', 0, 1);
         }
 
         ctx.restore();
@@ -372,96 +349,142 @@ export function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle
     ctx.globalAlpha = 1.0;
 }
 
-// Draw cannon
+// Draw cannon - Ink Dropper/Blob Style
 export function drawCannon(
     ctx: CanvasRenderingContext2D,
     cannon: Cannon,
     color: string,
     isPlayer: boolean
 ): void {
+    const time = Date.now() / 1000;
+
+    // Idle breathing animation
+    const breatheScale = 1 + Math.sin(time * 2.5) * 0.03;
+    const breatheY = Math.sin(time * 2) * 2;
+
     ctx.save();
-    ctx.translate(cannon.x, cannon.y);
+    ctx.translate(cannon.x, cannon.y + breatheY);
+
+    // === SHADOW ===
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.beginPath();
+    ctx.ellipse(0, 12, 22 * breatheScale, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === MAIN BLOB BODY ===
+    ctx.save();
+    ctx.scale(breatheScale, breatheScale);
+
+    // Body gradient (team color)
+    const bodyGradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, 28);
+    bodyGradient.addColorStop(0, shadeColor(color, 40));
+    bodyGradient.addColorStop(0.5, color);
+    bodyGradient.addColorStop(1, shadeColor(color, -30));
+
+    ctx.fillStyle = bodyGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner shine highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(-8, -8, 10, 7, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Secondary small highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.beginPath();
+    ctx.arc(6, -12, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // === NOZZLE/DROPPER TIP ===
+    ctx.save();
     ctx.rotate(cannon.angle);
 
-    // Cannon shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    // Nozzle base (connects to blob)
+    const nozzleGradient = ctx.createLinearGradient(20, 0, 45, 0);
+    nozzleGradient.addColorStop(0, color);
+    nozzleGradient.addColorStop(1, shadeColor(color, -40));
+
+    ctx.fillStyle = nozzleGradient;
     ctx.beginPath();
-    ctx.ellipse(0, 5, 18, 8, 0, 0, Math.PI * 2);
+    ctx.moveTo(18, -10);
+    ctx.lineTo(40, -6);
+    ctx.lineTo(48, 0);
+    ctx.lineTo(40, 6);
+    ctx.lineTo(18, 10);
+    ctx.closePath();
     ctx.fill();
 
-    // Cannon base gradient
-    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 18);
-    gradient.addColorStop(0, '#FFFFFF');
-    gradient.addColorStop(1, '#F1F5F9');
-
-    ctx.fillStyle = gradient;
+    // Nozzle highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.moveTo(20, -8);
+    ctx.lineTo(38, -5);
+    ctx.lineTo(38, -2);
+    ctx.lineTo(20, -4);
+    ctx.closePath();
     ctx.fill();
 
-    // Cannon barrel with gradient
-    const barrelGradient = ctx.createLinearGradient(0, -12, 40, -12);
-    barrelGradient.addColorStop(0, color);
-    barrelGradient.addColorStop(1, shadeColor(color, -20));
-
-    ctx.fillStyle = barrelGradient;
+    // Droplet tip (animated)
+    const dropPulse = 1 + Math.sin(time * 4) * 0.15;
+    ctx.fillStyle = shadeColor(color, 20);
     ctx.beginPath();
-    ctx.roundRect(-5, -12, 45, 24, 8);
+    ctx.arc(48, 0, 5 * dropPulse, 0, Math.PI * 2);
     ctx.fill();
 
-    // Cannon details
-    ctx.fillStyle = '#CBD5E1';
+    // Droplet shine
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.beginPath();
-    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.arc(46, -2, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#94A3B8';
+    ctx.restore();
+
+    // === CENTER DETAIL ===
+    // Inner circle (eye-like detail)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
     ctx.fill();
 
-    // Player indicator
-    if (isPlayer) {
-        ctx.fillStyle = '#60A5FA';
-        ctx.beginPath();
-        ctx.arc(30, 0, 5, 0, Math.PI * 2);
-        ctx.fill();
-    }
+    // Pupil/core
+    ctx.fillStyle = shadeColor(color, -50);
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Powerup indicators for player
+    // Eye shine
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.beginPath();
+    ctx.arc(-2, -2, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === POWERUP INDICATORS ===
     if (isPlayer && cannon.powerups) {
-        const { burstShot, shield } = cannon.powerups;
-        if (burstShot > 0 || shield > 0) {
-            ctx.save();
-            ctx.rotate(-cannon.angle); // Unrotate for proper positioning
+        const { shield } = cannon.powerups;
+        if (shield > 0) {
+            // Shield ring effect
+            ctx.strokeStyle = COLORS.powerup.shield;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, 32, 0, Math.PI * 2);
+            ctx.stroke();
 
-            let indicatorX = 25;
-            if (burstShot > 0) {
-                ctx.fillStyle = COLORS.powerup.burst;
-                ctx.beginPath();
-                ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'white';
-                ctx.font = '8px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(burstShot), indicatorX, -25);
-                indicatorX += 15;
-            }
+            // Shield counter badge
+            ctx.fillStyle = COLORS.powerup.shield;
+            ctx.beginPath();
+            ctx.arc(22, -22, 10, 0, Math.PI * 2);
+            ctx.fill();
 
-            if (shield > 0) {
-                ctx.fillStyle = COLORS.powerup.shield;
-                ctx.beginPath();
-                ctx.arc(indicatorX, -25, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'white';
-                ctx.font = '8px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(shield), indicatorX, -25);
-            }
-
-            ctx.restore();
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(shield), 22, -22);
         }
     }
 
@@ -505,33 +528,6 @@ export function drawTrajectory(
     ctx.setLineDash([5, 5]);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // Show burst shot preview if available
-    if (player.powerups && player.powerups.burstShot > 0) {
-        ctx.save();
-        ctx.translate(player.x, player.y);
-
-        // Main shot
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(player.angle) * 100, Math.sin(player.angle) * 100);
-        ctx.strokeStyle = 'rgba(157, 78, 221, 0.8)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Additional shots
-        const angles = [-0.3, 0.3];
-        angles.forEach((angle) => {
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(player.angle + angle) * 80, Math.sin(player.angle + angle) * 80);
-            ctx.strokeStyle = 'rgba(157, 78, 221, 0.6)';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-        });
-
-        ctx.restore();
-    }
 }
 
 // Draw screen flash effect
@@ -548,43 +544,7 @@ export function drawScreenFlash(
 }
 
 // Draw target marker for meteor
-export function drawTargetMarker(
-    ctx: CanvasRenderingContext2D,
-    targetX: number,
-    targetY: number
-): void {
-    ctx.save();
 
-    // Outer dashed circle
-    ctx.beginPath();
-    ctx.arc(targetX, targetY, 40, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(249, 199, 79, 0.4)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([8, 6]);
-    ctx.stroke();
-
-    // Inner pulsating circle
-    const pulse = 0.5 + 0.3 * Math.sin(Date.now() / 200);
-    ctx.beginPath();
-    ctx.arc(targetX, targetY, 20, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(249, 199, 79, ${0.2 * pulse})`;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-// Draw meteor warning pulse
-export function drawMeteorWarning(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number
-): void {
-    const pulse = 0.05 + Math.sin(Date.now() / 100) * 0.03;
-    ctx.fillStyle = `rgba(249, 199, 79, ${pulse})`;
-    ctx.fillRect(0, 0, width, height);
-}
 
 // Draw Golden Pixel (secondary objective)
 export function drawGoldenPixel(
@@ -683,4 +643,112 @@ export function drawFrenzyOverlay(
     ctx.strokeStyle = `rgba(255, 107, 53, ${0.4 * intensity})`;
     ctx.lineWidth = borderWidth;
     ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
+}
+
+// Draw global territory shield overlay
+export function drawGlobalShieldOverlay(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    // team: 'blue' | 'red' // unused for now but good to keep in API signature? user asked to fix lint.
+): void {
+    const time = Date.now();
+    const pulse = 0.5 + 0.3 * Math.sin(time / 300);
+
+    // Shield color (Green for "Protection")
+    const shieldColor = '#22c55e'; // Green-500
+
+    ctx.save();
+
+    // 1. Draw glowing border
+    ctx.strokeStyle = `rgba(34, 197, 94, ${0.6 * pulse})`;
+    ctx.lineWidth = 6 + 2 * Math.sin(time / 200);
+    ctx.strokeRect(0, 0, width, height);
+
+    // 2. Draw subtle hexagonal grid overlay
+    ctx.globalAlpha = 0.05 * pulse;
+    ctx.strokeStyle = shieldColor;
+    ctx.lineWidth = 1;
+
+    const hexSize = 40;
+    const hexHeight = hexSize * Math.sqrt(3);
+    const hexWidth = hexSize * 2;
+    const xStep = hexWidth * 0.75;
+    const yStep = hexHeight;
+
+    // Simple grid pattern
+    ctx.beginPath();
+    for (let x = 0; x < width + hexSize; x += xStep) {
+        for (let y = 0; y < height + hexSize; y += yStep) {
+            const shiftY = (Math.floor(x / xStep) % 2) * (hexHeight / 2);
+            ctx.moveTo(x + hexSize * Math.cos(0), y + shiftY + hexSize * Math.sin(0));
+            for (let i = 1; i <= 6; i++) {
+                ctx.lineTo(x + hexSize * Math.cos(i * Math.PI / 3), y + shiftY + hexSize * Math.sin(i * Math.PI / 3));
+            }
+        }
+    }
+    ctx.stroke();
+
+    // 3. Status Text
+    ctx.fillStyle = shieldColor;
+    ctx.globalAlpha = 0.8 * pulse;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('TERRITORY PROTECTION ACTIVE', width / 2, 20);
+
+    ctx.restore();
+}
+
+// Draw inkBomb explosion preview
+export function drawInkBombPreview(ctx: CanvasRenderingContext2D, preview: { x: number; y: number; active: boolean } | undefined, paintRadius: number): void {
+    if (!preview || !preview.active) return;
+
+    ctx.save();
+
+    // Create a more visible preview with multiple visual elements
+    const centerX = preview.x;
+    const centerY = preview.y;
+    const radius = paintRadius * GRID_SIZE;
+
+    // Draw outer glow effect
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 10);
+    gradient.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+    gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius + 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw main dashed circle
+    ctx.strokeStyle = '#FFD700'; // Yellow color
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 6]); // More visible dashed pattern
+
+    // Draw the circle at the preview position with the explosion radius
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Draw inner targeting crosshair
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+
+    // Horizontal line
+    ctx.beginPath();
+    ctx.moveTo(centerX - 15, centerY);
+    ctx.lineTo(centerX + 15, centerY);
+    ctx.stroke();
+
+    // Vertical line
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY - 15);
+    ctx.lineTo(centerX, centerY + 15);
+    ctx.stroke();
+
+    // Reset line dash
+    ctx.setLineDash([]);
+
+    ctx.restore();
 }

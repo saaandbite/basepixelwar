@@ -2,15 +2,14 @@
 
 // Chroma Duel Game Page
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useAudio } from './hooks/useAudio';
-import { GRID_SIZE } from './lib/constants';
-import { calculateScore } from './lib/gameLogic';
+import { GAME_WIDTH, GAME_HEIGHT } from './lib/constants';
+
 import { GameCanvas } from './components/GameCanvas';
-import { GameHUD } from './components/GameHUD';
+import { GameNavbar } from './components/GameNavbar';
 import { GameInstructions } from './components/GameInstructions';
-import { PauseOverlay } from './components/PauseOverlay';
 import { GameOverModal } from './components/GameOverModal';
 import { PowerupIndicator } from './components/PowerupIndicator';
 import { PowerupEffect } from './components/PowerupEffect';
@@ -18,39 +17,69 @@ import { ComboEffect } from './components/ComboEffect';
 import { InkBar } from './components/InkBar';
 import { WeaponSelector } from './components/WeaponSelector';
 import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
-import type { WeaponMode } from './types';
+import { PvPGamePage } from './PvPGamePage';
+
 import './game.css';
 
+// Wrapper component to decide between PvP and AI mode
 export default function GamePage() {
+    const [isPvP, setIsPvP] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        const pvpMode = sessionStorage.getItem('pvp_mode') === 'true';
+        const roomId = sessionStorage.getItem('pvp_room_id');
+
+        // Strict check: Must have mode AND room ID to be in PvP
+        if (pvpMode && roomId) {
+            setIsPvP(true);
+        } else {
+            // Default to AI and clean up potential stale state
+            setIsPvP(false);
+            sessionStorage.removeItem('pvp_mode');
+            sessionStorage.removeItem('pvp_room_id');
+            sessionStorage.removeItem('pvp_team');
+        }
+    }, []);
+
+    if (!mounted) {
+        return <div className="game-container flex items-center justify-center h-screen">Loading...</div>;
+    }
+
+    if (isPvP) {
+        return <PvPGamePage />;
+    }
+
+    return <AIGamePage />;
+}
+
+// AI Game Page (original single-player vs AI)
+function AIGamePage() {
     const {
-        state,
+        gameStateRef, // Mutable Ref 
+        uiState,      // React State (Synced)
         startGame,
         resetGame,
-        setCanvasSize,
-        togglePause,
-        toggleSound,
+
         setPlayerAngle,
         setPlayerFiring,
         setWeaponMode,
+        setInkBombPreview,
         updateGame,
         timerTick,
-        showMeteorWarning,
-        launchMeteor,
-        activateShield,
+
     } = useGameState();
 
     const { initAudio, playSound, setSoundOn } = useAudio();
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const canvasSizeRef = useRef({ width: 400, height: 700 });
 
     const [isMounted, setIsMounted] = useState(false);
+    // showCombo is now derived in uiState? No, I added it to uiState interface but didn't fully implement logic to override local state? 
+    // Actually simpler to keep local for animation control if uiState update isn't 60fps.
+    // However, the `comboStreak` comes from `uiState`.
     const [showCombo, setShowCombo] = useState(false);
-    const [footerStatus, setFooterStatus] = useState<{ name: string; icon: string; color: string } | null>(null);
-    const [footerTimeout, setFooterTimeout] = useState<NodeJS.Timeout | null>(null);
-    const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'burst' | 'shield' | 'meteor'; x: number; y: number } | null>(null);
-
-    // Refs to track meteor triggers to prevent duplicates
-    const triggeredMeteorsRef = useRef<Set<number>>(new Set());
+    const [powerupEffect, setPowerupEffect] = useState<{ show: boolean; type: 'shield'; x: number; y: number } | null>(null);
 
     // Initial mount hydration safety
     useEffect(() => {
@@ -59,44 +88,13 @@ export default function GamePage() {
 
     // Audio sync
     useEffect(() => {
-        setSoundOn(state.isSoundOn);
-    }, [state.isSoundOn, setSoundOn]);
-
-    const showFooterStatus = useCallback((name: string, icon: string, color: string) => {
-        if (footerTimeout) clearTimeout(footerTimeout);
-        setFooterStatus({ name, icon, color });
-        const timeout = setTimeout(() => setFooterStatus(null), 3000);
-        setFooterTimeout(timeout);
-    }, [footerTimeout]);
-
-    // Meteor trigger
-    const triggerMeteor = useCallback(() => {
-        const { cols, rows } = state;
-
-        // Randomly target either player area or enemy area
-        const isTargetingEnemy = Math.random() < 0.5;
-        let tx: number, ty: number;
-
-        if (isTargetingEnemy) {
-            // Target enemy area (top half)
-            tx = Math.random() * (cols * GRID_SIZE);
-            ty = Math.random() * (rows * GRID_SIZE * 0.4); // Top 40%
-        } else {
-            // Target player area (bottom half)
-            tx = Math.random() * (cols * GRID_SIZE);
-            ty = (rows * GRID_SIZE) - Math.random() * (rows * GRID_SIZE * 0.4); // Bottom 40%
-        }
-
-        showMeteorWarning(tx, ty);
-
-        setTimeout(() => {
-            launchMeteor(tx, ty);
-        }, 2500);
-    }, [showMeteorWarning, launchMeteor]); // Removed state from dependency to prevent infinite loop
+        setSoundOn(uiState.isSoundOn);
+    }, [uiState.isSoundOn, setSoundOn]);
 
     // Timer
+    const { gameActive } = uiState;
     useEffect(() => {
-        if (state.gameActive && !state.isPaused) {
+        if (gameActive) {
             timerRef.current = setInterval(() => {
                 timerTick(playSound);
             }, 1000);
@@ -108,138 +106,89 @@ export default function GamePage() {
                 timerRef.current = null;
             }
         };
-    }, [state.gameActive, state.isPaused, timerTick, playSound]);
-
-    // Separate effect for meteor triggers to avoid timer recreation
-    useEffect(() => {
-        // Check for meteor triggers based on current timeLeft
-        if (state.gameActive && !state.isPaused && [60, 40, 20].includes(state.timeLeft)) {
-            // Only trigger if we haven't already triggered for this time
-            if (!triggeredMeteorsRef.current.has(state.timeLeft)) {
-                triggeredMeteorsRef.current.add(state.timeLeft);
-                triggerMeteor();
-            }
-        }
-    }, [state.timeLeft, state.gameActive, state.isPaused, triggerMeteor]);
+    }, [gameActive, timerTick, playSound]);
 
     // Combo display
     useEffect(() => {
-        if (state.comboStreak >= 2) {
+        if (uiState.comboStreak >= 2) {
             setShowCombo(true);
-            if (state.comboStreak > 2) {
+            if (uiState.comboStreak > 2) {
                 playSound('combo');
             }
             const timeout = setTimeout(() => setShowCombo(false), 1500);
             return () => clearTimeout(timeout);
         }
-    }, [state.comboStreak, playSound]);
+    }, [uiState.comboStreak, playSound]);
 
-    // Track powerup collection for footer
-    const prevPowerupsRef = useRef(state.player.powerups);
+    // Track powerup collection for effect
+    const prevPowerupsRef = useRef(uiState.player.powerups);
     useEffect(() => {
         const prev = prevPowerupsRef.current;
-        const curr = state.player.powerups;
+        const curr = uiState.player.powerups;
 
         if (curr && prev) {
-            if (curr.burstShot > (prev.burstShot || 0)) {
-                showFooterStatus('BURST SHOT', 'auto_awesome', 'text-purple-500');
-                // Show powerup effect
-                setPowerupEffect({ show: true, type: 'burst', x: state.player.x, y: state.player.y });
-                setTimeout(() => setPowerupEffect(null), 1000);
-            } else if (curr.shield > (prev.shield || 0)) {
-                showFooterStatus('SHIELD', 'shield', 'text-green-500');
-                // Show powerup effect
-                setPowerupEffect({ show: true, type: 'shield', x: state.player.x, y: state.player.y });
+            if (curr.shield > (prev.shield || 0)) {
+                // Show powerup effect - Read position from REF for accuracy
+                const playerPos = gameStateRef.current.player;
+                setPowerupEffect({ show: true, type: 'shield', x: playerPos.x, y: playerPos.y });
                 setTimeout(() => setPowerupEffect(null), 1000);
             }
         }
 
         prevPowerupsRef.current = curr;
-    }, [state.player.powerups, state.player.x, state.player.y, showFooterStatus]);
+    }, [uiState.player.powerups, gameStateRef]); // Removed player.x/y dependency to avoid re-running on move
 
     // Handlers
     const handleStart = useCallback(() => {
         initAudio();
-        // Reset the triggered meteors when starting a new game
-        triggeredMeteorsRef.current.clear();
-        resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
+        resetGame(GAME_WIDTH, GAME_HEIGHT);
         startGame(playSound);
     }, [initAudio, resetGame, startGame, playSound]);
 
-    const handleRestart = useCallback(() => {
-        togglePause();
-        setTimeout(() => {
-            // Reset the triggered meteors when restarting the game
-            triggeredMeteorsRef.current.clear();
-            resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
-            startGame(playSound);
-        }, 100);
-    }, [togglePause, resetGame, startGame, playSound]);
-
     const handlePlayAgain = useCallback(() => {
-        // Reset the triggered meteors when playing again
-        triggeredMeteorsRef.current.clear();
-        resetGame(canvasSizeRef.current.width, canvasSizeRef.current.height);
+        resetGame(GAME_WIDTH, GAME_HEIGHT);
         startGame(playSound);
     }, [resetGame, startGame, playSound]);
 
     const handleResize = useCallback(
-        (width: number, height: number) => {
-            // Avoid extreme sensitivity
-            if (Math.abs(canvasSizeRef.current.width - width) < 2 && Math.abs(canvasSizeRef.current.height - height) < 2) return;
-
-            canvasSizeRef.current = { width, height };
-            setCanvasSize(width, height);
+        () => {
+            // No-op for now as we enforce fixed size
         },
-        [setCanvasSize]
+        []
     );
 
     const handlePlayerInput = useCallback(
-        (angle: number, isFiring: boolean) => {
-            setPlayerAngle(angle);
+        (angle: number, isFiring: boolean, _isDown: boolean, targetPos?: { x: number; y: number }) => {
+            setPlayerAngle(angle, targetPos);
             setPlayerFiring(isFiring);
         },
         [setPlayerAngle, setPlayerFiring]
     );
 
-    // Special handler for shield activation
-    const handleShieldActivation = useCallback(() => {
-        if (state.player.powerups?.shield && state.player.powerups.shield > 0) {
-            activateShield(playSound);
-        }
-    }, [state.player.powerups?.shield, activateShield, playSound]);
-
     const handleUpdate = useCallback(() => {
         updateGame(playSound);
     }, [updateGame, playSound]);
 
-    const handlePause = useCallback(() => {
-        if (state.gameActive && state.gameStarted) {
-            togglePause();
-        }
-    }, [state.gameActive, state.gameStarted, togglePause]);
 
-    const handleToggleSound = useCallback(() => {
-        toggleSound();
-    }, [toggleSound]);
 
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (!state.gameActive || state.isPaused) return;
+            if (!uiState.gameActive) return;
 
             // Weapon switching with number keys
             switch (e.key) {
+
                 case '1':
                     setWeaponMode('machineGun');
                     break;
                 case '2':
-                    if (state.player.isFrenzy || state.player.ink >= 5) {
+                    if (uiState.player.isFrenzy || uiState.player.ink >= 5) {
                         setWeaponMode('shotgun');
                     }
                     break;
                 case '3':
-                    if (state.player.isFrenzy || state.player.ink >= 20) {
+                    if (uiState.player.isFrenzy || uiState.player.ink >= 20) {
                         setWeaponMode('inkBomb');
                     }
                     break;
@@ -248,132 +197,124 @@ export default function GamePage() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [state.gameActive, state.isPaused, state.player.ink, state.player.isFrenzy, setWeaponMode]);
+    }, [uiState.gameActive, uiState.player.ink, uiState.player.isFrenzy, setWeaponMode]);
 
-    const score = useMemo(
-        () => calculateScore(state.grid, state.cols, state.rows),
-        [state.grid, state.cols, state.rows]
-    );
+    // Score from UI State (Synced periodically)
+    const score = uiState.score;
 
     // Is game over?
-    const isGameOver = state.gameStarted && !state.gameActive && state.timeLeft <= 0;
+    const isGameOver = uiState.gameStarted && !uiState.gameActive && uiState.timeLeft <= 0;
+
+    // Should show control panel? Always show it so it's visible under blur
+    const showControlPanel = isMounted;
 
     return (
-        <div className="h-screen flex flex-col items-center justify-center text-text-main font-sans">
-            <main className="relative w-full max-w-[420px] h-[95vh] max-h-[880px] bg-gradient-to-b from-white/95 to-blue-50 rounded-2xl shadow-game border-[6px] border-white/90 flex flex-col overflow-hidden ring-1 ring-slate-200/80">
+        <div className="h-screen w-full bg-slate-100 overflow-hidden flex flex-col items-center justify-center p-2">
+            {/* Unified Game Card - "One Body" */}
+            <div className="relative flex flex-col w-full max-w-[420px] bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-slate-900/5 h-auto max-h-full">
+
                 {isMounted ? (
                     <>
-                        {/* HUD */}
-                        <GameHUD
-                            scoreBlue={score.blue}
-                            scoreRed={score.red}
-                            timeLeft={state.timeLeft}
-                            isSoundOn={state.isSoundOn}
-                            onPause={handlePause}
-                            onToggleSound={handleToggleSound}
-                            comboStreak={state.comboStreak}
-                            showCombo={showCombo}
-                        />
+                        {/* 1. Navbar (Top of Card) */}
+                        <div className="shrink-0 relative">
+                            <GameNavbar
+                                scoreBlue={score.blue}
+                                scoreRed={score.red}
+                                timeLeft={uiState.timeLeft}
+                                goldenPixel={uiState.goldenPixel}
+                                lastGoldenPixelSpawn={uiState.lastGoldenPixelSpawn}
+                                isFrenzy={uiState.player.isFrenzy}
+                                frenzyEndTime={uiState.player.frenzyEndTime}
+                            />
+                        </div>
 
-                        {/* Game Canvas */}
-                        <GameCanvas
-                            state={state}
-                            onResize={handleResize}
-                            onPlayerInput={handlePlayerInput}
-                            onShieldActivation={handleShieldActivation}
-                            onUpdate={handleUpdate}
-                        />
+                        {/* 2. Game Canvas (Middle of Card) */}
+                        <div className="relative w-full flex-1 min-h-0">
+                            {/* Wrapper to hold the canvas and overlays */}
+                            <GameCanvas
+                                gameStateRef={gameStateRef}
+                                onResize={handleResize}
+                                onPlayerInput={handlePlayerInput}
+                                onInkBombPreview={setInkBombPreview}
+                                onUpdate={handleUpdate}
+                            />
 
-                        {/* Ink Economy UI - Only show when game is active */}
-                        {state.gameStarted && state.gameActive && (
-                            <>
-                                {/* Ink Bar */}
-                                <div className="absolute bottom-24 left-0 right-0 px-3 z-20 pointer-events-none">
-                                    <InkBar
-                                        ink={state.player.ink}
-                                        maxInk={state.player.maxInk}
-                                        isFrenzy={state.player.isFrenzy}
-                                        frenzyEndTime={state.player.frenzyEndTime}
+                            {/* Golden Timer Overlay */}
+                            {uiState.gameActive && (
+                                <div className="absolute top-2 right-2 z-20 pointer-events-none">
+                                    <GoldenPixelIndicator
+                                        goldenPixel={uiState.goldenPixel}
+                                        timeLeft={uiState.timeLeft}
+                                        lastGoldenPixelSpawn={uiState.lastGoldenPixelSpawn}
+                                        isFrenzy={uiState.player.isFrenzy}
+                                        frenzyEndTime={uiState.player.frenzyEndTime}
                                     />
                                 </div>
+                            )}
 
-                                {/* Weapon Selector */}
-                                <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-20">
+                            {/* Effects Layer */}
+                            <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+                                <ComboEffect show={showCombo} comboStreak={uiState.comboStreak} />
+
+                                {powerupEffect && (
+                                    <PowerupEffect
+                                        show={powerupEffect.show}
+                                        type={powerupEffect.type}
+                                        x={powerupEffect.x}
+                                        y={powerupEffect.y}
+                                    />
+                                )}
+                            </div>
+
+                            <PowerupIndicator
+                                shield={uiState.player.powerups?.shield || 0}
+                            />
+                        </div>
+
+                        {/* 3. Control Panel (Bottom of Card) - No gaps */}
+                        {showControlPanel && (
+                            <div className="shrink-0 bg-white border-t border-slate-100">
+                                <div className="px-3 py-3 flex flex-col gap-2">
+                                    <InkBar
+                                        ink={uiState.player.ink}
+                                        maxInk={uiState.player.maxInk}
+                                        isFrenzy={uiState.player.isFrenzy}
+                                        frenzyEndTime={uiState.player.frenzyEndTime}
+                                    />
+
                                     <WeaponSelector
-                                        currentMode={state.player.weaponMode}
-                                        ink={state.player.ink}
-                                        isFrenzy={state.player.isFrenzy}
+                                        currentMode={uiState.player.weaponMode}
+                                        ink={uiState.player.ink}
+                                        isFrenzy={uiState.player.isFrenzy}
                                         onSelectMode={setWeaponMode}
                                     />
                                 </div>
-
-                                {/* Golden Pixel Indicator */}
-                                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20">
-                                    <GoldenPixelIndicator
-                                        goldenPixel={state.goldenPixel}
-                                        timeLeft={state.timeLeft}
-                                        lastGoldenPixelSpawn={state.lastGoldenPixelSpawn}
-                                        isFrenzy={state.player.isFrenzy}
-                                        frenzyEndTime={state.player.frenzyEndTime}
-                                    />
-                                </div>
-                            </>
+                            </div>
                         )}
 
-                        {/* Combo Effect */}
-                        <ComboEffect show={showCombo} comboStreak={state.comboStreak} />
-
-                        {/* Powerup Effect */}
-                        {powerupEffect && (
-                            <PowerupEffect
-                                show={powerupEffect.show}
-                                type={powerupEffect.type}
-                                x={powerupEffect.x}
-                                y={powerupEffect.y}
-                            />
-                        )}
-
-                        {/* Powerup Indicator & Footer */}
-                        <PowerupIndicator
-                            burstShot={state.player.powerups?.burstShot || 0}
-                            shield={state.player.powerups?.shield || 0}
-                            showMeteorWarning={state.showMeteorIndicator}
-                            footerStatus={footerStatus}
-                        />
-
-                        {/* Overlays */}
-                        {!state.gameStarted && <GameInstructions onStart={handleStart} />}
-
-                        {state.isPaused && (
-                            <PauseOverlay onResume={togglePause} onRestart={handleRestart} />
+                        {/* Global Overlays (Cover entire Card) */}
+                        {!uiState.gameStarted && (
+                            <div className="absolute inset-0 z-[100]">
+                                <GameInstructions onStart={handleStart} />
+                            </div>
                         )}
 
                         {isGameOver && (
-                            <GameOverModal
-                                blueScore={score.blue}
-                                maxCombo={state.maxCombo}
-                                powerupsCollected={state.totalPowerupsCollected}
-                                onPlayAgain={handlePlayAgain}
-                            />
+                            <div className="absolute inset-0 z-[100]">
+                                <GameOverModal
+                                    blueScore={score.blue}
+                                    maxCombo={uiState.maxCombo}
+                                    powerupsCollected={uiState.totalPowerupsCollected}
+                                    onPlayAgain={handlePlayAgain}
+                                />
+                            </div>
                         )}
                     </>
                 ) : (
-                    <>
-                        {/* Static Skeleton for LCP & FCP */}
-                        <div className="w-full h-16 p-3 bg-white/95 border-b border-slate-100 flex justify-between items-center shrink-0">
-                            <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
-                            <div className="flex-1 max-w-24 h-8 bg-slate-100/50 rounded-lg mx-auto"></div>
-                            <div className="w-11 h-11 bg-slate-50/80 rounded-xl"></div>
-                        </div>
-                        <div className="flex-grow bg-slate-100/30"></div>
-                        {/* SSR the instructions since they are the LCP candidate */}
-                        <div className="absolute inset-0 z-50 overflow-hidden pointer-events-none">
-                            <GameInstructions onStart={handleStart} />
-                        </div>
-                        <footer className="h-14 bg-white/95 border-t border-slate-100/80"></footer>
-                    </>
+                    <div className="w-full h-96 flex items-center justify-center text-slate-400">Loading...</div>
                 )}
-            </main>
+            </div>
         </div>
     );
 }
+
