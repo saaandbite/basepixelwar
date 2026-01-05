@@ -76,3 +76,4 @@ node_modules/
 vendor/
 
 # File yang
+pnpm-lock.yaml
