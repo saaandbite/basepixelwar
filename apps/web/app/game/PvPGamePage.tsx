@@ -278,15 +278,17 @@ export function PvPGamePage() {
                     )}
                 </div>
 
-                {/* Controls - Fixed at bottom */}
-                <div className="shrink-0 z-20">
-                    <PvPGameControls
-                        weaponMode={weaponMode}
-                        setWeaponMode={setWeaponMode}
-                        inkLevel={myInk}
-                        myTeam={pvp.myTeam || 'blue'}
-                    />
-                </div>
+                {/* Controls - Fixed at bottom (hidden when game over) */}
+                {!pvp.gameOverResult && (
+                    <div className="shrink-0 z-20">
+                        <PvPGameControls
+                            weaponMode={weaponMode}
+                            setWeaponMode={setWeaponMode}
+                            inkLevel={myInk}
+                            myTeam={pvp.myTeam || 'blue'}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

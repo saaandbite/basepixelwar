@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, Flag, Home, Target, Swords, Ban } from 'lucide-react';
+import { Trophy, Flag, Home, Target, Swords, Ban, Coins } from 'lucide-react';
 
 interface PvPGameOverModalProps {
     myTeam: 'blue' | 'red';
@@ -61,6 +61,7 @@ export function PvPGameOverModal({
     const isDraw = myScore === enemyScore;
 
     const [isVisible, setIsVisible] = useState(false);
+    const [claimed, setClaimed] = useState(false);
 
     useEffect(() => {
         setIsVisible(true);
@@ -200,6 +201,53 @@ export function PvPGameOverModal({
                 >
                     {theme.badge}
                 </div>
+
+                {/* Claim Reward Section (Winner Only) */}
+                {isWinner && (
+                    <div className="mb-4">
+                        {!claimed ? (
+                            <button
+                                onClick={() => setClaimed(true)}
+                                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                            >
+                                <Coins size={18} className="group-hover:rotate-12 transition-transform" />
+                                <span>CLAIM REWARD</span>
+                            </button>
+                        ) : (
+                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-4 animate-fade-in-up">
+                                {/* Header */}
+                                <div className="flex items-center justify-center gap-2 mb-3">
+                                    <div className="p-1.5 bg-emerald-100 rounded-full">
+                                        <Coins size={16} className="text-emerald-600" />
+                                    </div>
+                                    <span className="font-bold text-emerald-700 text-sm tracking-wide">REWARD CLAIMED!</span>
+                                </div>
+
+                                {/* Breakdown */}
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Total Pool</span>
+                                        <span className="font-semibold text-slate-700">0.002 ETH</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Platform Fee (1%)</span>
+                                        <span className="font-semibold text-red-500">-0.00002 ETH</span>
+                                    </div>
+                                    <div className="border-t border-emerald-200 my-2"></div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold text-emerald-700">Your Reward</span>
+                                        <span className="font-black text-emerald-600 text-lg">0.00198 ETH</span>
+                                    </div>
+                                </div>
+
+                                {/* Success indicator */}
+                                <div className="mt-3 text-center">
+                                    <span className="text-xs text-emerald-600 font-medium">✓ Sent to your wallet</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Exit Button */}
                 <button
