@@ -6,8 +6,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMultiplayer } from '../game/hooks/useMultiplayer';
 import { useWallet, formatAddress, isCorrectChain } from '../contexts/WalletContext';
-import { useGameVault, GameMode } from '../hooks/useGameVault';
-import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle } from 'lucide-react';
+import { useGameVault } from '../hooks/useGameVault';
+import { useENSName } from '../hooks/useENSName';
+import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check } from 'lucide-react';
 import '../game/game.css';
 
 export default function RoomPage() {
@@ -15,7 +16,6 @@ export default function RoomPage() {
     const {
         connectionStatus,
         matchmakingStatus,
-        playerId,
         opponent,
         queuePosition,
         countdown,
@@ -42,16 +42,31 @@ export default function RoomPage() {
         switchToBase,
     } = useWallet();
 
+    // ENS Name resolution
+    const { ensName, isLoading: isLoadingENS } = useENSName(walletAddress);
+
     // Game vault for transactions
     const {
         isLoading: isTransactionLoading,
         error: transactionError,
-        createGame,
         getBidAmount,
     } = useGameVault();
 
-    const [playerName, setPlayerName] = useState('');
     const isOnCorrectChain = isCorrectChain(chainId);
+
+    // Player name state - priority: custom > ENS > wallet address
+    const [customName, setCustomName] = useState('');
+    const [isEditingName, setIsEditingName] = useState(false);
+
+    // Determine display name
+    const getDisplayName = () => {
+        if (customName.trim()) return customName.trim();
+        if (ensName) return ensName;
+        if (walletAddress) return formatAddress(walletAddress);
+        return 'Unknown Player';
+    };
+
+    const displayName = getDisplayName();
 
     // Auto-connect to server on mount
     useEffect(() => {
@@ -72,13 +87,14 @@ export default function RoomPage() {
             }
             sessionStorage.setItem('pvp_team', myTeam || 'blue');
             sessionStorage.setItem('pvp_mode', 'true');
-            // Store wallet address for in-game transactions
+            // Store player name and wallet address for in-game display
+            sessionStorage.setItem('player_name', displayName);
             if (walletAddress) {
                 sessionStorage.setItem('wallet_address', walletAddress);
             }
             router.push('/game');
         }
-    }, [isPlaying, myTeam, router, room, walletAddress]);
+    }, [isPlaying, myTeam, router, room, walletAddress, displayName]);
 
     // Auto ready when match found
     useEffect(() => {
@@ -98,23 +114,19 @@ export default function RoomPage() {
             return;
         }
 
-        if (playerName.trim()) {
-            sessionStorage.setItem('player_name', playerName);
-        }
+        // Store player name for game
+        sessionStorage.setItem('player_name', displayName);
 
         // Store wallet address for game
         if (walletAddress) {
             sessionStorage.setItem('wallet_address', walletAddress);
         }
 
-        // TODO: Create on-chain game when smart contract is deployed
-        // try {
-        //     await createGame(GameMode.OneVsOne);
-        // } catch (err) {
-        //     console.error('Failed to create on-chain game:', err);
-        // }
-
         joinQueue();
+    };
+
+    const handleSaveName = () => {
+        setIsEditingName(false);
     };
 
     const error = multiplayerError || walletError || transactionError;
@@ -201,16 +213,65 @@ export default function RoomPage() {
                                 </div>
                             )}
 
-                            <div className="mb-4">
-                                <label className="block text-purple-300 text-sm mb-1">Your Name (optional)</label>
-                                <input
-                                    type="text"
-                                    value={playerName}
-                                    onChange={(e) => setPlayerName(e.target.value)}
-                                    placeholder={`Player_${playerId?.substring(0, 6) || '???'}`}
-                                    className="w-full bg-purple-800/50 border border-purple-700 rounded-lg px-4 py-2 text-white placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm transition-all"
-                                />
-                            </div>
+                            {/* Player Name Section */}
+                            {isWalletConnected && walletAddress && (
+                                <div className="mb-4 bg-purple-800/30 border border-purple-600/50 rounded-lg p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-purple-300 text-xs">Playing as</label>
+                                        {!isEditingName && (
+                                            <button
+                                                onClick={() => setIsEditingName(true)}
+                                                className="text-purple-400 hover:text-purple-300 transition-colors"
+                                                title="Edit name"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {isEditingName ? (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={customName}
+                                                onChange={(e) => setCustomName(e.target.value)}
+                                                placeholder={ensName || formatAddress(walletAddress)}
+                                                className="flex-1 bg-purple-900/50 border border-purple-600 rounded-lg px-3 py-2 text-white placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={handleSaveName}
+                                                className="p-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white transition-colors"
+                                            >
+                                                <Check size={16} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                                                {displayName.slice(0, 2).toUpperCase()}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-white font-semibold">{displayName}</p>
+                                                <p className="text-purple-400 text-xs">
+                                                    {isLoadingENS ? (
+                                                        <span className="flex items-center gap-1">
+                                                            <Loader2 className="animate-spin" size={10} />
+                                                            Checking ENS...
+                                                        </span>
+                                                    ) : ensName ? (
+                                                        `ENS: ${ensName}`
+                                                    ) : customName ? (
+                                                        `Wallet: ${formatAddress(walletAddress)}`
+                                                    ) : (
+                                                        'MetaMask Wallet'
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <button
                                 onClick={handleJoinQueue}
@@ -270,11 +331,9 @@ export default function RoomPage() {
                             <div className="text-center">
                                 <p className="text-white font-medium text-lg">Finding Opponent...</p>
                                 <p className="text-purple-300 text-sm mt-1">Queue Position: #{queuePosition}</p>
-                                {walletAddress && (
-                                    <p className="text-emerald-400 text-xs mt-2">
-                                        Wallet: {formatAddress(walletAddress)}
-                                    </p>
-                                )}
+                                <p className="text-emerald-400 text-xs mt-2">
+                                    Playing as: {displayName}
+                                </p>
                             </div>
                             <button
                                 onClick={leaveQueue}
@@ -302,14 +361,14 @@ export default function RoomPage() {
                             <div className="flex items-center gap-6 mt-4 opacity-80">
                                 <div className="flex flex-col items-center gap-2">
                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-blue-500' : 'bg-red-500'} text-white`}>
-                                        {myTeam === 'blue' ? 'YOU' : 'VS'}
+                                        {displayName.slice(0, 2).toUpperCase()}
                                     </div>
-                                    <span className="text-xs text-purple-300">You</span>
+                                    <span className="text-xs text-purple-300">{displayName}</span>
                                 </div>
                                 <Swords size={24} className="text-purple-400" />
                                 <div className="flex flex-col items-center gap-2">
                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-red-500' : 'bg-blue-500'} text-white`}>
-                                        {myTeam === 'blue' ? 'VS' : 'YOU'}
+                                        {opponent?.name?.slice(0, 2).toUpperCase() || 'VS'}
                                     </div>
                                     <span className="text-xs text-purple-300">{opponent?.name}</span>
                                 </div>
