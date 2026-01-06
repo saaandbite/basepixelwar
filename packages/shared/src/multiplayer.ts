@@ -103,6 +103,13 @@ export interface SyncedPlayerState {
     weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
     frenzyEndTime?: number;
     isFrenzy?: boolean;
+    hasShield?: boolean;
+    // Per-Weapon Usage System
+    weaponStates: Record<'machineGun' | 'shotgun' | 'inkBomb', {
+        usage: number;
+        isOverheated: boolean;
+        cooldownEndTime: number;
+    }>;
 }
 
 // Particle for visual effects

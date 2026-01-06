@@ -1,44 +1,26 @@
-import { Droplets, Flame, Bomb } from 'lucide-react';
+import { WeaponSelector } from './WeaponSelector';
+import { Droplets } from 'lucide-react';
 
 interface PvPGameControlsProps {
     weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
     setWeaponMode: (mode: 'machineGun' | 'shotgun' | 'inkBomb') => void;
     inkLevel: number; // 0-100
     myTeam: 'blue' | 'red';
+    weaponStates?: Record<'machineGun' | 'shotgun' | 'inkBomb', {
+        usage: number;
+        isOverheated: boolean;
+        cooldownEndTime: number;
+    }>;
+    isFrenzy?: boolean;
 }
-
-const WEAPONS = [
-    {
-        id: 'machineGun',
-        icon: Droplets,
-        cost: 1,
-        color: 'text-blue-400',
-        bgColor: 'bg-blue-50',
-        selectedBorder: 'border-blue-400',
-    },
-    {
-        id: 'shotgun',
-        icon: Flame,
-        cost: 5,
-        color: 'text-orange-500',
-        bgColor: 'bg-orange-50',
-        selectedBorder: 'border-orange-500',
-    },
-    {
-        id: 'inkBomb',
-        icon: Bomb,
-        cost: 20,
-        color: 'text-purple-600',
-        bgColor: 'bg-purple-50',
-        selectedBorder: 'border-purple-600',
-    }
-] as const;
 
 export function PvPGameControls({
     weaponMode,
     setWeaponMode,
     inkLevel,
-    myTeam
+    myTeam,
+    weaponStates,
+    isFrenzy = false
 }: PvPGameControlsProps) {
 
     // Team color for the ink bar
@@ -58,38 +40,18 @@ export function PvPGameControls({
                 <span className="font-bold text-slate-600 w-6 sm:w-8 text-right text-xs sm:text-sm">{Math.round(inkLevel)}</span>
             </div>
 
-            {/* Weapon Cards */}
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
-                {WEAPONS.map((w) => {
-                    const isSelected = weaponMode === w.id;
-                    const Icon = w.icon;
-                    const canAfford = inkLevel >= w.cost;
-
-                    return (
-                        <button
-                            key={w.id}
-                            onClick={() => setWeaponMode(w.id as 'machineGun' | 'shotgun' | 'inkBomb')}
-                            disabled={!canAfford}
-                            className={`
-                                relative flex flex-col items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
-                                ${isSelected
-                                    ? `${w.bgColor} ${w.selectedBorder} shadow-md scale-105 z-10`
-                                    : 'bg-white border-slate-100 hover:border-slate-200'
-                                }
-                                ${!canAfford ? 'opacity-50 grayscale cursor-not-allowed' : ''}
-                            `}
-                        >
-                            <Icon
-                                className={`w-4 h-4 sm:w-6 sm:h-6 ${isSelected ? w.color : 'text-slate-400'} ${isSelected ? 'fill-current' : ''}`}
-                            />
-                            <div className="flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-bold text-slate-500">
-                                <span className="text-[9px] sm:text-[10px]">💧</span>
-                                {w.cost}
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
+            {/* Weapon Selector (Shared Component) */}
+            <WeaponSelector
+                currentMode={weaponMode}
+                onSelectMode={setWeaponMode}
+                ink={inkLevel}
+                isFrenzy={isFrenzy}
+                weaponStates={weaponStates || {
+                    machineGun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                    shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                    inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                }}
+            />
         </div>
     );
 }

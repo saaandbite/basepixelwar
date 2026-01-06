@@ -286,6 +286,16 @@ export function PvPGamePage() {
                             setWeaponMode={setWeaponMode}
                             inkLevel={myInk}
                             myTeam={pvp.myTeam || 'blue'}
+                            weaponStates={
+                                pvp.gameState
+                                    ? (pvp.myTeam === 'blue' ? pvp.gameState.player1.weaponStates : pvp.gameState.player2.weaponStates)
+                                    : undefined
+                            }
+                            isFrenzy={
+                                pvp.gameState
+                                    ? (pvp.myTeam === 'blue' ? !!pvp.gameState.player1.isFrenzy : !!pvp.gameState.player2.isFrenzy)
+                                    : false
+                            }
                         />
                     </div>
                 )}
