@@ -2,6 +2,7 @@
 // Manages game state for PvP rooms
 
 import type { Server } from 'socket.io';
+import { updateRoomStatus } from './roomManager';
 
 // PvP Cannon state
 export interface PvPCannon {
@@ -990,6 +991,9 @@ function endGame(roomId: string) {
             goldenPixelsCaptured: { blue: 0, red: 0 }
         }
     });
+
+    // Update RoomManager status to prevent early cleanup
+    updateRoomStatus(roomId, 'finished');
 
     console.log(`[GameStateManager] Game ended for room ${roomId}`);
 }

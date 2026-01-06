@@ -220,8 +220,8 @@ function handleDisconnect(socket: GameSocket) {
     if (socket.data.roomId) {
         const room = RoomManager.getRoom(socket.data.roomId);
         // If room has 2 players, keep session alive for reconnect
-        if (room && room.players.length === 2 && (room.status === 'playing' || room.status === 'countdown' || room.status === 'waiting')) {
-            console.log(`[SocketServer] Player ${socket.data.playerId} disconnected from active room ${room.id}. Keeping session alive.`);
+        if (room && room.players.length === 2 && (room.status === 'playing' || room.status === 'countdown' || room.status === 'waiting' || room.status === 'finished')) {
+            console.log(`[SocketServer] Player ${socket.data.playerId} disconnected from active/finished room ${room.id}. Keeping session alive.`);
             return;
         }
     }
@@ -254,9 +254,30 @@ function handleRejoinGame(socket: GameSocket, roomId: string) {
             socket.join(roomId);
             socket.data.roomId = roomId;
 
+            // Retrieve player details
             const player = room.players.find(p => p.id === socket.data.playerId!)!;
             const opponent = room.players.find(p => p.id !== player.id)!;
 
+            // Special handling for FINISHED rooms (Rejoining Result Screen)
+            if (room.status === 'finished') {
+                const state = GameStateManager.getGameState(roomId);
+                if (state) {
+                    socket.emit('game_over', {
+                        winner: state.scores.blue > state.scores.red ? 'blue' :
+                            state.scores.red > state.scores.blue ? 'red' : 'draw',
+                        finalScore: state.scores,
+                        stats: {
+                            totalShots: { blue: 0, red: 0 },
+                            powerupsCollected: { blue: 0, red: 0 },
+                            goldenPixelsCaptured: { blue: 0, red: 0 }
+                        }
+                    });
+                    console.log(`[SocketServer] Player reconnected to FINISHED room ${roomId} for results`);
+                    return; // Stop here, do not restart game
+                }
+            }
+
+            // Standard Rejoin (Active Game)
             const gameConfig: GameStartData['config'] = {
                 duration: 90,
                 gridCols: 35,
