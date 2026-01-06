@@ -262,9 +262,18 @@ function handleRejoinGame(socket: GameSocket, roomId: string) {
             if (room.status === 'finished') {
                 const state = GameStateManager.getGameState(roomId);
                 if (state) {
+                    const winner = state.scores.blue > state.scores.red ? 'blue' :
+                        state.scores.red > state.scores.blue ? 'red' : 'draw';
+
+                    // RESTRICTION: Only the winner can rejoin a finished game (to claim rewards)
+                    // Losers are redirected to room
+                    if (player.team !== winner) {
+                        socket.emit('rejoin_failed');
+                        return;
+                    }
+
                     socket.emit('game_over', {
-                        winner: state.scores.blue > state.scores.red ? 'blue' :
-                            state.scores.red > state.scores.blue ? 'red' : 'draw',
+                        winner,
                         finalScore: state.scores,
                         stats: {
                             totalShots: { blue: 0, red: 0 },
