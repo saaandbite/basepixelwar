@@ -287,6 +287,7 @@ function AIGamePage() {
                                         ink={uiState.player.ink}
                                         isFrenzy={uiState.player.isFrenzy}
                                         onSelectMode={setWeaponMode}
+                                        weaponCooldowns={uiState.player.weaponCooldowns}
                                     />
                                 </div>
                             </div>

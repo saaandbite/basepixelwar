@@ -11,6 +11,8 @@ interface WeaponSelectorProps {
     ink: number;
     isFrenzy: boolean;
     onSelectMode: (mode: WeaponMode) => void;
+    // Map of weapon mode to timestamp when it becomes available
+    weaponCooldowns?: Record<WeaponMode, number>;
 }
 
 // Custom SVG icons for each weapon (ink/blob theme)
@@ -108,7 +110,15 @@ const WeaponSelectorMemo = memo(WeaponSelectorComponent);
 
 export const WeaponSelector = WeaponSelectorMemo;
 
-function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode }: WeaponSelectorProps) {
+function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode, weaponCooldowns }: WeaponSelectorProps) {
+
+    // Local state for smooth countdown animation (since game loop might be slower or we want strictly UI updates)
+    const [now, setNow] = React.useState(Date.now());
+
+    React.useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 100);
+        return () => clearInterval(interval);
+    }, []);
     return (
         <div className="w-full flex justify-center gap-2">
             {WEAPON_LIST.map(({ mode }) => {
@@ -139,6 +149,25 @@ function WeaponSelectorComponent({ currentMode, ink, isFrenzy, onSelectMode }: W
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#64748B">
                                     <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
                                 </svg>
+                            </div>
+                        )}
+
+                        {/* Cooldown Overlay */}
+                        {!isLocked && weaponCooldowns && weaponCooldowns[mode] > now && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg z-10 overflow-hidden">
+                                <div className="absolute inset-0 bg-slate-400/30 backdrop-blur-[1px]" />
+                                <div className="relative z-20 text-white font-bold text-xs drop-shadow-md">
+                                    {Math.ceil((weaponCooldowns[mode] - now) / 1000)}s
+                                </div>
+                                {/* Progress bar at bottom */}
+                                <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/10">
+                                    <div
+                                        className="h-full bg-white/80 transition-all duration-100 ease-linear"
+                                        style={{
+                                            width: `${Math.max(0, Math.min(100, ((weaponCooldowns[mode] - now) / (config.cooldown * 1000)) * 100))}%`
+                                        }}
+                                    />
+                                </div>
                             </div>
                         )}
 

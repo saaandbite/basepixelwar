@@ -86,6 +86,8 @@ export interface Cannon {
     frenzyEndTime: number;
     // Flag to track if an ink bomb is currently in flight
     inkBombInFlight?: boolean;
+    // Weapon Usage Cooldowns (timestamp when available)
+    weaponCooldowns: Record<WeaponMode, number>;
 }
 
 export interface GameState {

@@ -50,6 +50,7 @@ export interface GameUIState {
         frenzyEndTime: number;
         weaponMode: WeaponMode;
         powerups: { shield: number };
+        weaponCooldowns: Record<WeaponMode, number>;
     };
     goldenPixel: GameState['goldenPixel'];
     lastGoldenPixelSpawn: number;
@@ -90,6 +91,7 @@ function createInitialState(width: number, height: number): GameState {
             isFrenzy: false,
             frenzyEndTime: 0,
             inkBombInFlight: false,
+            weaponCooldowns: { machineGun: 0, shotgun: 0, inkBomb: 0 },
         },
         enemy: {
             x: width / 2 || 200,
@@ -112,6 +114,7 @@ function createInitialState(width: number, height: number): GameState {
             isFrenzy: false,
             frenzyEndTime: 0,
             inkBombInFlight: false,
+            weaponCooldowns: { machineGun: 0, shotgun: 0, inkBomb: 0 },
         },
         timeLeft: GAME_DURATION,
         gameActive: false,
@@ -347,14 +350,19 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             const weaponConfig = WEAPON_MODES[newState.player.weaponMode];
             const inkCost = newState.player.isFrenzy ? 0 : weaponConfig.cost;
             const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
+            const isOnUsageCooldown = newState.player.weaponCooldowns[newState.player.weaponMode] > now;
 
-            if (newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk) {
+            if (newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk && !isOnUsageCooldown) {
                 const bullets = createWeaponBullet(newState.player, 'blue', newState.player.weaponMode);
                 newState.projectiles = [...newState.projectiles, ...bullets];
                 newState.player = {
                     ...newState.player,
                     cooldown: weaponConfig.fireRate,
                     ink: newState.player.ink - inkCost,
+                    weaponCooldowns: {
+                        ...newState.player.weaponCooldowns,
+                        [newState.player.weaponMode]: weaponConfig.cooldown > 0 ? now + weaponConfig.cooldown * 1000 : 0
+                    }
                 };
                 action.playSound('shoot');
             }
@@ -1082,7 +1090,8 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
             isFrenzy: false,
             frenzyEndTime: 0,
             weaponMode: 'machineGun',
-            powerups: { shield: 0 }
+            powerups: { shield: 0 },
+            weaponCooldowns: { machineGun: 0, shotgun: 0, inkBomb: 0 }
         },
         goldenPixel: null,
         lastGoldenPixelSpawn: 0,
@@ -1125,6 +1134,7 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
                 frenzyEndTime: state.player.frenzyEndTime,
                 weaponMode: state.player.weaponMode,
                 powerups: state.player.powerups || { shield: 0 },
+                weaponCooldowns: state.player.weaponCooldowns || { machineGun: 0, shotgun: 0, inkBomb: 0 },
             },
             goldenPixel: state.goldenPixel,
             lastGoldenPixelSpawn: state.lastGoldenPixelSpawn,
