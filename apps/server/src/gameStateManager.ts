@@ -318,9 +318,6 @@ function calculateBallisticVelocity(
         // v0 = dy/t - 0.5*g*(t+1)
         const vy = (dy / t) - 0.5 * gravity * (t + 1);
 
-        // STRICTURE: Must launch UPWARDS (negative vy) for mortar effect
-        if (vy > 0) continue;
-
         const launchSpeed = Math.hypot(vx, vy);
         const diff = Math.abs(launchSpeed - speed);
 
@@ -348,6 +345,10 @@ function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machin
 
     if (type === 'inkBomb' && cannon.targetPos) {
         const bombMode = WEAPON_MODES.inkBomb;
+
+        // Dynamic Gravity: Red needs NEGATIVE gravity to "Lob" downwards
+        const effectiveGravity = team === 'red' ? -bombMode.gravity : bombMode.gravity;
+
         // Use Ballistic Targeting
         const solution = calculateBallisticVelocity(
             cannon.x,
@@ -355,34 +356,34 @@ function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machin
             cannon.targetPos.x,
             cannon.targetPos.y,
             bombMode.speed,
-            bombMode.gravity
+            effectiveGravity
         );
 
         if (solution) {
             vx = solution.vx;
             vy = solution.vy;
-            gravity = bombMode.gravity;
+            gravity = effectiveGravity;
             explodeTime = solution.flightTime;
         } else {
             // Fallback: Force Mortar Arc Logic
-            // If solver fails, launch UP and towards target x
+            // If solver fails, launch AGAINST gravity
 
             // 1. Determine direction to target x
             const dx = cannon.targetPos.x - cannon.x;
             const dirX = dx > 0 ? 1 : -1;
 
-            // 2. Fixed "Pop Up" velocity
-            // We want it to go UP regardless of player position (Top/Bottom)
-            // vy negative = Up
-            vy = -bombMode.speed * 0.7; // 70% of speed is upward
+            // 2. Fixed "Pop Up" velocity (Counter Gravity)
+            // Blue (Gravity +): Shoot Up (-VY).
+            // Red (Gravity -): Shoot Down (+VY).
+            const dirY = team === 'red' ? 1 : -1;
+            vy = dirY * bombMode.speed * 0.7; // 70% of speed is vertical
 
             // 3. Remaining speed for horizontal
-            // vx = direction * remaining_speed
             const vTotal = bombMode.speed;
-            const vxMag = Math.sqrt(vTotal * vTotal - vy * vy);
+            const vxMag = Math.sqrt(Math.max(0, vTotal * vTotal - vy * vy));
             vx = dirX * vxMag;
 
-            gravity = bombMode.gravity;
+            gravity = effectiveGravity;
         }
     }
 
