@@ -8,7 +8,7 @@ import { useMultiplayer } from '../game/hooks/useMultiplayer';
 import { useWallet, formatAddress, isCorrectChain } from '../contexts/WalletContext';
 import { useGameVault } from '../hooks/useGameVault';
 import { useENSName } from '../hooks/useENSName';
-import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check } from 'lucide-react';
+import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check, Bot } from 'lucide-react';
 import '../game/game.css';
 
 export default function RoomPage() {
@@ -99,6 +99,7 @@ export default function RoomPage() {
     // Auto ready when match found
     useEffect(() => {
         if (matchmakingStatus === 'found' && opponent) {
+            sessionStorage.removeItem('ai_mode'); // Clear AI flag
             setReady();
         }
     }, [matchmakingStatus, opponent, setReady]);
@@ -300,7 +301,7 @@ export default function RoomPage() {
                                     </>
                                 ) : (
                                     <>
-                                        <Zap className="text-yellow-300" size={20} />
+                                        <Swords className="text-yellow-300" size={20} />
                                         <span className="text-sm sm:text-base">Find Match</span>
                                     </>
                                 )}
@@ -311,11 +312,12 @@ export default function RoomPage() {
                                     sessionStorage.removeItem('pvp_mode');
                                     sessionStorage.removeItem('pvp_room_id');
                                     sessionStorage.removeItem('pvp_team');
+                                    sessionStorage.setItem('ai_mode', 'true');
                                     router.push('/game');
                                 }}
                                 className="w-full border-2 border-purple-500 hover:border-emerald-400 text-purple-300 hover:text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300"
                             >
-                                <Crown size={20} />
+                                <Bot size={20} />
                                 <span className="text-sm sm:text-base">Play vs AI Instead</span>
                             </button>
                         </>

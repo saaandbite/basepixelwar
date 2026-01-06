@@ -56,6 +56,7 @@ export interface PlayerInput {
 export type ServerToClientEvents = {
     // Connection
     'connected': (playerId: string) => void;
+    'rejoin_failed': () => void;
 
     // Matchmaking
     'queue_status': (data: { position: number; totalInQueue: number }) => void;

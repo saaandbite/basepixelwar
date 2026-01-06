@@ -232,7 +232,10 @@ function handleDisconnect(socket: GameSocket) {
 
 function handleRejoinGame(socket: GameSocket, roomId: string) {
     const room = RoomManager.getRoom(roomId);
-    if (!room) return;
+    if (!room) {
+        socket.emit('rejoin_failed');
+        return;
+    }
 
     // Find disconnected player slot
     let oldPlayerId: string | null = null;

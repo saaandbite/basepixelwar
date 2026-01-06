@@ -1,8 +1,7 @@
 'use client';
 
-// Chroma Duel Game Page
-
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useGameState } from './hooks/useGameState';
 import { useAudio } from './hooks/useAudio';
 import { GAME_WIDTH, GAME_HEIGHT } from './lib/constants';
@@ -23,6 +22,7 @@ import './game.css';
 
 // Wrapper component to decide between PvP and AI mode
 export default function GamePage() {
+    const router = useRouter();
     const [isPvP, setIsPvP] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -30,18 +30,26 @@ export default function GamePage() {
         setMounted(true);
         const pvpMode = sessionStorage.getItem('pvp_mode') === 'true';
         const roomId = sessionStorage.getItem('pvp_room_id');
+        const aiMode = sessionStorage.getItem('ai_mode') === 'true';
 
-        // Strict check: Must have mode AND room ID to be in PvP
+        // Session Guard: Must have explicit mode to be here
+        if (!pvpMode && !aiMode) {
+            router.push('/room');
+            return;
+        }
+
+        // PvP Check
         if (pvpMode && roomId) {
             setIsPvP(true);
         } else {
-            // Default to AI and clean up potential stale state
+            // Default to AI
             setIsPvP(false);
+            // Cleanup PvP flags just in case
             sessionStorage.removeItem('pvp_mode');
             sessionStorage.removeItem('pvp_room_id');
             sessionStorage.removeItem('pvp_team');
         }
-    }, []);
+    }, [router]);
 
     if (!mounted) {
         return <div className="game-container flex items-center justify-center h-screen">Loading...</div>;

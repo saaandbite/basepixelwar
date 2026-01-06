@@ -100,6 +100,14 @@ export function usePvPGame() {
             }
         });
 
+        socket.on('rejoin_failed', () => {
+            console.log('[PvP] Rejoin failed, redirecting to room');
+            sessionStorage.removeItem('pvp_mode');
+            sessionStorage.removeItem('pvp_room_id');
+            sessionStorage.removeItem('pvp_team');
+            window.location.href = '/room';
+        });
+
         socket.on('match_found', ({ roomId, opponent }) => {
             // Determine my team based on opponent's team
             const inferredTeam: 'blue' | 'red' = opponent.team === 'red' ? 'blue' : 'red';
