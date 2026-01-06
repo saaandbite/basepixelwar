@@ -16,6 +16,12 @@ export interface PvPCannon {
     frenzyEndTime?: number;
     isFrenzy?: boolean;
     hasShield?: boolean;
+    // Per-Weapon Usage System (Same as Client)
+    weaponStates: Record<'machineGun' | 'shotgun' | 'inkBomb', {
+        usage: number;
+        isOverheated: boolean;
+        cooldownEndTime: number;
+    }>;
 }
 
 // Projectile for sync
@@ -124,22 +130,27 @@ const WEAPON_MODES = {
         cost: 2.5,
         speed: 6,
         paintRadius: 1,
-        fireRate: 5, // 5 frames @ 30fps = ~6 shots/sec (better pacing, not laser-like)
+        fireRate: 5,
+        maxDuration: 5000,
+        recoveryDuration: 3000,
     },
     shotgun: {
         cost: 5,
         speed: 5.5,
-        paintRadius: 1, // Same as MG (was 2)
-        fireRate: 8, // ~4 shots/sec at 30fps
-        spreadAngles: [-0.2, 0, 0.2], // Keep 3-bullet spread
-        // maxLifetime removed - unlimited range like MG
+        paintRadius: 1,
+        fireRate: 8,
+        spreadAngles: [-0.2, 0, 0.2],
+        maxDuration: 3000,
+        recoveryDuration: 5000,
     },
     inkBomb: {
         cost: 20,
         speed: 9,
         paintRadius: 5,
-        fireRate: 15, // ~2 shots/sec at 30fps
+        fireRate: 15,
         gravity: 0.08,
+        maxDuration: 1, // 1 shot (logic check)
+        recoveryDuration: 7000,
     }
 } as const;
 
@@ -180,6 +191,11 @@ export function createGameState(roomId: string): PvPGameState {
             ink: INK_MAX,
             weaponMode: 'machineGun',
             cooldown: 0,
+            weaponStates: {
+                machineGun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+            },
         },
         player2: {
             x: GAME_WIDTH / 2,
@@ -189,6 +205,11 @@ export function createGameState(roomId: string): PvPGameState {
             ink: INK_MAX,
             weaponMode: 'machineGun',
             cooldown: 0,
+            weaponStates: {
+                machineGun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+            },
         },
         projectiles: [],
         powerups: [],
@@ -383,12 +404,45 @@ function updateGameState(roomId: string) {
                 player.frenzyEndTime = undefined;
             }
         }
+
+        // Per-Weapon Cooldown & Decay Logic (Same as Client)
+        const modes: ('machineGun' | 'shotgun' | 'inkBomb')[] = ['machineGun', 'shotgun', 'inkBomb'];
+        modes.forEach(mode => {
+            const wState = player.weaponStates[mode];
+            const wConfig = WEAPON_MODES[mode];
+
+            // 1. Check Overheat Cooldown
+            if (wState.isOverheated) {
+                if (now > wState.cooldownEndTime) {
+                    // Reset
+                    player.weaponStates[mode] = {
+                        ...wState,
+                        isOverheated: false,
+                        usage: 0,
+                        cooldownEndTime: 0
+                    };
+                }
+            } else {
+                // 2. Decay if not firing THIS weapon
+                const isFiringThisWeapon = player.isFiring && player.weaponMode === mode;
+                if (!isFiringThisWeapon && wState.usage > 0) {
+                    let decayAmount = 0;
+                    if (wConfig.maxDuration < 10) {
+                        // Shot-based (InkBomb): Fast decay / manual reset?
+                        decayAmount = 0.1;
+                    } else {
+                        // Time-based (MachineGun): Decay 33ms per tick (server runs at 33ms)
+                        decayAmount = 33;
+                    }
+                    player.weaponStates[mode].usage = Math.max(0, wState.usage - decayAmount);
+                }
+            }
+        });
     };
     updatePlayer(state.player1);
     updatePlayer(state.player2);
 
     // 1. Handle Projectiles
-    const GRID_SIZE = 15;
     const newProjectiles: SyncProjectile[] = [];
 
     for (const p of state.projectiles) {
@@ -642,6 +696,34 @@ function updateGameState(roomId: string) {
         if (player.ink < inkCost) return; // Not enough ink
 
         // FIRE!
+
+        // 1. Check Specific Weapon Overheat
+        const wState = player.weaponStates[mode];
+        if (wState.isOverheated) return; // Locked
+
+        // 2. Accumulate Usage
+        let usageIncrease = 0;
+        if (weaponData.maxDuration < 10) {
+            usageIncrease = 1; // Shot based
+        } else {
+            // Time based: Add frames * 33ms? 
+            // We fire every 'fireRate' frames. Server tick is 33ms.
+            // So usage added is fireRate * 33ms.
+            usageIncrease = weaponData.fireRate * 33;
+        }
+
+        player.weaponStates[mode].usage += usageIncrease;
+
+        // 3. Check for Overheat Trigger
+        if (player.weaponStates[mode].usage >= weaponData.maxDuration) {
+            player.weaponStates[mode].isOverheated = true;
+            player.weaponStates[mode].usage = weaponData.maxDuration; // Cap visual
+            player.weaponStates[mode].cooldownEndTime = now + weaponData.recoveryDuration;
+            // Server doesn't play sound directly but client will see state change or handle event if we send it
+            // Actually currently valid state is sent via snapshot, so client sees isOverheated flag if we sync it.
+            // NOTE: We need to sync weaponStates in PvPCannon definition -> It is in interface, so it will be JSON stringified to client!
+        }
+
         // Set cooldown based on weapon fireRate
         player.cooldown = weaponData.fireRate;
 

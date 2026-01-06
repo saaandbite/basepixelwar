@@ -50,7 +50,12 @@ export interface GameUIState {
         frenzyEndTime: number;
         weaponMode: WeaponMode;
         powerups: { shield: number };
-        weaponCooldowns: Record<WeaponMode, number>;
+        // Per-Weapon Usage System
+        weaponStates: Record<WeaponMode, {
+            usage: number;
+            isOverheated: boolean;
+            cooldownEndTime: number;
+        }>;
     };
     goldenPixel: GameState['goldenPixel'];
     lastGoldenPixelSpawn: number;
@@ -91,7 +96,12 @@ function createInitialState(width: number, height: number): GameState {
             isFrenzy: false,
             frenzyEndTime: 0,
             inkBombInFlight: false,
-            weaponCooldowns: { machineGun: 0, shotgun: 0, inkBomb: 0 },
+            // Per-Weapon Usage System
+            weaponStates: {
+                machineGun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+            },
         },
         enemy: {
             x: width / 2 || 200,
@@ -114,7 +124,12 @@ function createInitialState(width: number, height: number): GameState {
             isFrenzy: false,
             frenzyEndTime: 0,
             inkBombInFlight: false,
-            weaponCooldowns: { machineGun: 0, shotgun: 0, inkBomb: 0 },
+            // Per-Weapon Policy (Enemy doesn't strictly use this yet, but needs shape)
+            weaponStates: {
+                machineGun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+            },
         },
         timeLeft: GAME_DURATION,
         gameActive: false,
@@ -346,22 +361,124 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 };
             }
 
-            // Player shooting with INK ECONOMY
+
+            // Per-Weapon Usage & Cooldown Logic
+            // 1. Check Cooldowns & Decay for ALL weapons
+            (['machineGun', 'shotgun', 'inkBomb'] as WeaponMode[]).forEach((mode) => {
+                const wState = newState.player.weaponStates[mode];
+                const wConfig = WEAPON_MODES[mode];
+
+                // If Overheated: Check if cooled down
+                if (wState.isOverheated) {
+                    if (now > wState.cooldownEndTime) {
+                        // Cooldown Finished: Reset
+                        newState.player.weaponStates[mode] = {
+                            ...wState,
+                            isOverheated: false,
+                            usage: 0,
+                            cooldownEndTime: 0
+                        };
+                    }
+                } else {
+                    // Not Overheated: Decay usage if not firing THIS weapon
+                    // Note: If we are firing this weapon, usage increases in the firing block below.
+                    // If we are firing a DIFFERENT weapon, this one should decay.
+                    // If we are not firing at all, this one should decay.
+
+                    const isFiringThisWeapon = newState.player.isFiring && newState.player.weaponMode === mode;
+
+                    if (!isFiringThisWeapon && wState.usage > 0) {
+                        let decayAmount = 0;
+                        if (wConfig.maxDuration < 10) {
+                            // Shot-based (InkBomb): Decay doesn't really ensure "1 shot per X".
+                            // For InkBomb: Usage 1 -> Overheat. NO DECAY needed for 1-shot limit usually, 
+                            // but if user fired 0.5 shots? (Not possible).
+                            // Let's just say Shot-based weapons don't decay, they only reset on cooldown.
+                            // OR: If specific design requires decay?
+                            // User said: "1 shot -> 3s cooldown".
+                            // So if usage is 0, allow 1 shot.
+                            // If usage is 1, it overheats immediately (handled in firing).
+                            // So passive decay might not be needed for InkBomb implies instant recovery if not overheated?
+                            // Let's assume usage decays fast for shot based if not overheated (e.g. cancelled shot?)
+                            decayAmount = 0.1;
+                        } else {
+                            // Time-based (MachineGun, Shotgun): Decay over time
+                            // ~16ms per frame. Let's decay at 1x speed.
+                            decayAmount = 16.67;
+                        }
+
+                        newState.player.weaponStates[mode] = {
+                            ...wState,
+                            usage: Math.max(0, wState.usage - decayAmount)
+                        };
+                    }
+                }
+            });
+
+            // Player shooting with INK ECONOMY & USAGE LIMITS
             const weaponConfig = WEAPON_MODES[newState.player.weaponMode];
             const inkCost = newState.player.isFrenzy ? 0 : weaponConfig.cost;
             const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
-            const isOnUsageCooldown = newState.player.weaponCooldowns[newState.player.weaponMode] > now;
 
-            if (newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk && !isOnUsageCooldown) {
+            // Get current weapon state
+            const currentWeaponState = newState.player.weaponStates[newState.player.weaponMode];
+            const isWeaponOverheated = currentWeaponState.isOverheated;
+
+            // Can fire if NOT overheated
+            const canFire = !isWeaponOverheated;
+
+            if (newState.player.isFiring && newState.player.cooldown <= 0 && hasEnoughInk && canFire) {
                 const bullets = createWeaponBullet(newState.player, 'blue', newState.player.weaponMode);
                 newState.projectiles = [...newState.projectiles, ...bullets];
+
+                // Usage Accumulation
+                let usageIncrease = 0;
+                if (weaponConfig.maxDuration < 10) {
+                    // Shot based
+                    usageIncrease = 1;
+                } else {
+                    // Time based (approx ms per shot/frame?)
+                    // This block runs once per SHOT (fireRate).
+                    // Wait, fireRate is in frames (e.g. 5 frames).
+                    // So we are here every 5 frames (~80ms).
+                    // If maxDuration is 5000ms, and we add 80ms every shot?
+                    // That would mean we track "time spent firing".
+                    // If we only add inside this block, we only count time when effectively shooting.
+                    // This seems correct for "Usage Duration".
+                    // How much time passed since last shot? `weaponConfig.fireRate * 16.67` ms.
+                    usageIncrease = weaponConfig.fireRate * 16.67;
+                }
+
+                let newUsage = currentWeaponState.usage + usageIncrease;
+                let isOverheated = false;
+                let cooldownEndTime = 0;
+
+                // Check Limit
+                // Relaxed check: allows slightly exceeding limit on last shot to trigger overheat
+                if (newUsage >= weaponConfig.maxDuration) {
+                    isOverheated = true;
+                    // Usage capped or kept? 
+                    // Let's cap it at max to avoid crazy values, but it resets 0 anyway.
+                    // Actually, for visualization, cap at max.
+                    newUsage = weaponConfig.maxDuration;
+
+                    cooldownEndTime = now + (weaponConfig.recoveryDuration || 3000);
+                    action.playSound('overheat');
+                }
+
+                // Update Player State
                 newState.player = {
                     ...newState.player,
                     cooldown: weaponConfig.fireRate,
                     ink: newState.player.ink - inkCost,
-                    weaponCooldowns: {
-                        ...newState.player.weaponCooldowns,
-                        [newState.player.weaponMode]: weaponConfig.cooldown > 0 ? now + weaponConfig.cooldown * 1000 : 0
+                    // Update specific weapon state
+                    weaponStates: {
+                        ...newState.player.weaponStates,
+                        [newState.player.weaponMode]: {
+                            usage: newUsage,
+                            isOverheated: isOverheated,
+                            cooldownEndTime: isOverheated ? cooldownEndTime : currentWeaponState.cooldownEndTime
+                        }
                     }
                 };
                 action.playSound('shoot');
@@ -1091,7 +1208,11 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
             frenzyEndTime: 0,
             weaponMode: 'machineGun',
             powerups: { shield: 0 },
-            weaponCooldowns: { machineGun: 0, shotgun: 0, inkBomb: 0 }
+            weaponStates: {
+                machineGun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+            },
         },
         goldenPixel: null,
         lastGoldenPixelSpawn: 0,
@@ -1134,7 +1255,11 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
                 frenzyEndTime: state.player.frenzyEndTime,
                 weaponMode: state.player.weaponMode,
                 powerups: state.player.powerups || { shield: 0 },
-                weaponCooldowns: state.player.weaponCooldowns || { machineGun: 0, shotgun: 0, inkBomb: 0 },
+                weaponStates: state.player.weaponStates || {
+                    machineGun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                    shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                    inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
+                },
             },
             goldenPixel: state.goldenPixel,
             lastGoldenPixelSpawn: state.lastGoldenPixelSpawn,

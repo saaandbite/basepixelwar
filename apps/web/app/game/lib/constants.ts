@@ -53,7 +53,8 @@ export const WEAPON_MODES = {
         name: 'Machine Gun',
         icon: '🔫',
         description: 'Fast shots, small area',
-        cooldown: 0, // No usage cooldown
+        maxDuration: 5000,    // 5 seconds usage
+        recoveryDuration: 3000, // 3 seconds cooldown
     },
     shotgun: {
         cost: 5,
@@ -65,7 +66,8 @@ export const WEAPON_MODES = {
         name: 'Shotgun',
         icon: '💥',
         description: '3-way spread, medium range',
-        cooldown: 3, // 3 seconds cooldown
+        maxDuration: 3000,     // 3 seconds usage
+        recoveryDuration: 5000, // 5 seconds cooldown
     },
     inkBomb: {
         cost: 20,
@@ -76,7 +78,8 @@ export const WEAPON_MODES = {
         name: 'Ink Bomb',
         icon: '💣',
         description: 'Arc shot, massive explosion',
-        cooldown: 5, // 5 seconds cooldown
+        maxDuration: 1,        // 1 Shot (Special Logic)
+        recoveryDuration: 7000, // 7 seconds cooldown
     },
 
 } as const;

@@ -86,8 +86,12 @@ export interface Cannon {
     frenzyEndTime: number;
     // Flag to track if an ink bomb is currently in flight
     inkBombInFlight?: boolean;
-    // Weapon Usage Cooldowns (timestamp when available)
-    weaponCooldowns: Record<WeaponMode, number>;
+    // Per-Weapon Usage System
+    weaponStates: Record<WeaponMode, {
+        usage: number;        // Accumulated usage (ms or shots)
+        isOverheated: boolean; // True if usage limit reached = locked
+        cooldownEndTime: number; // When lock expires
+    }>;
 }
 
 export interface GameState {
