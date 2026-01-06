@@ -312,10 +312,14 @@ function calculateBallisticVelocity(
 
     // Search flight times (frames)
     // Server runs at ~30fps, assume target frames 10-150
-    for (let t = 10; t <= 150; t += 1) {
+    // Prefer higher flight times for "mortar" arc
+    for (let t = 30; t <= 150; t += 1) { // Min 30 frames to force some arc
         const vx = dx / t;
         // v0 = dy/t - 0.5*g*(t+1)
         const vy = (dy / t) - 0.5 * gravity * (t + 1);
+
+        // STRICTURE: Must launch UPWARDS (negative vy) for mortar effect
+        if (vy > 0) continue;
 
         const launchSpeed = Math.hypot(vx, vy);
         const diff = Math.abs(launchSpeed - speed);
@@ -326,7 +330,7 @@ function calculateBallisticVelocity(
         }
     }
 
-    if (bestSol && minSpeedDiff < speed * 0.5) {
+    if (bestSol && minSpeedDiff < speed * 0.8) { // Slightly looser tolerance
         return bestSol;
     }
     return null;
@@ -360,11 +364,25 @@ function createProjectile(cannon: PvPCannon, team: 'blue' | 'red', type: 'machin
             gravity = bombMode.gravity;
             explodeTime = solution.flightTime;
         } else {
-            // Fallback linear with gravity arc simulated (e.g. fire slightly up)
-            // or just linear + gravity drop. 
-            // Let's use simple arc fallback like single player
+            // Fallback: Force Mortar Arc Logic
+            // If solver fails, launch UP and towards target x
+
+            // 1. Determine direction to target x
+            const dx = cannon.targetPos.x - cannon.x;
+            const dirX = dx > 0 ? 1 : -1;
+
+            // 2. Fixed "Pop Up" velocity
+            // We want it to go UP regardless of player position (Top/Bottom)
+            // vy negative = Up
+            vy = -bombMode.speed * 0.7; // 70% of speed is upward
+
+            // 3. Remaining speed for horizontal
+            // vx = direction * remaining_speed
+            const vTotal = bombMode.speed;
+            const vxMag = Math.sqrt(vTotal * vTotal - vy * vy);
+            vx = dirX * vxMag;
+
             gravity = bombMode.gravity;
-            vy -= 4; // loft
         }
     }
 
