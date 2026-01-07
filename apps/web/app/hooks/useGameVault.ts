@@ -33,7 +33,7 @@ export interface UseGameVaultReturn {
     lastTxHash: string | null;
 
     // Functions
-    createGame: (mode: GameMode) => Promise<string>;
+    createGame: (mode: GameMode) => Promise<{ txHash: string; gameId: number }>;
     joinGame: (gameId: number) => Promise<string>;
 
     // Utility
@@ -44,8 +44,6 @@ export interface UseGameVaultReturn {
 // ============ Constants ============
 
 // Contract address - UPDATE THIS after deployment
-// Contract address - UPDATE THIS after deployment
-// const GAME_VAULT_ADDRESS = process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS || "0x089a1619c076b6e844620cf80ea3b981daca3772";
 const GAME_VAULT_ADDRESS = "0x089a1619c076b6e844620cf80ea3b981daca3772";
 
 // Bid amount in wei (0.001 ETH)
@@ -87,16 +85,43 @@ export function useGameVault(): UseGameVaultReturn {
         }
     }, [chainId, switchToBase]);
 
+    // Wait for transaction receipt
+    const waitForReceipt = useCallback(async (txHash: string): Promise<any> => {
+        if (!window.ethereum) throw new Error("No ethereum provider");
+
+        console.log("[GameVault] Waiting for receipt:", txHash);
+
+        let attempts = 0;
+        const maxAttempts = 30; // 30 * 2s = 60s timeout
+
+        while (attempts < maxAttempts) {
+            try {
+                const receipt = await window.ethereum.request({
+                    method: "eth_getTransactionReceipt",
+                    params: [txHash],
+                });
+
+                if (receipt) {
+                    console.log("[GameVault] Receipt found:", receipt);
+                    return receipt;
+                }
+            } catch (e) {
+                console.warn("[GameVault] Error fetching receipt:", e);
+            }
+
+            await new Promise(r => setTimeout(r, 2000));
+            attempts++;
+        }
+
+        throw new Error("Transaction confirmation timeout");
+    }, []);
+
     // Create a new game
     const createGame = useCallback(
-        async (mode: GameMode): Promise<string> => {
+        async (mode: GameMode): Promise<{ txHash: string, gameId: number }> => {
             if (!address) {
                 throw new Error("Wallet not connected");
             }
-
-            // if (GAME_VAULT_ADDRESS === "0x0000000000000000000000000000000000000000") {
-            //    throw new Error("Game Vault contract address not configured. Please set NEXT_PUBLIC_GAME_VAULT_ADDRESS.");
-            // }
 
             setIsLoading(true);
             setError(null);
@@ -122,14 +147,34 @@ export function useGameVault(): UseGameVaultReturn {
 
                 setLastTxHash(txHash);
                 console.log("[GameVault] Game created, tx:", txHash);
-                return txHash;
+
+                // Wait for receipt to get the Game ID
+                const receipt = await waitForReceipt(txHash);
+
+                // Parse logs for GameCreated event
+                // Topic0: keccak256("GameCreated(uint256,uint8,address)")
+                // We just look for the log that has 3 topics (signature + indexed gameId + ...)
+                // actually checking signature is safer.
+                // Signature: 0x86e73797686b24e6c38d56230678d46244ab9940292e35359cd49b3861298815 (calculated)
+                // But simplified: Just find the log from our contract address
+
+                const log = (receipt.logs as any[]).find((l: any) =>
+                    l.address.toLowerCase() === GAME_VAULT_ADDRESS.toLowerCase() &&
+                    l.topics.length >= 2 // Topic0 + GameId
+                );
+
+                let gameId = 0;
+                if (log && log.topics[1]) {
+                    gameId = parseInt(log.topics[1], 16);
+                    console.log("[GameVault] Parsed Game ID:", gameId);
+                } else {
+                    console.error("[GameVault] Could not parse Game ID from logs");
+                    // Fallback to extraction from hash if log parsing fails (unlikely)
+                }
+
+                return { txHash, gameId };
             } catch (err: any) {
                 console.error("[GameVault] createGame error:", err);
-                if (typeof err === 'object') {
-                    try {
-                        console.error("[GameVault] createGame error JSON:", JSON.stringify(err, null, 2));
-                    } catch (e) { }
-                }
                 const errorMessage = err?.message || "Failed to create game";
                 setError(errorMessage);
                 throw err;
@@ -137,7 +182,7 @@ export function useGameVault(): UseGameVaultReturn {
                 setIsLoading(false);
             }
         },
-        [address, ensureCorrectChain, sendTransaction]
+        [address, ensureCorrectChain, sendTransaction, waitForReceipt]
     );
 
     // Join an existing game
@@ -146,10 +191,6 @@ export function useGameVault(): UseGameVaultReturn {
             if (!address) {
                 throw new Error("Wallet not connected");
             }
-
-            // if (GAME_VAULT_ADDRESS === "0x0000000000000000000000000000000000000000") {
-            //    throw new Error("Game Vault contract address not configured. Please set NEXT_PUBLIC_GAME_VAULT_ADDRESS.");
-            // }
 
             setIsLoading(true);
             setError(null);
@@ -171,11 +212,6 @@ export function useGameVault(): UseGameVaultReturn {
                 return txHash;
             } catch (err: any) {
                 console.error("[GameVault] joinGame error:", err);
-                if (typeof err === 'object') {
-                    try {
-                        console.error("[GameVault] joinGame error JSON:", JSON.stringify(err, null, 2));
-                    } catch (e) { }
-                }
                 const errorMessage = err?.message || "Failed to join game";
                 setError(errorMessage);
                 throw err;

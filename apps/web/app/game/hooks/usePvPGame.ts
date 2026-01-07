@@ -364,10 +364,10 @@ export function usePvPGame() {
             if (state.isFirstPlayer) {
                 // First player creates game on-chain
                 console.log('[PvP] Creating game on-chain...');
-                txHash = await gameVault.createGame(GameMode.OneVsOne);
-                // For now, use a simple ID derived from tx hash
-                // In production, you'd parse the gameId from transaction logs
-                onChainGameId = parseInt(txHash.slice(-8), 16) % 1000000;
+                const result = await gameVault.createGame(GameMode.OneVsOne);
+                txHash = result.txHash;
+                onChainGameId = result.gameId;
+
                 console.log('[PvP] Game created on-chain, gameId:', onChainGameId);
             } else {
                 // Second player joins existing game

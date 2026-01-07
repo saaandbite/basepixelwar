@@ -21,7 +21,7 @@ export const GRID_SIZE = 15;
 
 export const TARGET_FPS = 60; // Reverted to 60 for smoothness, slowing down via per-frame constants instead
 export const FIRE_RATE = 8;
-export const GAME_DURATION = 90;
+export const GAME_DURATION = 30;
 export const POWERUP_CHANCE = 0.05; // 5% chance per territory flip
 export const MAX_POWERUPS_ON_SCREEN = 3;
 export const BULLET_SPEED = 5; // Reduced global baseline

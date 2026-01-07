@@ -140,6 +140,16 @@ export default function RoomPage() {
             // If NOT, it means we are the first to pay -> WE CREATE
             const existingGameId = paymentStatus.onChainGameId;
 
+            // CRITICAL: Player 2 MUST wait for Player 1 to create the game first
+            // If Player 2 tries to pay before Player 1, they would also call createGame
+            // which would create a SEPARATE game, breaking the match.
+            if (!isFirstPlayer && !existingGameId) {
+                console.log('[RoomPage] Player 2 waiting for Player 1 to create game...');
+                // Don't proceed - Player 2 should wait for the onChainGameId to be set
+                // The UI should show a "Waiting for opponent..." message
+                return;
+            }
+
             if (existingGameId) {
                 // Game exists, join it
                 console.log('[RoomPage] Joining existing game:', existingGameId);
@@ -148,15 +158,11 @@ export default function RoomPage() {
             } else {
                 // No game yet, create it
                 console.log('[RoomPage] Creating new game on-chain...');
-                txHash = await gameVault.createGame(GameMode.OneVsOne);
-                // Extract gameId from logs or calculate it (assuming simple counter or hash based)
-                // Note: In a real app, we should parse the logs. Here we use the logic from before.
-                // If the contract uses a counter, we might need to fetch it differently or rely on the event.
-                // For now, keeping the existing logic of parsing/mocking.
-                // WAIT: The previous code was: parseInt(txHash.slice(-8), 16) % 1000000;
-                // This looks like a mock/temporary ID generation if the contract doesn't return it directly.
-                // Let's stick to the previous extraction logic for consistency.
-                onChainGameId = parseInt(txHash.slice(-8), 16) % 1000000;
+                console.log('[RoomPage] Creating new game on-chain...');
+                const result = await gameVault.createGame(GameMode.OneVsOne);
+                txHash = result.txHash;
+                onChainGameId = result.gameId;
+
                 console.log('[RoomPage] Game created, gameId:', onChainGameId);
             }
 
@@ -200,7 +206,7 @@ export default function RoomPage() {
             sessionStorage.setItem('wallet_address', walletAddress);
         }
 
-        joinQueue();
+        joinQueue(walletAddress || undefined);
     };
 
     const handleSaveName = () => {
@@ -423,75 +429,77 @@ export default function RoomPage() {
                         </div>
                     ) : matchmakingStatus === 'found' && paymentStatus ? (
                         // Pay & Play Confirmation
-                        <div className="flex flex-col items-center py-4 gap-4">
-                            <Swords className="text-emerald-400" size={40} />
-                            <p className="text-emerald-400 font-bold text-xl">Match Found!</p>
+                        <div className="flex flex-col items-center py-3 gap-3">
+                            <Swords className="text-emerald-400" size={32} />
+                            <p className="text-emerald-400 font-bold text-lg">Match Found!</p>
 
                             <p className="text-purple-200 text-sm">
                                 vs <span className="text-white font-semibold">{opponent?.name || 'Unknown'}</span>
                             </p>
 
-                            {/* Payment Status */}
-                            <div className="flex gap-6 text-center my-2">
+                            {/* Payment Status - Compact */}
+                            <div className="flex items-center gap-4 my-1">
                                 <div className="flex flex-col items-center">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all ${paymentStatus.player1Paid ? 'bg-emerald-500 text-white' : 'bg-purple-800 text-purple-400'
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player1Paid ? 'bg-emerald-500 text-white' : 'bg-purple-800 text-purple-400'
                                         }`}>
                                         {paymentStatus.player1Paid ? '✓' : '1'}
                                     </div>
-                                    <p className="text-xs text-purple-300 mt-1">
+                                    <p className="text-xs text-purple-300 mt-0.5">
                                         {isFirstPlayer ? 'You' : 'Opponent'}
                                     </p>
                                 </div>
-                                <div className="flex items-center text-purple-500 text-xl">VS</div>
+                                <span className="text-purple-500 text-sm font-medium">VS</span>
                                 <div className="flex flex-col items-center">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold transition-all ${paymentStatus.player2Paid ? 'bg-emerald-500 text-white' : 'bg-purple-800 text-purple-400'
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player2Paid ? 'bg-emerald-500 text-white' : 'bg-purple-800 text-purple-400'
                                         }`}>
                                         {paymentStatus.player2Paid ? '✓' : '2'}
                                     </div>
-                                    <p className="text-xs text-purple-300 mt-1">
+                                    <p className="text-xs text-purple-300 mt-0.5">
                                         {!isFirstPlayer ? 'You' : 'Opponent'}
                                     </p>
                                 </div>
                             </div>
 
                             {/* Timer */}
-                            <p className="text-purple-400 text-sm">
+                            <p className="text-purple-400 text-xs">
                                 Time: <span className={`font-mono font-bold ${paymentTimeLeft <= 10 ? 'text-red-400' : 'text-white'}`}>{paymentTimeLeft}s</span>
                             </p>
 
-                            {/* Entry Fee */}
-                            <div className="bg-purple-800/50 p-3 rounded-xl w-full text-center border border-purple-600">
-                                <p className="text-purple-400 text-xs uppercase">Entry Fee</p>
-                                <p className="text-xl font-bold text-white">{getBidAmount()}</p>
+                            {/* Entry Fee - Compact */}
+                            <div className="bg-purple-800/50 px-4 py-2 rounded-lg w-full text-center border border-purple-600/50">
+                                <p className="text-purple-400 text-xs uppercase tracking-wider">Entry Fee</p>
+                                <p className="text-lg font-bold text-white">{getBidAmount()}</p>
                                 <p className="text-purple-400 text-xs">Winner takes 0.00198 ETH</p>
                             </div>
 
                             {/* Error */}
                             {gameVault.error && (
-                                <p className="text-red-400 text-sm text-center">{gameVault.error}</p>
+                                <p className="text-red-400 text-xs text-center">{gameVault.error}</p>
                             )}
 
-                            {/* Buttons */}
-                            <div className="flex gap-3 w-full">
+                            {/* Buttons - Compact */}
+                            <div className="flex gap-2 w-full">
                                 <button
                                     onClick={handleCancelPayment}
                                     disabled={gameVault.isLoading}
-                                    className="flex-1 py-2.5 bg-purple-800 text-purple-300 rounded-xl font-medium hover:bg-purple-700 transition disabled:opacity-50"
+                                    className="flex-1 py-2 bg-purple-800/80 text-purple-300 rounded-lg text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handlePayToPlay}
-                                    disabled={gameVault.isLoading || (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid)}
-                                    className={`flex-1 py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-2 ${(isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid)
+                                    disabled={gameVault.isLoading || (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) || (!isFirstPlayer && !paymentStatus.onChainGameId)}
+                                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-1.5 ${(isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid)
                                         ? 'bg-emerald-600 text-white'
                                         : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
                                         } disabled:opacity-70`}
                                 >
                                     {gameVault.isLoading ? (
-                                        <><Loader2 className="animate-spin" size={18} /> Confirming...</>
+                                        <><Loader2 className="animate-spin" size={14} /> Confirming...</>
                                     ) : (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) ? (
                                         'Waiting...'
+                                    ) : (!isFirstPlayer && !paymentStatus.onChainGameId) ? (
+                                        <><Loader2 className="animate-spin" size={14} /> Waiting for opponent...</>
                                     ) : (
                                         'Pay & Play'
                                     )}

@@ -317,9 +317,9 @@ export function useMultiplayer() {
     }, []);
 
     // Join matchmaking queue
-    const joinQueue = useCallback(() => {
+    const joinQueue = useCallback((walletAddress?: string) => {
         if (socketRef.current?.connected) {
-            socketRef.current.emit('join_queue');
+            socketRef.current.emit('join_queue', walletAddress);
             setState(prev => ({ ...prev, matchmakingStatus: 'queue' }));
         }
     }, []);

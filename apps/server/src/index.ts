@@ -4,6 +4,20 @@
 import { createServer } from 'http';
 import { initializeSocketServer } from './socketServer';
 import { getStats } from './roomManager';
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from specific path (root .env)
+const envPath = path.resolve(__dirname, '../../../.env');
+console.log(`[Server] Loading config from: ${envPath}`);
+dotenv.config({ path: envPath });
+
+// Try default load if above failed or for other vars
+dotenv.config();
+
+// Initialize services after env vars are loaded
+import { contractService } from './contractService';
+contractService.initialize();
 
 const PORT = process.env.PORT || 3000;
 
@@ -36,13 +50,10 @@ initializeSocketServer(httpServer);
 
 // Start listening
 httpServer.listen(PORT, () => {
-  console.log('═══════════════════════════════════════════');
-  console.log('  🎮 Chroma Duel PvP Server');
-  console.log('═══════════════════════════════════════════');
-  console.log(`  📡 WebSocket: ws://localhost:${PORT}`);
-  console.log(`  🔗 Health:    http://localhost:${PORT}/health`);
-  console.log(`  📊 Stats:     http://localhost:${PORT}/stats`);
-  console.log('═══════════════════════════════════════════');
+  console.log(`[Server] Server-Run`);
+  console.log(`[Server] WebSocket: ws://localhost:${PORT}`); // WebSocket endpoint
+  console.log(`[Server] Health:    http://localhost:${PORT}/health`); // Health check endpoint
+  console.log(`[Server] Stats:     http://localhost:${PORT}/stats`); // Stats endpoint
 });
 
 // Graceful shutdown

@@ -1,8 +1,6 @@
-// apps/server/src/socketServer.ts
-// WebSocket server untuk PvP multiplayer
-
 import { Server as HTTPServer } from 'http';
 import { Server, Socket } from 'socket.io';
+import { contractService } from './contractService';
 import type {
     ClientToServerEvents,
     ServerToClientEvents,
@@ -490,6 +488,22 @@ function startGame(roomId: string) {
 
     RoomManager.updateRoomStatus(roomId, 'playing');
 
+    // START ON-CHAIN GAME
+    if (room.onChainGameId) {
+        console.log(`\n==================================================`);
+        console.log(`[SocketServer] Starting game on-chain: ${room.onChainGameId}`);
+        console.log(`==================================================`);
+
+        contractService.startGame(room.onChainGameId)
+            .then(tx => {
+                if (tx) console.log(`[SocketServer] Game ${room.onChainGameId} started! Tx: ${tx}`);
+                else console.error(`[SocketServer] Failed to start game ${room.onChainGameId} on-chain`);
+            })
+            .catch(err => {
+                console.error(`[SocketServer] Error starting game on-chain:`, err);
+            });
+    }
+
     const gameConfig: GameStartData['config'] = {
         duration: 90,
         gridCols: 35,
@@ -526,4 +540,3 @@ function startGame(roomId: string) {
 export function getIO() {
     return io;
 }
-
