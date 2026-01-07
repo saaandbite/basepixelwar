@@ -38,6 +38,9 @@ export interface MultiplayerState {
     latestGameState: SyncedGameState | null;
     lastGameResult: GameResult | null;
     error: string | null;
+    // Payment state
+    paymentStatus: import('@repo/shared/multiplayer').PaymentStatus | null;
+    isFirstPlayer: boolean;
 }
 
 const getServerUrl = () => {
@@ -70,6 +73,9 @@ export function useMultiplayer() {
         latestGameState: null,
         lastGameResult: null,
         error: null,
+        // Payment
+        paymentStatus: null,
+        isFirstPlayer: false,
     });
 
     // Callback ref for opponent input handling
@@ -141,6 +147,68 @@ export function useMultiplayer() {
                     status: 'waiting',
                     createdAt: Date.now()
                 } as unknown as GameRoom
+            }));
+        });
+
+        // NEW: Handle pending_payment (match found, waiting for blockchain payment)
+        socket.on('pending_payment', ({ roomId, opponent, deadline, isFirstPlayer }) => {
+            console.log('[Multiplayer] Match found (pending_payment)!', roomId, opponent);
+            // Determine my team based on opponent's team
+            const inferredTeam: 'blue' | 'red' = opponent.team === 'red' ? 'blue' : 'red';
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'found', // Treat as match found for UI purposes
+                opponent,
+                myTeam: inferredTeam,
+                isFirstPlayer,
+                paymentStatus: {
+                    player1Paid: false,
+                    player2Paid: false,
+                    deadline,
+                },
+                // Create a minimal room object so we can access roomId
+                room: {
+                    id: roomId,
+                    players: [],
+                    status: 'pending_payment',
+                    createdAt: Date.now(),
+                    paymentDeadline: deadline,
+                } as unknown as GameRoom
+            }));
+        });
+
+        // Handle payment status updates
+        socket.on('payment_status', (status) => {
+            console.log('[Multiplayer] Payment status update:', status);
+            setState(prev => ({
+                ...prev,
+                paymentStatus: status,
+            }));
+        });
+
+        // Handle payment cancelled
+        socket.on('payment_cancelled', (reason) => {
+            console.log('[Multiplayer] Payment cancelled:', reason);
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'queue', // Back to queue
+                room: null,
+                opponent: null,
+                paymentStatus: null,
+                isFirstPlayer: false,
+            }));
+        });
+
+        // Handle payment timeout
+        socket.on('payment_timeout', () => {
+            console.log('[Multiplayer] Payment timeout');
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'queue', // Back to queue
+                room: null,
+                opponent: null,
+                paymentStatus: null,
+                isFirstPlayer: false,
             }));
         });
 
@@ -289,6 +357,30 @@ export function useMultiplayer() {
         opponentInputCallbackRef.current = callback;
     }, []);
 
+    // Confirm payment (emit to server)
+    const confirmPayment = useCallback((txHash: string, onChainGameId: number) => {
+        if (socketRef.current?.connected) {
+            console.log('[Multiplayer] Confirming payment:', txHash, onChainGameId);
+            socketRef.current.emit('payment_confirmed', { txHash, onChainGameId });
+        }
+    }, []);
+
+    // Cancel payment
+    const cancelPayment = useCallback(() => {
+        if (socketRef.current?.connected) {
+            console.log('[Multiplayer] Cancelling payment');
+            socketRef.current.emit('cancel_payment');
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'queue',
+                room: null,
+                opponent: null,
+                paymentStatus: null,
+                isFirstPlayer: false,
+            }));
+        }
+    }, []);
+
     // Auto-disconnect on unmount
     useEffect(() => {
         return () => {
@@ -313,5 +405,8 @@ export function useMultiplayer() {
         setReady,
         sendInput,
         setOpponentInputCallback,
+        // Payment
+        confirmPayment,
+        cancelPayment,
     };
 }

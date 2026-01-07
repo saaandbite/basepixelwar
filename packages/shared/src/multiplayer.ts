@@ -10,14 +10,28 @@ export interface PvPPlayer {
     name: string;
     team: 'blue' | 'red';
     ready: boolean;
+    walletAddress?: string; // Wallet address for smart contract
+}
+
+export interface PaymentStatus {
+    player1Paid: boolean;
+    player2Paid: boolean;
+    player1TxHash?: string;
+    player2TxHash?: string;
+    deadline: number;
+    onChainGameId?: number;
 }
 
 export interface GameRoom {
     id: string;
     players: PvPPlayer[];
-    status: 'waiting' | 'countdown' | 'playing' | 'finished';
+    status: 'waiting' | 'pending_payment' | 'countdown' | 'playing' | 'finished';
     createdAt: number;
     gameStartedAt?: number;
+    // Smart contract integration
+    onChainGameId?: number;
+    paymentDeadline?: number;
+    paymentStatus?: PaymentStatus;
 }
 
 // ============================================
@@ -26,9 +40,13 @@ export interface GameRoom {
 
 export type ClientToServerEvents = {
     // Matchmaking
-    'join_queue': () => void;
+    'join_queue': (walletAddress?: string) => void;
     'leave_queue': () => void;
     'player_ready': () => void;
+
+    // Payment
+    'payment_confirmed': (data: { txHash: string; onChainGameId: number }) => void;
+    'cancel_payment': () => void;
 
     // Gameplay
     'player_input': (input: PlayerInput) => void;
@@ -61,6 +79,12 @@ export type ServerToClientEvents = {
     // Matchmaking
     'queue_status': (data: { position: number; totalInQueue: number }) => void;
     'match_found': (data: { roomId: string; opponent: PvPPlayer }) => void;
+
+    // Payment Flow
+    'pending_payment': (data: { roomId: string; opponent: PvPPlayer; deadline: number; isFirstPlayer: boolean }) => void;
+    'payment_status': (status: PaymentStatus) => void;
+    'payment_timeout': () => void;
+    'payment_cancelled': (reason: string) => void;
 
     // Room Management
     'room_created': (room: GameRoom) => void;

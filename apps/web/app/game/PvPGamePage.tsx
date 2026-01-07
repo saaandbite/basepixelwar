@@ -161,7 +161,142 @@ export function PvPGamePage() {
 
     }, [pvp.gameState, pvp.myTeam]);
 
-    // Waiting for game (Only if NOT playing AND NOT Game Over)
+    // Calculate payment deadline countdown
+    const [paymentTimeLeft, setPaymentTimeLeft] = React.useState(60);
+
+    React.useEffect(() => {
+        if (!pvp.pendingPayment || !pvp.paymentStatus?.deadline) return;
+
+        const updateTimer = () => {
+            const remaining = Math.max(0, Math.floor((pvp.paymentStatus!.deadline - Date.now()) / 1000));
+            setPaymentTimeLeft(remaining);
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [pvp.pendingPayment, pvp.paymentStatus?.deadline]);
+
+    // Pay & Play confirmation screen
+    if (pvp.pendingPayment && pvp.paymentStatus) {
+        const myPaid = pvp.isFirstPlayer ? pvp.paymentStatus.player1Paid : pvp.paymentStatus.player2Paid;
+
+        return (
+            <div className="game-container bg-slate-50">
+                <div className="flex flex-col items-center justify-center h-screen gap-6 p-4">
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">
+                        MATCH FOUND!
+                    </h1>
+
+                    <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-6 w-full max-w-sm">
+                        {/* Opponent Info */}
+                        <p className="text-slate-600">
+                            Opponent: <span className="font-bold text-slate-800">{pvp.opponentName}</span>
+                        </p>
+
+                        {/* Payment Status Indicators */}
+                        <div className="flex gap-8 text-center">
+                            <div className="flex flex-col items-center">
+                                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all ${pvp.paymentStatus.player1Paid
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-slate-200 text-slate-400'
+                                    }`}>
+                                    {pvp.paymentStatus.player1Paid ? '✓' : '1'}
+                                </div>
+                                <p className="text-sm text-slate-500 mt-2">
+                                    {pvp.isFirstPlayer ? 'You' : 'Opponent'}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                    {pvp.paymentStatus.player1Paid ? 'Paid' : 'Waiting'}
+                                </p>
+                            </div>
+
+                            <div className="flex items-center text-slate-300 text-2xl">
+                                VS
+                            </div>
+
+                            <div className="flex flex-col items-center">
+                                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all ${pvp.paymentStatus.player2Paid
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-slate-200 text-slate-400'
+                                    }`}>
+                                    {pvp.paymentStatus.player2Paid ? '✓' : '2'}
+                                </div>
+                                <p className="text-sm text-slate-500 mt-2">
+                                    {!pvp.isFirstPlayer ? 'You' : 'Opponent'}
+                                </p>
+                                <p className="text-xs text-slate-400">
+                                    {pvp.paymentStatus.player2Paid ? 'Paid' : 'Waiting'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Countdown Timer */}
+                        <div className="text-center">
+                            <p className="text-slate-400 text-sm">
+                                Time remaining: <span className="font-mono font-bold text-slate-600">{paymentTimeLeft}s</span>
+                            </p>
+                            {paymentTimeLeft <= 10 && (
+                                <p className="text-red-500 text-xs mt-1 animate-pulse">Hurry up!</p>
+                            )}
+                        </div>
+
+                        {/* Entry Fee Display */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl w-full text-center border border-blue-100">
+                            <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">Entry Fee</p>
+                            <p className="text-2xl font-bold text-slate-800">0.001 ETH</p>
+                            <p className="text-slate-500 text-xs mt-1">Winner takes 0.00198 ETH (1% fee)</p>
+                        </div>
+
+                        {/* Error Message */}
+                        {pvp.paymentError && (
+                            <div className="bg-red-50 border border-red-200 p-3 rounded-xl w-full">
+                                <p className="text-red-600 text-sm text-center">{pvp.paymentError}</p>
+                                <button
+                                    onClick={pvp.clearPaymentError}
+                                    className="text-red-400 text-xs underline w-full text-center mt-1"
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-4 w-full">
+                            <button
+                                onClick={pvp.cancelPayment}
+                                disabled={pvp.isPaymentLoading}
+                                className="flex-1 py-3 px-6 bg-slate-100 text-slate-600 rounded-xl font-semibold hover:bg-slate-200 transition disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={pvp.payToPlay}
+                                disabled={pvp.isPaymentLoading || myPaid}
+                                className={`flex-1 py-3 px-6 rounded-xl font-semibold transition ${myPaid
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                                    } disabled:opacity-70`}
+                            >
+                                {pvp.isPaymentLoading ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                                        Confirming...
+                                    </span>
+                                ) : myPaid ? (
+                                    'Waiting for opponent...'
+                                ) : (
+                                    'Pay & Play'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Waiting for game (Only if NOT playing AND NOT Game Over AND NOT pending payment)
     if (!pvp.isPlaying && !pvp.gameOverResult) {
         return (
             <div className="game-container bg-slate-50">

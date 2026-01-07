@@ -20,6 +20,9 @@ type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServer
 
 let io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
+// Payment timeout tracking
+const paymentTimeouts = new Map<string, NodeJS.Timeout>();
+
 // ============================================
 // SERVER INITIALIZATION
 // ============================================
@@ -61,7 +64,7 @@ function handleConnection(socket: GameSocket) {
     socket.emit('connected', playerId);
 
     // Register event handlers
-    socket.on('join_queue', () => handleJoinQueue(socket));
+    socket.on('join_queue', (walletAddress?: string) => handleJoinQueue(socket, walletAddress));
     socket.on('leave_queue', () => handleLeaveQueue(socket));
     socket.on('player_ready', () => handlePlayerReady(socket));
     socket.on('player_input', (input: Parameters<ClientToServerEvents['player_input']>[0]) => handlePlayerInput(socket, input));
@@ -70,18 +73,23 @@ function handleConnection(socket: GameSocket) {
     socket.on('rejoin_game', (roomId: string) => handleRejoinGame(socket, roomId));
     socket.on('leave_room', () => handleLeaveRoom(socket));
     socket.on('disconnect', () => handleDisconnect(socket));
+
+    // Payment events
+    socket.on('payment_confirmed', (data) => handlePaymentConfirmed(socket, data));
+    socket.on('cancel_payment', () => handleCancelPayment(socket));
 }
 
 // ============================================
 // EVENT HANDLERS
 // ============================================
 
-function handleJoinQueue(socket: GameSocket) {
+function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
     const player: PvPPlayer = {
         id: socket.data.playerId!,
         name: socket.data.playerName!,
         team: 'blue', // Will be assigned when matched
         ready: false,
+        walletAddress,
     };
 
     const position = RoomManager.joinQueue(player);
@@ -106,17 +114,26 @@ function handleJoinQueue(socket: GameSocket) {
             socket1.data.roomId = room.id;
             socket2.data.roomId = room.id;
 
-            // Notify match found
-            socket1.emit('match_found', {
+            const deadline = room.paymentDeadline || Date.now() + 60000;
+
+            // Notify pending payment (not match_found yet)
+            socket1.emit('pending_payment', {
                 roomId: room.id,
-                opponent: room.players.find(p => p.id !== player1.id)!
+                opponent: room.players.find(p => p.id !== player1.id)!,
+                deadline,
+                isFirstPlayer: true,
             });
-            socket2.emit('match_found', {
+            socket2.emit('pending_payment', {
                 roomId: room.id,
-                opponent: room.players.find(p => p.id !== player2.id)!
+                opponent: room.players.find(p => p.id !== player2.id)!,
+                deadline,
+                isFirstPlayer: false,
             });
 
-            console.log(`[SocketServer] Match made: ${player1.name} vs ${player2.name}`);
+            // Start payment timeout
+            startPaymentTimeout(room.id);
+
+            console.log(`[SocketServer] Match made (pending_payment): ${player1.name} vs ${player2.name}`);
         }
     }
 }
@@ -130,7 +147,7 @@ function handlePlayerReady(socket: GameSocket) {
     const room = RoomManager.setPlayerReady(socket.data.playerId!, true);
 
     if (room && RoomManager.areAllPlayersReady(room)) {
-        // Only start countdown if room is waiting
+        // Only start countdown if room is waiting (not pending_payment)
         // If it's already playing or counting down, ignore this trigger
         if (room.status === 'waiting') {
             startGameCountdown(room.id);
@@ -224,6 +241,13 @@ function handleDisconnect(socket: GameSocket) {
             console.log(`[SocketServer] Player ${socket.data.playerId} disconnected from active/finished room ${room.id}. Keeping session alive.`);
             return;
         }
+
+        // If in pending_payment and player disconnects, cancel the match
+        if (room && room.status === 'pending_payment') {
+            console.log(`[SocketServer] Player ${socket.data.playerId} disconnected during pending_payment. Cancelling match.`);
+            cancelPaymentAndRefund(room.id, 'Opponent disconnected');
+            return;
+        }
     }
 
     // Leave room if in room (normal cleanup)
@@ -310,6 +334,133 @@ function handleRejoinGame(socket: GameSocket, roomId: string) {
 }
 
 // ============================================
+// PAYMENT HANDLERS
+// ============================================
+
+function handlePaymentConfirmed(
+    socket: GameSocket,
+    data: { txHash: string; onChainGameId: number }
+) {
+    const roomId = socket.data.roomId;
+    if (!roomId) {
+        console.log('[Payment] No roomId for payment confirmation');
+        return;
+    }
+
+    const room = RoomManager.confirmPayment(
+        roomId,
+        socket.data.playerId!,
+        data.txHash,
+        data.onChainGameId
+    );
+
+    if (!room) {
+        console.log('[Payment] Failed to confirm payment - room not found');
+        return;
+    }
+
+    // Broadcast payment status to both players
+    const status = RoomManager.getPaymentStatus(room);
+    io.to(roomId).emit('payment_status', status);
+
+    // Check if both paid
+    if (RoomManager.areBothPlayersPaid(room)) {
+        console.log(`[Payment] Both players paid in room ${roomId}`);
+        clearPaymentTimeout(roomId);
+
+        // Update room status to waiting (ready for game)
+        RoomManager.updateRoomStatus(roomId, 'waiting');
+
+        // Set both players as ready and start countdown
+        room.players.forEach(p => {
+            RoomManager.setPlayerReady(p.id, true);
+        });
+
+        // Start game countdown immediately
+        startGameCountdown(roomId);
+    }
+}
+
+function handleCancelPayment(socket: GameSocket) {
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+
+    const room = RoomManager.getRoom(roomId);
+    if (!room || room.status !== 'pending_payment') return;
+
+    // Cancel and refund
+    cancelPaymentAndRefund(roomId, 'Player cancelled');
+}
+
+// ============================================
+// PAYMENT TIMEOUT
+// ============================================
+
+function startPaymentTimeout(roomId: string) {
+    // Clear any existing timeout
+    clearPaymentTimeout(roomId);
+
+    const timeout = setTimeout(() => {
+        const room = RoomManager.getRoom(roomId);
+        if (room && room.status === 'pending_payment') {
+            console.log(`[Payment] Timeout for room ${roomId}`);
+            cancelPaymentAndRefund(roomId, 'Payment timeout');
+        }
+    }, 60000); // 60 seconds
+
+    paymentTimeouts.set(roomId, timeout);
+    console.log(`[Payment] Started 60s timeout for room ${roomId}`);
+}
+
+function clearPaymentTimeout(roomId: string) {
+    const timeout = paymentTimeouts.get(roomId);
+    if (timeout) {
+        clearTimeout(timeout);
+        paymentTimeouts.delete(roomId);
+        console.log(`[Payment] Cleared timeout for room ${roomId}`);
+    }
+}
+
+function cancelPaymentAndRefund(roomId: string, reason: string) {
+    clearPaymentTimeout(roomId);
+
+    const room = RoomManager.getRoom(roomId);
+    if (!room) return;
+
+    console.log(`[Payment] Cancelling room ${roomId}: ${reason}`);
+
+    // Check if any player paid - if so, need to trigger on-chain refund
+    // TODO: Call smart contract cancelGame(onChainGameId) for refund
+    if (RoomManager.hasAnyPlayerPaid(room) && room.onChainGameId) {
+        console.log(`[Payment] Need to refund on-chain game ${room.onChainGameId}`);
+        // This would require backend signer to call cancelGame on the contract
+        // For now, we just log it - actual implementation needs private key management
+    }
+
+    // Notify players
+    io.to(roomId).emit('payment_cancelled', reason);
+
+    // Return players to queue
+    room.players.forEach(player => {
+        const playerSocket = io.sockets.sockets.get(player.id);
+        if (playerSocket) {
+            playerSocket.leave(roomId);
+            playerSocket.data.roomId = undefined;
+
+            // Re-add to queue
+            RoomManager.joinQueue(player);
+            playerSocket.emit('queue_status', {
+                position: RoomManager.getQueuePosition(player.id),
+                totalInQueue: RoomManager.getQueueSize()
+            });
+        }
+    });
+
+    // Delete room
+    RoomManager.deleteRoom(roomId);
+}
+
+// ============================================
 // GAME FLOW
 // ============================================
 
@@ -375,3 +526,4 @@ function startGame(roomId: string) {
 export function getIO() {
     return io;
 }
+

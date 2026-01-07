@@ -44,7 +44,9 @@ export interface UseGameVaultReturn {
 // ============ Constants ============
 
 // Contract address - UPDATE THIS after deployment
-const GAME_VAULT_ADDRESS = process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS || "0x0000000000000000000000000000000000000000";
+// Contract address - UPDATE THIS after deployment
+// const GAME_VAULT_ADDRESS = process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS || "0x089a1619c076b6e844620cf80ea3b981daca3772";
+const GAME_VAULT_ADDRESS = "0x089a1619c076b6e844620cf80ea3b981daca3772";
 
 // Bid amount in wei (0.001 ETH)
 const BID_AMOUNT_WEI = "0x38D7EA4C68000"; // 0.001 ETH = 1000000000000000 wei
@@ -54,9 +56,9 @@ const BID_AMOUNT_WEI = "0x38D7EA4C68000"; // 0.001 ETH = 1000000000000000 wei
 // Function selectors (keccak256 of function signature, first 4 bytes)
 const FUNCTION_SELECTORS = {
     // createGame(uint8) - mode is enum, treated as uint8
-    createGame: "0x73b21930", // keccak256("createGame(uint8)")[:4]
+    createGame: "0xe580f6ab", // cast sig "createGame(uint8)"
     // joinGame(uint256)
-    joinGame: "0xefaa55a0", // keccak256("joinGame(uint256)")[:4]
+    joinGame: "0xefaa55a0", // cast sig "joinGame(uint256)"
 };
 
 function encodeUint8(value: number): string {
@@ -92,6 +94,10 @@ export function useGameVault(): UseGameVaultReturn {
                 throw new Error("Wallet not connected");
             }
 
+            // if (GAME_VAULT_ADDRESS === "0x0000000000000000000000000000000000000000") {
+            //    throw new Error("Game Vault contract address not configured. Please set NEXT_PUBLIC_GAME_VAULT_ADDRESS.");
+            // }
+
             setIsLoading(true);
             setError(null);
 
@@ -100,6 +106,13 @@ export function useGameVault(): UseGameVaultReturn {
 
                 // Encode function call: createGame(uint8 mode)
                 const data = FUNCTION_SELECTORS.createGame + encodeUint8(mode);
+
+                console.log("[GameVault] Creating game with params:", {
+                    to: GAME_VAULT_ADDRESS,
+                    toLength: GAME_VAULT_ADDRESS.length,
+                    value: BID_AMOUNT_WEI,
+                    data
+                });
 
                 const txHash = await sendTransaction(
                     GAME_VAULT_ADDRESS,
@@ -110,8 +123,14 @@ export function useGameVault(): UseGameVaultReturn {
                 setLastTxHash(txHash);
                 console.log("[GameVault] Game created, tx:", txHash);
                 return txHash;
-            } catch (err: unknown) {
-                const errorMessage = err instanceof Error ? err.message : "Failed to create game";
+            } catch (err: any) {
+                console.error("[GameVault] createGame error:", err);
+                if (typeof err === 'object') {
+                    try {
+                        console.error("[GameVault] createGame error JSON:", JSON.stringify(err, null, 2));
+                    } catch (e) { }
+                }
+                const errorMessage = err?.message || "Failed to create game";
                 setError(errorMessage);
                 throw err;
             } finally {
@@ -127,6 +146,10 @@ export function useGameVault(): UseGameVaultReturn {
             if (!address) {
                 throw new Error("Wallet not connected");
             }
+
+            // if (GAME_VAULT_ADDRESS === "0x0000000000000000000000000000000000000000") {
+            //    throw new Error("Game Vault contract address not configured. Please set NEXT_PUBLIC_GAME_VAULT_ADDRESS.");
+            // }
 
             setIsLoading(true);
             setError(null);
@@ -146,8 +169,14 @@ export function useGameVault(): UseGameVaultReturn {
                 setLastTxHash(txHash);
                 console.log("[GameVault] Game joined, tx:", txHash);
                 return txHash;
-            } catch (err: unknown) {
-                const errorMessage = err instanceof Error ? err.message : "Failed to join game";
+            } catch (err: any) {
+                console.error("[GameVault] joinGame error:", err);
+                if (typeof err === 'object') {
+                    try {
+                        console.error("[GameVault] joinGame error JSON:", JSON.stringify(err, null, 2));
+                    } catch (e) { }
+                }
+                const errorMessage = err?.message || "Failed to join game";
                 setError(errorMessage);
                 throw err;
             } finally {

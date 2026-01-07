@@ -1,12 +1,15 @@
 // apps/server/src/roomManager.ts
 // Room management untuk PvP matchmaking
 
-import type { GameRoom, PvPPlayer } from '@repo/shared/multiplayer';
+import type { GameRoom, PvPPlayer, PaymentStatus } from '@repo/shared/multiplayer';
 
 // In-memory room storage (akan diganti dengan Redis untuk production)
 const rooms: Map<string, GameRoom> = new Map();
 const playerRoomMap: Map<string, string> = new Map(); // playerId -> roomId
 const matchmakingQueue: PvPPlayer[] = [];
+
+// Payment timeout duration (60 seconds)
+const PAYMENT_TIMEOUT_MS = 60000;
 
 // Utility untuk generate room ID
 function generateRoomId(): string {
@@ -19,18 +22,25 @@ function generateRoomId(): string {
 
 export function createRoom(creator: PvPPlayer): GameRoom {
     const roomId = generateRoomId();
+    const deadline = Date.now() + PAYMENT_TIMEOUT_MS;
 
     const room: GameRoom = {
         id: roomId,
         players: [{ ...creator, team: 'blue', ready: false }],
-        status: 'waiting',
+        status: 'pending_payment',
         createdAt: Date.now(),
+        paymentDeadline: deadline,
+        paymentStatus: {
+            player1Paid: false,
+            player2Paid: false,
+            deadline,
+        },
     };
 
     rooms.set(roomId, room);
     playerRoomMap.set(creator.id, roomId);
 
-    console.log(`[RoomManager] Room ${roomId} created by ${creator.name}`);
+    console.log(`[RoomManager] Room ${roomId} created by ${creator.name} (pending_payment)`);
     return room;
 }
 
@@ -47,7 +57,7 @@ export function joinRoom(roomId: string, player: PvPPlayer): GameRoom | null {
         return null;
     }
 
-    if (room.status !== 'waiting') {
+    if (room.status !== 'waiting' && room.status !== 'pending_payment') {
         console.log(`[RoomManager] Room ${roomId} is not accepting players (status: ${room.status})`);
         return null;
     }
@@ -102,6 +112,15 @@ export function getRoom(roomId: string): GameRoom | null {
     return rooms.get(roomId) || null;
 }
 
+export function deleteRoom(roomId: string): void {
+    const room = rooms.get(roomId);
+    if (room) {
+        room.players.forEach(p => playerRoomMap.delete(p.id));
+        rooms.delete(roomId);
+        console.log(`[RoomManager] Room ${roomId} deleted`);
+    }
+}
+
 export function getPlayerRoom(playerId: string): GameRoom | null {
     const roomId = playerRoomMap.get(playerId);
     if (!roomId) return null;
@@ -134,6 +153,62 @@ export function updateRoomStatus(roomId: string, status: GameRoom['status']): Ga
     }
 
     return room;
+}
+
+// ============================================
+// PAYMENT MANAGEMENT
+// ============================================
+
+export function confirmPayment(
+    roomId: string,
+    playerId: string,
+    txHash: string,
+    onChainGameId: number
+): GameRoom | null {
+    const room = rooms.get(roomId);
+    if (!room || !room.paymentStatus) return null;
+
+    const playerIndex = room.players.findIndex(p => p.id === playerId);
+
+    if (playerIndex === 0) {
+        room.paymentStatus.player1Paid = true;
+        room.paymentStatus.player1TxHash = txHash;
+        room.onChainGameId = onChainGameId;
+    } else if (playerIndex === 1) {
+        room.paymentStatus.player2Paid = true;
+        room.paymentStatus.player2TxHash = txHash;
+        // If second player, use existing onChainGameId or update
+        if (!room.onChainGameId) {
+            room.onChainGameId = onChainGameId;
+        }
+    }
+
+    console.log(`[RoomManager] Payment confirmed for player ${playerIndex + 1} in room ${roomId}`);
+    return room;
+}
+
+export function areBothPlayersPaid(room: GameRoom): boolean {
+    if (!room.paymentStatus) return false;
+    return room.paymentStatus.player1Paid && room.paymentStatus.player2Paid;
+}
+
+export function getPaymentStatus(room: GameRoom): PaymentStatus {
+    const status = room.paymentStatus || {
+        player1Paid: false,
+        player2Paid: false,
+        deadline: room.paymentDeadline || 0,
+    };
+
+    // Make sure to include onChainGameId from room
+    return {
+        ...status,
+        onChainGameId: room.onChainGameId,
+    };
+}
+
+export function hasAnyPlayerPaid(room: GameRoom): boolean {
+    if (!room.paymentStatus) return false;
+    return room.paymentStatus.player1Paid || room.paymentStatus.player2Paid;
 }
 
 // ============================================
@@ -218,5 +293,7 @@ export function getStats() {
         totalRooms: rooms.size,
         queueSize: matchmakingQueue.length,
         activeGames: Array.from(rooms.values()).filter(r => r.status === 'playing').length,
+        pendingPayments: Array.from(rooms.values()).filter(r => r.status === 'pending_payment').length,
     };
 }
+

@@ -23,12 +23,12 @@ export interface WalletContextType extends WalletState {
 // ============ Constants ============
 
 // Base Mainnet Chain ID
-const BASE_CHAIN_ID = 8453;
+const BASE_CHAIN_ID = 8453 as number;
 // Base Sepolia (Testnet) Chain ID
-const BASE_SEPOLIA_CHAIN_ID = 84532;
+const BASE_SEPOLIA_CHAIN_ID = 84532 as number;
 
 // Use testnet for development
-const TARGET_CHAIN_ID = BASE_SEPOLIA_CHAIN_ID;
+const TARGET_CHAIN_ID = BASE_SEPOLIA_CHAIN_ID as number;
 
 const BASE_CHAIN_CONFIG = {
     chainId: `0x${TARGET_CHAIN_ID.toString(16)}`,
