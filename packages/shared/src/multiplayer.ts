@@ -99,6 +99,9 @@ export type ServerToClientEvents = {
     'game_state': (state: SyncedGameState) => void;
     'game_over': (result: GameResult) => void;
 
+    // Settlement (prize distribution)
+    'settlement_complete': (data: SettlementResult) => void;
+
     // PvP Input Relay - Server broadcasts opponent's input to you
     'opponent_input': (input: PlayerInput & { team: 'blue' | 'red' }) => void;
 };
@@ -234,6 +237,15 @@ export interface GameResult {
         powerupsCollected: { blue: number; red: number };
         goldenPixelsCaptured: { blue: number; red: number };
     };
+}
+
+export interface SettlementResult {
+    success: boolean;
+    txHash?: string;
+    basescanUrl?: string;
+    winnerTeam?: 'blue' | 'red';
+    winnerAddress?: string;
+    error?: string;
 }
 
 // ============================================

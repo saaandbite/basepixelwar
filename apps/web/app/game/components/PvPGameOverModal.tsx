@@ -10,6 +10,7 @@ interface PvPGameOverModalProps {
         currentTilesOwned: number;
         totalTilesCaptured: number;
     };
+    settlementTxHash?: string | null;
     onExit: () => void;
 }
 
@@ -53,6 +54,7 @@ export function PvPGameOverModal({
     myTeam,
     scores,
     stats,
+    settlementTxHash,
     onExit,
 }: PvPGameOverModalProps) {
     const myScore = myTeam === 'blue' ? scores.blue : scores.red;
@@ -240,9 +242,19 @@ export function PvPGameOverModal({
                                     </div>
                                 </div>
 
-                                {/* Success indicator */}
+                                {/* Success indicator with Basescan link */}
                                 <div className="mt-3 text-center">
                                     <span className="text-xs text-emerald-600 font-medium">✓ Sent to your wallet</span>
+                                    {settlementTxHash && (
+                                        <a
+                                            href={`https://sepolia.basescan.org/tx/${settlementTxHash}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block mt-2 text-xs text-blue-500 hover:text-blue-600 underline transition-colors"
+                                        >
+                                            🔗 View Transaction on Basescan
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         )}

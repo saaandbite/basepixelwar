@@ -198,8 +198,8 @@ export function PvPGamePage() {
                         <div className="flex gap-8 text-center">
                             <div className="flex flex-col items-center">
                                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all ${pvp.paymentStatus.player1Paid
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-slate-200 text-slate-400'
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-slate-200 text-slate-400'
                                     }`}>
                                     {pvp.paymentStatus.player1Paid ? '✓' : '1'}
                                 </div>
@@ -217,8 +217,8 @@ export function PvPGamePage() {
 
                             <div className="flex flex-col items-center">
                                 <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all ${pvp.paymentStatus.player2Paid
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-slate-200 text-slate-400'
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-slate-200 text-slate-400'
                                     }`}>
                                     {pvp.paymentStatus.player2Paid ? '✓' : '2'}
                                 </div>
@@ -274,8 +274,8 @@ export function PvPGamePage() {
                                 onClick={pvp.payToPlay}
                                 disabled={pvp.isPaymentLoading || myPaid}
                                 className={`flex-1 py-3 px-6 rounded-xl font-semibold transition ${myPaid
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-blue-500 text-white hover:bg-blue-600'
                                     } disabled:opacity-70`}
                             >
                                 {pvp.isPaymentLoading ? (
@@ -408,6 +408,7 @@ export function PvPGamePage() {
                                 currentTilesOwned: stats.currentTiles,
                                 totalTilesCaptured: stats.totalCaptured
                             }}
+                            settlementTxHash={pvp.settlementTxHash}
                             onExit={handleExit}
                         />
                     )}

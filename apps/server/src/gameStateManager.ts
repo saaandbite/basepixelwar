@@ -982,10 +982,12 @@ function endGame(roomId: string) {
         gameLoops.delete(roomId);
     }
 
-    // Broadcast result
+    const winner = state.scores.blue > state.scores.red ? 'blue' :
+        state.scores.red > state.scores.blue ? 'red' : 'draw';
+
+    // Broadcast result immediately (before settlement)
     ioInstance.to(roomId).emit('game_over', {
-        winner: state.scores.blue > state.scores.red ? 'blue' :
-            state.scores.red > state.scores.blue ? 'red' : 'draw',
+        winner,
         finalScore: state.scores,
         stats: {
             totalShots: { blue: 0, red: 0 },
@@ -994,16 +996,14 @@ function endGame(roomId: string) {
         }
     });
 
-    // START: On-Chain Settlement
+    // START: On-Chain Settlement (async - will emit settlement_complete when done)
     const room = RoomManager.getRoom(roomId);
+    const io = ioInstance; // Capture reference for async callback
 
     if (room && room.onChainGameId) {
         console.log(`\n==================================================`);
         console.log(`[GameStateManager] 🏛️ STARTING SETTLEMENT FOR GAME ${room.onChainGameId}`);
         console.log(`==================================================`);
-
-        const winner = state.scores.blue > state.scores.red ? 'blue' :
-            state.scores.red > state.scores.blue ? 'red' : 'draw';
 
         if (winner !== 'draw') {
             const winnerTeam = winner;
@@ -1025,13 +1025,33 @@ function endGame(roomId: string) {
                             console.log(`\n✅ [GameStateManager] SETTLEMENT SUCCESS!`);
                             console.log(`🔗 Ref: https://sepolia.basescan.org/tx/${tx}`);
                             console.log(`==================================================\n`);
+
+                            // Emit settlement complete to room with tx hash
+                            io.to(roomId).emit('settlement_complete', {
+                                success: true,
+                                txHash: tx,
+                                winnerTeam,
+                                winnerAddress: winnerPlayer.walletAddress,
+                                basescanUrl: `https://sepolia.basescan.org/tx/${tx}`
+                            });
                         } else {
                             console.error(`\n❌ [GameStateManager] SETTLEMENT FAILED (See above for details)`);
                             console.error(`==================================================\n`);
+
+                            // Emit settlement failed
+                            io.to(roomId).emit('settlement_complete', {
+                                success: false,
+                                error: 'Transaction failed'
+                            });
                         }
                     }).catch((err: unknown) => {
                         console.error(`\n❌ [GameStateManager] SETTLEMENT EXCEPTION:`, err);
                         console.error(`==================================================\n`);
+
+                        io.to(roomId).emit('settlement_complete', {
+                            success: false,
+                            error: 'Transaction exception'
+                        });
                     });
                 } catch (error) {
                     console.error(`\n❌ [GameStateManager] CRITICAL ERROR calling finalizeGame1vs1:`, error);

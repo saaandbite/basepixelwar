@@ -13,6 +13,7 @@ import type {
     SyncedGameState,
     GameStartData,
     PaymentStatus,
+    SettlementResult,
 } from '@repo/shared/multiplayer';
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -51,6 +52,10 @@ export interface PvPState {
     // Game Over 
     gameOverResult: { winner: 'blue' | 'red' | 'draw', scores: { blue: number; red: number } } | null;
 
+    // Settlement (prize distribution)
+    settlementTxHash: string | null;
+    settlementSuccess: boolean | null;
+
     // Payment
     pendingPayment: boolean;
     paymentStatus: PaymentStatus | null;
@@ -82,6 +87,9 @@ export function usePvPGame() {
         scores: { blue: 50, red: 50 },
         timeLeft: 120,
         gameOverResult: null,
+        // Settlement
+        settlementTxHash: null,
+        settlementSuccess: null,
         // Payment
         pendingPayment: false,
         paymentStatus: null,
@@ -278,7 +286,29 @@ export function usePvPGame() {
                     scores: result.finalScore
                 },
                 scores: result.finalScore,
+                // Reset settlement state
+                settlementTxHash: null,
+                settlementSuccess: null,
             }));
+        });
+
+        // Settlement complete (prize distributed)
+        socket.on('settlement_complete', (data: SettlementResult) => {
+            console.log('[PvP] Settlement complete:', data);
+            if (data.success && data.txHash) {
+                setState(prev => ({
+                    ...prev,
+                    settlementTxHash: data.txHash!,
+                    settlementSuccess: true,
+                }));
+            } else {
+                console.error('[PvP] Settlement failed:', data.error);
+                setState(prev => ({
+                    ...prev,
+                    settlementTxHash: null,
+                    settlementSuccess: false,
+                }));
+            }
         });
 
         socket.on('disconnect', () => {
@@ -305,6 +335,8 @@ export function usePvPGame() {
             scores: { blue: 50, red: 50 },
             timeLeft: 120,
             gameOverResult: null,
+            settlementTxHash: null,
+            settlementSuccess: null,
             pendingPayment: false,
             paymentStatus: null,
             isFirstPlayer: false,
