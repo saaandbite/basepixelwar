@@ -70,7 +70,7 @@ pnpm install
 
 *Optional: Install tsx for TypeScript execution if not available:*
 ```bash
-pnpm add -D -w tsx
+pnpm add -D -w typescript@latest
 ```
 
 ### 2. Database Setup
