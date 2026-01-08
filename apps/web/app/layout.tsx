@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Fredoka, Nunito } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
-import { WalletProvider } from "./contexts/WalletContext";
+import "@coinbase/onchainkit/styles.css";
+import { Providers } from "./providers";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -49,9 +50,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} ${fredoka.variable} ${nunito.variable}`}>
-        <WalletProvider>
+        <Providers>
           {children}
-        </WalletProvider>
+        </Providers>
       </body>
     </html>
   );

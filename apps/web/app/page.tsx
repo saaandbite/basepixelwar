@@ -3,26 +3,27 @@
 import Link from "next/link";
 import styles from "./page.module.css";
 import { useWallet, formatAddress, isCorrectChain } from "./contexts/WalletContext";
+import {
+  ConnectWallet,
+  Wallet,
+  WalletDropdown,
+  WalletDropdownDisconnect,
+} from "@coinbase/onchainkit/wallet";
+import {
+  Address,
+  Avatar,
+  Name,
+  Identity,
+} from "@coinbase/onchainkit/identity";
 
 export default function Home() {
   const {
     address,
     isConnected,
-    isConnecting,
     chainId,
     error,
-    connect,
-    disconnect,
     switchToBase,
   } = useWallet();
-
-  const handleConnectWallet = async () => {
-    await connect();
-  };
-
-  const handleDisconnect = () => {
-    disconnect();
-  };
 
   const isOnCorrectChain = isCorrectChain(chainId);
 
@@ -69,24 +70,21 @@ export default function Home() {
             Start Game
           </Link>
 
-          {isConnected && address ? (
-            <button
-              onClick={handleDisconnect}
-              className={styles.walletButtonConnected}
-            >
-              <span className={styles.buttonIcon}>✅</span>
-              {formatAddress(address)}
-            </button>
-          ) : (
-            <button
-              onClick={handleConnectWallet}
-              disabled={isConnecting}
-              className={styles.walletButton}
-            >
-              <span className={styles.buttonIcon}>🔗</span>
-              {isConnecting ? "Connecting..." : "Connect Wallet"}
-            </button>
-          )}
+          {/* OnchainKit Wallet Component - Full integration */}
+          <Wallet>
+            <ConnectWallet className={styles.walletButton}>
+              <Avatar className="h-6 w-6" />
+              <Name />
+            </ConnectWallet>
+            <WalletDropdown>
+              <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+                <Avatar />
+                <Name />
+                <Address />
+              </Identity>
+              <WalletDropdownDisconnect />
+            </WalletDropdown>
+          </Wallet>
         </div>
 
         {/* Connected Info */}
@@ -123,7 +121,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <p>Built on Base L2 • Powered by Web3</p>
+        <p>Built on Base L2 • Powered by OnchainKit</p>
       </footer>
     </div>
   );

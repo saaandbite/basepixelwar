@@ -1,6 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useMemo, useCallback } from "react";
+import { useAccount, useConnect, useDisconnect, useSwitchChain, useSendTransaction } from "wagmi";
+import { baseSepolia, base } from "wagmi/chains";
+import { parseEther } from "viem";
 
 // ============ Types ============
 
@@ -23,41 +26,14 @@ export interface WalletContextType extends WalletState {
 // ============ Constants ============
 
 // Base Mainnet Chain ID
-const BASE_CHAIN_ID = 8453 as number;
+export const BASE_CHAIN_ID = 8453 as number;
 // Base Sepolia (Testnet) Chain ID
-const BASE_SEPOLIA_CHAIN_ID = 84532 as number;
+export const BASE_SEPOLIA_CHAIN_ID = 84532 as number;
 
 // Use testnet for development
-const TARGET_CHAIN_ID = BASE_SEPOLIA_CHAIN_ID as number;
+export const TARGET_CHAIN_ID = BASE_SEPOLIA_CHAIN_ID as number;
 
-const BASE_CHAIN_CONFIG = {
-    chainId: `0x${TARGET_CHAIN_ID.toString(16)}`,
-    chainName: TARGET_CHAIN_ID === BASE_CHAIN_ID ? "Base" : "Base Sepolia",
-    nativeCurrency: {
-        name: "Ethereum",
-        symbol: "ETH",
-        decimals: 18,
-    },
-    rpcUrls: TARGET_CHAIN_ID === BASE_CHAIN_ID
-        ? ["https://mainnet.base.org"]
-        : ["https://sepolia.base.org"],
-    blockExplorerUrls: TARGET_CHAIN_ID === BASE_CHAIN_ID
-        ? ["https://basescan.org"]
-        : ["https://sepolia.basescan.org"],
-};
-
-// ============ Extend Window ============
-
-declare global {
-    interface Window {
-        ethereum?: {
-            isMetaMask?: boolean;
-            request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-            on: (event: string, callback: (...args: unknown[]) => void) => void;
-            removeListener: (event: string, callback: (...args: unknown[]) => void) => void;
-        };
-    }
-}
+const TARGET_CHAIN = TARGET_CHAIN_ID === BASE_CHAIN_ID ? base : baseSepolia;
 
 // ============ Context ============
 
@@ -66,236 +42,104 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 // ============ Provider ============
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
-    const [state, setState] = useState<WalletState>({
-        address: null,
-        isConnected: false,
-        isConnecting: false,
-        chainId: null,
-        error: null,
-    });
+    // Wagmi hooks
+    const { address, isConnected, isConnecting, chain } = useAccount();
+    const { connect: wagmiConnect, connectors, isPending: isConnectPending } = useConnect();
+    const { disconnect: wagmiDisconnect } = useDisconnect();
+    const { switchChain } = useSwitchChain();
+    const { sendTransactionAsync } = useSendTransaction();
 
-    // Check for existing connection on mount
-    useEffect(() => {
-        const checkConnection = async () => {
-            if (typeof window === "undefined" || !window.ethereum) return;
-
-            try {
-                const accounts = (await window.ethereum.request({
-                    method: "eth_accounts",
-                })) as string[];
-
-                const chainId = (await window.ethereum.request({
-                    method: "eth_chainId",
-                })) as string;
-
-                if (accounts.length > 0 && accounts[0]) {
-                    setState((prev) => ({
-                        ...prev,
-                        address: accounts[0],
-                        isConnected: true,
-                        chainId: parseInt(chainId, 16),
-                    }));
-                }
-            } catch (err) {
-                console.error("Error checking wallet connection:", err);
-            }
-        };
-
-        checkConnection();
-    }, []);
-
-    // Listen for account and chain changes
-    useEffect(() => {
-        if (typeof window === "undefined" || !window.ethereum) return;
-
-        const handleAccountsChanged = (accounts: unknown) => {
-            const accountsArray = accounts as string[];
-            if (accountsArray.length === 0 || !accountsArray[0]) {
-                setState({
-                    address: null,
-                    isConnected: false,
-                    isConnecting: false,
-                    chainId: null,
-                    error: null,
-                });
-            } else {
-                setState((prev) => ({
-                    ...prev,
-                    address: accountsArray[0],
-                    isConnected: true,
-                }));
-            }
-        };
-
-        const handleChainChanged = (chainId: unknown) => {
-            const newChainId = parseInt(chainId as string, 16);
-            setState((prev) => ({
-                ...prev,
-                chainId: newChainId,
-            }));
-        };
-
-        window.ethereum.on("accountsChanged", handleAccountsChanged);
-        window.ethereum.on("chainChanged", handleChainChanged);
-
-        return () => {
-            if (window.ethereum) {
-                window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
-                window.ethereum.removeListener("chainChanged", handleChainChanged);
-            }
-        };
-    }, []);
+    // Derived state
+    const chainId = chain?.id ?? null;
+    const error = null; // Wagmi handles errors differently, we'll handle inline
 
     // Connect wallet
     const connect = useCallback(async () => {
-        setState((prev) => ({ ...prev, error: null, isConnecting: true }));
-
-        if (typeof window === "undefined" || !window.ethereum) {
-            setState((prev) => ({
-                ...prev,
-                isConnecting: false,
-                error: "MetaMask is not installed. Please install MetaMask to continue.",
-            }));
-            window.open("https://metamask.io/download/", "_blank");
-            return;
-        }
-
         try {
-            // Request accounts
-            const accounts = (await window.ethereum.request({
-                method: "eth_requestAccounts",
-            })) as string[];
-
-            // Get chain ID
-            const chainId = (await window.ethereum.request({
-                method: "eth_chainId",
-            })) as string;
-
-            if (accounts.length > 0 && accounts[0]) {
-                setState({
-                    address: accounts[0],
-                    isConnected: true,
-                    isConnecting: false,
-                    chainId: parseInt(chainId, 16),
-                    error: null,
-                });
+            // Use the first available connector (coinbaseWallet from our config)
+            const connector = connectors[0];
+            if (connector) {
+                wagmiConnect({ connector });
             }
-        } catch (err: unknown) {
-            const error = err as { code?: number; message?: string };
-            let errorMessage = "Failed to connect wallet. Please try again.";
-
-            if (error.code === 4001) {
-                errorMessage = "Connection rejected. Please approve the connection in MetaMask.";
-            }
-
-            setState((prev) => ({
-                ...prev,
-                isConnecting: false,
-                error: errorMessage,
-            }));
+        } catch (err) {
+            console.error("Failed to connect wallet:", err);
         }
-    }, []);
+    }, [wagmiConnect, connectors]);
 
     // Disconnect wallet
     const disconnect = useCallback(() => {
-        setState({
-            address: null,
-            isConnected: false,
-            isConnecting: false,
-            chainId: null,
-            error: null,
-        });
-    }, []);
+        wagmiDisconnect();
+    }, [wagmiDisconnect]);
 
     // Switch to Base network
     const switchToBase = useCallback(async () => {
-        if (typeof window === "undefined" || !window.ethereum) {
-            throw new Error("MetaMask is not installed");
-        }
-
         try {
-            await window.ethereum.request({
-                method: "wallet_switchEthereumChain",
-                params: [{ chainId: BASE_CHAIN_CONFIG.chainId }],
-            });
-        } catch (switchError: unknown) {
-            const error = switchError as { code?: number };
-            // Chain doesn't exist, add it
-            if (error.code === 4902) {
-                await window.ethereum.request({
-                    method: "wallet_addEthereumChain",
-                    params: [BASE_CHAIN_CONFIG],
-                });
-            } else {
-                throw switchError;
-            }
+            switchChain({ chainId: TARGET_CHAIN.id });
+        } catch (err) {
+            console.error("Failed to switch chain:", err);
+            throw err;
         }
-    }, []);
+    }, [switchChain]);
 
     // Send transaction
     const sendTransaction = useCallback(
         async (to: string, value: string, data?: string): Promise<string> => {
-            if (!state.address || !window.ethereum) {
+            if (!address) {
                 throw new Error("Wallet not connected");
             }
 
             // Ensure we're on the correct chain
-            if (state.chainId !== TARGET_CHAIN_ID) {
+            if (chainId !== TARGET_CHAIN_ID) {
                 await switchToBase();
             }
 
-            const txParams: {
-                from: string;
-                to: string;
-                value: string;
-                data?: string;
-            } = {
-                from: state.address,
-                to,
-                value,
-            };
+            // Convert hex value to bigint
+            // value is expected in hex format like "0x38D7EA4C68000"
+            const valueInWei = BigInt(value);
 
-            if (data) {
-                txParams.data = data;
-            }
-
-            const txHash = (await window.ethereum.request({
-                method: "eth_sendTransaction",
-                params: [txParams],
-            })) as string;
+            const txHash = await sendTransactionAsync({
+                to: to as `0x${string}`,
+                value: valueInWei,
+                data: data as `0x${string}` | undefined,
+            });
 
             return txHash;
         },
-        [state.address, state.chainId, switchToBase]
+        [address, chainId, switchToBase, sendTransactionAsync]
     );
 
-    // Sign message
+    // Sign message - not currently using wagmi signMessage, keeping stub
     const signMessage = useCallback(
         async (message: string): Promise<string> => {
-            if (!state.address || !window.ethereum) {
+            if (!address || typeof window === "undefined" || !window.ethereum) {
                 throw new Error("Wallet not connected");
             }
 
+            // Fallback to window.ethereum for now
             const signature = (await window.ethereum.request({
                 method: "personal_sign",
-                params: [message, state.address],
+                params: [message, address],
             })) as string;
 
             return signature;
         },
-        [state.address]
+        [address]
     );
 
     const value = useMemo<WalletContextType>(
         () => ({
-            ...state,
+            address: address ?? null,
+            isConnected,
+            isConnecting: isConnecting || isConnectPending,
+            chainId,
+            error,
             connect,
             disconnect,
             switchToBase,
             sendTransaction,
             signMessage,
         }),
-        [state, connect, disconnect, switchToBase, sendTransaction, signMessage]
+        [address, isConnected, isConnecting, isConnectPending, chainId, error, connect, disconnect, switchToBase, sendTransaction, signMessage]
     );
 
     return (
@@ -323,4 +167,15 @@ export function isCorrectChain(chainId: number | null): boolean {
     return chainId === TARGET_CHAIN_ID;
 }
 
-export { TARGET_CHAIN_ID, BASE_CHAIN_ID, BASE_SEPOLIA_CHAIN_ID };
+// ============ Extend Window for fallback ============
+
+declare global {
+    interface Window {
+        ethereum?: {
+            isMetaMask?: boolean;
+            request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+            on: (event: string, callback: (...args: unknown[]) => void) => void;
+            removeListener: (event: string, callback: (...args: unknown[]) => void) => void;
+        };
+    }
+}

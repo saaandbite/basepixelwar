@@ -62,8 +62,11 @@ function namehash(name: string): string {
     if (name) {
         const labels = name.split(".");
         for (let i = labels.length - 1; i >= 0; i--) {
-            const labelHash = keccak256(labels[i]);
-            node = keccak256Bytes(hexToBytes(node) as Uint8Array, hexToBytes(labelHash) as Uint8Array);
+            const label = labels[i];
+            if (label) {
+                const labelHash = keccak256(label);
+                node = keccak256Bytes(hexToBytes(node) as Uint8Array, hexToBytes(labelHash) as Uint8Array);
+            }
         }
     }
 
@@ -82,7 +85,7 @@ function keccak256(input: string): string {
     // Simple hash implementation (for demo - in production use proper keccak256)
     let hash = 0n;
     for (let i = 0; i < data.length; i++) {
-        hash = ((hash << 8n) + BigInt(data[i])) % (2n ** 256n);
+        hash = ((hash << 8n) + BigInt(data[i] ?? 0)) % (2n ** 256n);
     }
     return "0x" + hash.toString(16).padStart(64, "0");
 }
@@ -94,7 +97,7 @@ function keccak256Bytes(a: Uint8Array, b: Uint8Array): string {
 
     let hash = 0n;
     for (let i = 0; i < combined.length; i++) {
-        hash = ((hash << 8n) + BigInt(combined[i])) % (2n ** 256n);
+        hash = ((hash << 8n) + BigInt(combined[i] ?? 0)) % (2n ** 256n);
     }
     return "0x" + hash.toString(16).padStart(64, "0");
 }

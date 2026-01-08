@@ -19,6 +19,18 @@ dotenv.config();
 import { contractService } from './contractService';
 contractService.initialize();
 
+// Verify signer matches contract (detects config issues early)
+contractService.verifySigner().then(result => {
+  if (result && !result.isMatch) {
+    console.error('═══════════════════════════════════════════════════════════════');
+    console.error('🚨 CRITICAL: Backend wallet does NOT match contract backendSigner!');
+    console.error('🚨 Prize distributions will FAIL until this is fixed.');
+    console.error(`   Server Wallet:     ${result.serverAddress}`);
+    console.error(`   Contract Signer:   ${result.contractSigner}`);
+    console.error('═══════════════════════════════════════════════════════════════');
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 // Create HTTP server

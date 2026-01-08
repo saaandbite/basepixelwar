@@ -1,5 +1,5 @@
 
-import { createWalletClient, http, publicActions, getContract } from 'viem';
+import { createWalletClient, http, publicActions, getContract, Hash } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, baseSepolia } from 'viem/chains';
 import * as dotenv from 'dotenv';
@@ -129,16 +129,50 @@ export class ContractService {
         }
     }
 
+    /**
+     * Wait for transaction to be mined and confirmed
+     */
+    private async waitForTransaction(hash: Hash): Promise<{ success: boolean; error?: string }> {
+        try {
+            console.log(`[ContractService] ⏳ Waiting for tx confirmation: ${hash}`);
+
+            const receipt = await this.client.waitForTransactionReceipt({
+                hash,
+                timeout: 60_000, // 60 second timeout
+            });
+
+            if (receipt.status === 'success') {
+                console.log(`[ContractService] ✅ Transaction confirmed in block ${receipt.blockNumber}`);
+                return { success: true };
+            } else {
+                console.error(`[ContractService] ❌ Transaction REVERTED in block ${receipt.blockNumber}`);
+                return { success: false, error: 'Transaction reverted' };
+            }
+        } catch (error: any) {
+            console.error(`[ContractService] ❌ Transaction confirmation failed:`, error?.message || error);
+            return { success: false, error: error?.message || 'Unknown error' };
+        }
+    }
+
     async startGame(gameId: number): Promise<string | null> {
         if (!this.isConfigured) return null;
 
         try {
             console.log(`[ContractService] Starting game ${gameId} on-chain...`);
             const hash = await this.contract.write.startGame([BigInt(gameId)]);
-            console.log(`[ContractService] Game ${gameId} started. Tx: ${hash}`);
+            console.log(`[ContractService] Game ${gameId} tx sent: ${hash}`);
+
+            // Wait for confirmation
+            const result = await this.waitForTransaction(hash);
+            if (!result.success) {
+                console.error(`[ContractService] startGame FAILED: ${result.error}`);
+                return null;
+            }
+
+            console.log(`[ContractService] Game ${gameId} started successfully!`);
             return hash;
-        } catch (error) {
-            console.error(`[ContractService] Failed to start game ${gameId}:`, error);
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to start game ${gameId}:`, error?.shortMessage || error?.message || error);
             return null;
         }
     }
@@ -155,10 +189,19 @@ export class ContractService {
                 BigInt(gameId),
                 winnerAddress as `0x${string}`
             ]);
-            console.log(`[ContractService] Game ${gameId} finalized. Tx: ${hash}`);
+            console.log(`[ContractService] Game ${gameId} tx sent: ${hash}`);
+
+            // Wait for confirmation
+            const result = await this.waitForTransaction(hash);
+            if (!result.success) {
+                console.error(`[ContractService] finalizeGame1vs1 FAILED: ${result.error}`);
+                return null;
+            }
+
+            console.log(`[ContractService] Game ${gameId} finalized successfully!`);
             return hash;
-        } catch (error) {
-            console.error(`[ContractService] Failed to finalize game ${gameId}:`, error);
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to finalize game ${gameId}:`, error?.shortMessage || error?.message || error);
             return null;
         }
     }
@@ -169,10 +212,19 @@ export class ContractService {
         try {
             console.log(`[ContractService] Cancelling game ${gameId}...`);
             const hash = await this.contract.write.cancelGame([BigInt(gameId)]);
-            console.log(`[ContractService] Game ${gameId} cancelled. Tx: ${hash}`);
+            console.log(`[ContractService] Game ${gameId} tx sent: ${hash}`);
+
+            // Wait for confirmation
+            const result = await this.waitForTransaction(hash);
+            if (!result.success) {
+                console.error(`[ContractService] cancelGame FAILED: ${result.error}`);
+                return null;
+            }
+
+            console.log(`[ContractService] Game ${gameId} cancelled successfully!`);
             return hash;
-        } catch (error) {
-            console.error(`[ContractService] Failed to cancel game ${gameId}:`, error);
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to cancel game ${gameId}:`, error?.shortMessage || error?.message || error);
             return null;
         }
     }
@@ -186,7 +238,12 @@ export class ContractService {
 
             console.log(`[ContractService] Server Address: ${serverAddress}`);
             console.log(`[ContractService] Contract Signer: ${contractSigner}`);
-            console.log(`[ContractService] Match: ${isMatch}`);
+            console.log(`[ContractService] Match: ${isMatch ? '✅ YES' : '❌ NO'}`);
+
+            if (!isMatch) {
+                console.error(`[ContractService] ⚠️ CRITICAL: Server wallet does NOT match contract's backendSigner!`);
+                console.error(`[ContractService] ⚠️ Settlement transactions WILL FAIL with NotBackendSigner error!`);
+            }
 
             return { serverAddress, contractSigner: contractSigner as string, isMatch };
         } catch (error) {
