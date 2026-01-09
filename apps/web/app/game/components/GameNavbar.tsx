@@ -41,7 +41,7 @@ export function GameNavbar({
                     <User size={20} className="text-white" />
                 </div>
                 <div className="flex flex-col items-start leading-tight">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase">You</span>
+                    <span className="text-xs font-semibold text-slate-400 uppercase">You</span>
                     <span className="text-base font-bold text-[#4CC9F0] tabular-nums">{scoreBlue}%</span>
                 </div>
             </div>
@@ -56,7 +56,7 @@ export function GameNavbar({
             {/* Right: Red Score */}
             <div className="flex items-center gap-2 min-w-[80px] justify-end">
                 <div className="flex flex-col items-end leading-tight">
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase">Enemy</span>
+                    <span className="text-xs font-semibold text-slate-400 uppercase">Enemy</span>
                     <span className="text-base font-bold text-[#FF6B6B] tabular-nums">{scoreRed}%</span>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-[#FF6B6B] flex items-center justify-center shadow-sm border-2 border-white">

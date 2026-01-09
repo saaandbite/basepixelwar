@@ -44,7 +44,7 @@ export function GameInstructions({ onStart }: GameInstructionsProps) {
                             </svg>
                             <p className="text-xs font-bold">Power-ups</p>
                         </div>
-                        <p className="text-[10px] text-slate-300">Collect abilities & use special weapons!</p>
+                        <p className="text-xs text-slate-300">Collect abilities & use special weapons!</p>
                     </div>
 
                     {/* Start Button */}
