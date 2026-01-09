@@ -72,9 +72,6 @@ export function usePvPGame() {
     // Game Vault (Smart Contract)
     const gameVault = useGameVault();
 
-    // Client-Side Prediction
-    const [localAngle, setLocalAngle] = useState<number | null>(null);
-
     const [state, setState] = useState<PvPState>({
         isConnected: false,
         playerId: null,
@@ -341,7 +338,6 @@ export function usePvPGame() {
             paymentStatus: null,
             isFirstPlayer: false,
         });
-        setLocalAngle(null);
     }, []);
 
     // Join matchmaking queue
@@ -368,9 +364,6 @@ export function usePvPGame() {
         weaponMode: 'machineGun' | 'shotgun' | 'inkBomb';
         targetPos?: { x: number; y: number };
     }) => {
-        // Optimistic update for local responsiveness
-        setLocalAngle(input.angle);
-
         socketRef.current?.emit('player_input', {
             ...input,
             timestamp: Date.now(),
@@ -435,7 +428,6 @@ export function usePvPGame() {
 
     return {
         ...state,
-        localAngle, // Expose local angle for optimistic rendering
         connect,
         disconnect,
         joinQueue,
