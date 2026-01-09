@@ -328,7 +328,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         case 'GAME_UPDATE': {
             if (!state.gameActive) return state;
 
-            const newState = { ...state };
+            // OPTIMIZATION: Mutate state in-place for game loop to avoid GC pressure
+            // const newState = { ...state }; // Removed shallow copy
+            const newState = state; // Alias for code compatibility
             const now = Date.now();
 
             // Shake disabled for performance
@@ -1228,8 +1230,8 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
     const lastUiSyncRef = useRef<number>(0);
     const syncUI = useCallback((state: GameState, force: boolean = false) => {
         const now = Date.now();
-        // Limit UI updates to ~30 FPS (every 33ms) or forced events
-        if (!force && now - lastUiSyncRef.current < 33) return;
+        // Limit UI updates to ~15 FPS (every 66ms) or forced events for performance
+        if (!force && now - lastUiSyncRef.current < 66) return;
 
         const score = calculateScore(state.grid, state.cols, state.rows);
 

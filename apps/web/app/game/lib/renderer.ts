@@ -71,12 +71,19 @@ function computeGridHash(grid: ('blue' | 'red')[][], cols: number, rows: number)
     return hash;
 }
 
-// Draw background gradient
+// Draw background gradient (Cached)
+let backgroundCallbackCache: CanvasGradient | null = null;
+let lastBackgroundHeight: number = 0;
+
 export function drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, '#dbeafe');
-    gradient.addColorStop(1, '#bfdbfe');
-    ctx.fillStyle = gradient;
+    if (!backgroundCallbackCache || lastBackgroundHeight !== height) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, '#dbeafe');
+        gradient.addColorStop(1, '#bfdbfe');
+        backgroundCallbackCache = gradient;
+        lastBackgroundHeight = height;
+    }
+    ctx.fillStyle = backgroundCallbackCache;
     ctx.fillRect(0, 0, width, height);
 }
 
@@ -188,6 +195,7 @@ export function clearGridCache(): void {
     lastGridHash = null;
     lastCols = 0;
     lastRows = 0;
+    backgroundCallbackCache = null; // Clear background cache too
 }
 
 // Draw territory batch effects (expanding circles)

@@ -111,7 +111,8 @@ export default function Home() {
         {isConnected && address && isOnCorrectChain && (
           <div className={styles.connectedInfo}>
             <div className={styles.chainBadge}>
-              <span>🔵 Base Network</span>
+              <span className={styles.networkDot} />
+              <span>Base Network</span>
             </div>
           </div>
         )}

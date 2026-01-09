@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, Flag, Home, Target, Swords, Ban, Coins } from 'lucide-react';
+import { Trophy, Flag, Home, Target, Swords, Ban, Coins, ExternalLink } from 'lucide-react';
 
 interface PvPGameOverModalProps {
     myTeam: 'blue' | 'red';
@@ -217,43 +217,46 @@ export function PvPGameOverModal({
                                 <span>CLAIM REWARD 🏆</span>
                             </button>
                         ) : (
-                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-3 animate-fade-in-up">
+                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-4 animate-fade-in-up">
                                 {/* Header */}
-                                <div className="flex items-center justify-center gap-2 mb-2">
-                                    <div className="p-1 bg-emerald-100 rounded-full">
-                                        <Coins size={14} className="text-emerald-600" />
+                                <div className="flex items-center justify-center gap-2 mb-3">
+                                    <div className="p-1.5 bg-emerald-100 rounded-full">
+                                        <Coins size={16} className="text-emerald-600" />
                                     </div>
-                                    <span className="font-bold text-emerald-700 text-xs tracking-wide">REWARD CLAIMED!</span>
+                                    <span className="font-bold text-emerald-700 text-sm tracking-wide">REWARD CLAIMED!</span>
                                 </div>
 
                                 {/* Breakdown */}
-                                <div className="space-y-1 text-xs">
+                                <div className="space-y-2 text-xs sm:text-sm">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-500">Total Pool</span>
-                                        <span className="font-semibold text-slate-700">0.002 ETH</span>
+                                        <span className="text-slate-600">Total Pool</span>
+                                        <span className="font-semibold text-slate-800">0.002 ETH</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-500">Platform Fee (1%)</span>
+                                        <span className="text-slate-600">Platform Fee (1%)</span>
                                         <span className="font-semibold text-red-500">-0.00002 ETH</span>
                                     </div>
-                                    <div className="border-t border-emerald-200 my-1"></div>
+                                    <div className="border-t border-emerald-200 my-2"></div>
                                     <div className="flex justify-between items-center">
-                                        <span className="font-bold text-emerald-700">Your Reward</span>
-                                        <span className="font-black text-emerald-600 text-sm">0.00198 ETH</span>
+                                        <span className="font-bold text-emerald-800">Your Reward</span>
+                                        <span className="font-black text-emerald-600 text-base sm:text-lg">0.00198 ETH</span>
                                     </div>
                                 </div>
 
                                 {/* Success indicator with Basescan link */}
-                                <div className="mt-2 text-center">
-                                    <span className="text-[10px] text-emerald-600 font-medium">✓ Sent to your wallet</span>
+                                <div className="mt-4 text-center space-y-1">
+                                    <div className="text-xs text-emerald-700 font-semibold flex items-center justify-center gap-1">
+                                        <span>✓</span> Sent to your wallet
+                                    </div>
                                     {settlementTxHash && (
                                         <a
                                             href={`https://sepolia.basescan.org/tx/${settlementTxHash}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="block mt-1 text-[10px] text-blue-500 hover:text-blue-600 underline transition-colors"
+                                            className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors hover:underline group/link"
                                         >
-                                            🔗 View Transaction on Basescan
+                                            <span>View Transaction on Basescan</span>
+                                            <ExternalLink size={12} className="group-hover/link:translate-x-0.5 transition-transform" />
                                         </a>
                                     )}
                                 </div>
