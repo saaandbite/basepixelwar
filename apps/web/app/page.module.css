@@ -1,10 +1,37 @@
-/* Landing Page Styles - Saweria Theme */
+/* Landing Page Styles - Enhanced Color Hierarchy */
 .landingPage {
-  --primary: #FF8BA7;
-  --secondary: #FFC6C6;
-  --accent: #2ecc71;
-  --text-dark: #333333;
-  --text-muted: #666666;
+  /* Level 1: Primary Colors - Brand Identity */
+  --pink-primary: #FF8BA7;
+  --pink-primary-hover: #FF7B9C;
+  --pink-primary-active: #FF6B8C;
+
+  /* Level 2: Secondary Colors - Supporting Elements */
+  --pink-secondary: #FFC6C6;
+  --pink-light: #FFE5E5;
+  --pink-lightest: #FFFAFA;
+
+  /* Level 3: Accent Colors - Functional */
+  --success: #4CAF50;
+  --success-hover: #43A047;
+  --warning: #F59E0B;
+  --error: #E53935;
+  --info: #3B82F6;
+
+  /* Level 4: Text Hierarchy - Optimized Contrast */
+  --text-primary: #1F2937;
+  --text-secondary: #4B5563;
+  --text-tertiary: #6B7280;
+  --text-muted: #9CA3AF;
+
+  /* Level 5: Background & Surface */
+  --surface-white: #FFFFFF;
+  --surface-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Legacy support (deprecated, use new variables) */
+  --primary: var(--pink-primary);
+  --secondary: var(--pink-secondary);
+  --accent: var(--success);
+  --text-dark: var(--text-primary);
 
   position: relative;
   min-height: 100vh;
@@ -91,32 +118,30 @@
 
 .title {
   font-size: clamp(3rem, 10vw, 5.5rem);
-  font-weight: 800;
+  font-weight: 900;
   line-height: 1.1;
-  letter-spacing: -2px;
+  letter-spacing: -1.5px;
   margin: 0;
   display: flex;
   gap: 12px;
 }
 
 .pixel {
-  color: #FF8BA7;
-  /* Soft Pink */
+  color: var(--pink-primary);
   text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
 }
 
 .war {
-  color: #333333;
-  /* Dark Grey */
+  color: var(--text-primary);
   text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
 }
 
 .subtitle {
   font-size: clamp(1rem, 2.5vw, 1.3rem);
-  color: #555555;
-  font-weight: 500;
+  color: var(--text-secondary);
+  font-weight: 600;
   margin: 0;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 /* Buttons */
@@ -150,27 +175,28 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 16px 32px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 50px;
+  padding: 14px 28px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
   text-decoration: none;
   width: 250px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  letter-spacing: 0.3px;
 }
 
 .startButton {
-  background: #FF8BA7;
+  background: var(--pink-primary);
   color: white;
 }
 
 .startButton:hover {
-  background: #ff7b9c;
+  background: var(--pink-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(255, 139, 167, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 139, 167, 0.3);
 }
 
 .startButton:active {
@@ -178,19 +204,17 @@
 }
 
 .walletButton {
-  background: #4CAF50;
-  /* Green fallback */
+  background: var(--success);
   color: white;
 }
 
 .walletButtonConnected {
-  background: #4CAF50;
-  /* Green matches image */
+  background: var(--success);
   color: white;
 }
 
 .walletButtonConnected:hover {
-  background: #43a047;
+  background: var(--success-hover);
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
 }
@@ -293,11 +317,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #FFE5E5;
-  /* Light pink pill */
-  border: 1px solid #FFC6C6;
-  border-radius: 50px;
-  color: #FF8BA7;
+  background: var(--pink-light);
+  border: 2px solid var(--pink-secondary);
+  border-radius: 20px;
+  color: var(--pink-primary);
   font-size: 0.85rem;
   font-weight: 600;
   box-shadow: 0 2px 4px rgba(255, 139, 167, 0.1);
@@ -325,12 +348,13 @@
   align-items: center;
   gap: 12px;
   padding: 12px 24px;
-  background: #FFFFFF;
-  border-radius: 16px;
-  color: #333333;
+  background: var(--surface-white);
+  border-radius: 12px;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 0.95rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   transition: all 0.2s ease;
   white-space: nowrap;
 }
@@ -347,18 +371,20 @@
 
 /* Footer */
 .footer {
-  position: absolute;
-  bottom: 24px;
-  left: 0;
-  right: 0;
+  position: relative;
+  margin-top: 48px;
   text-align: center;
-  color: #444444;
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
   z-index: 1;
+  max-width: 420px;
+  width: 100%;
+  padding: 0 20px 40px;
 }
 
 .footer p {
-  margin: 0;
+  margin: 0 auto;
 }
 
 /* Responsive */
@@ -432,10 +458,7 @@
   }
 
   .footer {
-    position: relative;
-    bottom: auto;
-    margin-top: 32px;
-    font-size: 0.75rem;
+    max-width: 280px;
   }
 }
 
