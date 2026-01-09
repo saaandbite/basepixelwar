@@ -144,6 +144,22 @@
   justify-content: center;
 }
 
+/* Wallet wrapper to force full width */
+.walletWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Force all children inside wallet wrapper to be full width */
+.walletWrapper>* {
+  width: 100%;
+}
+
+.walletWrapper button {
+  width: 100% !important;
+}
+
 .startButton,
 .walletButton,
 .walletButtonConnected {
@@ -188,6 +204,7 @@
   background: white;
   color: #FF8395;
   border: 3px solid #FFE5E5;
+  width: 100%;
   box-shadow:
     0 6px 0 #FFCDD2,
     0 12px 30px rgba(255, 131, 149, 0.2);
@@ -216,6 +233,7 @@
 .walletButtonConnected {
   background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
   color: white;
+  width: 100%;
   box-shadow:
     0 6px 0 #388E3C,
     0 12px 30px rgba(76, 175, 80, 0.35);

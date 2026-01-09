@@ -140,57 +140,58 @@ export function PvPGameOverModal({
             {/* Main Card */}
             <div
                 className={`
-                    relative bg-white/95 backdrop-blur-xl rounded-3xl p-6 sm:p-8 max-w-sm w-full mx-4 shadow-2xl border-4 ${theme.borderColor}
+                    relative bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-6 max-w-sm w-full mx-4 shadow-2xl border-4 ${theme.borderColor}
                     transform transition-all duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)
+                    max-h-[85vh] overflow-y-auto
                     ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-75 translate-y-10 opacity-0'}
                 `}
             >
                 {/* Result Icon with Shine Effect */}
-                <div className="relative flex justify-center mb-6">
-                    <div className={`relative z-10 p-3 sm:p-4 rounded-full bg-gradient-to-br ${theme.bgGradient} shadow-inner`}>
-                        <theme.icon className={`w-12 h-12 sm:w-16 sm:h-16 ${theme.textColor}`} strokeWidth={1.5} />
+                <div className="relative flex justify-center mb-4">
+                    <div className={`relative z-10 p-2 sm:p-3 rounded-full bg-gradient-to-br ${theme.bgGradient} shadow-inner`}>
+                        <theme.icon className={`w-10 h-10 sm:w-12 sm:h-12 ${theme.textColor}`} strokeWidth={1.5} />
                     </div>
                     {/* Pulsing Glow behind icon */}
-                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-r ${theme.gradient} blur-xl opacity-20 animate-pulse`} />
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-r ${theme.gradient} blur-xl opacity-20 animate-pulse`} />
                 </div>
 
                 {/* Title & Subtext */}
-                <div className="text-center mb-6 sm:mb-8">
-                    <h1 className={`text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r ${theme.gradient} mb-2 tracking-tight`}>
+                <div className="text-center mb-4 sm:mb-6">
+                    <h1 className={`text-3xl sm:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r ${theme.gradient} mb-1 tracking-tight`}>
                         {theme.title}
                     </h1>
-                    <p className={`${theme.textColor} font-bold text-xs tracking-widest uppercase`}>
+                    <p className={`${theme.textColor} font-bold text-[10px] sm:text-xs tracking-widest uppercase`}>
                         {theme.subtext}
                     </p>
                 </div>
 
                 {/* Dominant Score Display */}
-                <div className="flex justify-center items-baseline gap-1 mb-6 sm:mb-8">
-                    <span className={`text-6xl sm:text-7xl font-black tabular-nums tracking-tighter ${theme.textColor}`}>
+                <div className="flex justify-center items-baseline gap-1 mb-4 sm:mb-6">
+                    <span className={`text-5xl sm:text-6xl font-black tabular-nums tracking-tighter ${theme.textColor}`}>
                         {displayedScore}
                     </span>
                     <span className={`text-2xl sm:text-3xl font-bold ${theme.textColor} opacity-60`}>%</span>
                 </div>
 
                 {/* Statistics Grid */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex items-center gap-3 shadow-sm">
-                        <div className="p-2 bg-blue-100/50 rounded-xl text-blue-600">
-                            <Flag size={20} />
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="bg-slate-50 rounded-xl p-2 border border-slate-100 flex items-center gap-2 shadow-sm">
+                        <div className="p-1.5 bg-blue-100/50 rounded-lg text-blue-600">
+                            <Flag size={16} />
                         </div>
                         <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Territory</div>
-                            <div className="font-black text-slate-700 text-lg leading-none">{displayedTiles}</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Territory</div>
+                            <div className="font-black text-slate-700 text-base leading-none">{displayedTiles}</div>
                         </div>
                     </div>
 
-                    <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex items-center gap-3 shadow-sm">
-                        <div className="p-2 bg-amber-100/50 rounded-xl text-amber-600">
-                            <Target size={20} />
+                    <div className="bg-slate-50 rounded-xl p-2 border border-slate-100 flex items-center gap-2 shadow-sm">
+                        <div className="p-1.5 bg-amber-100/50 rounded-lg text-amber-600">
+                            <Target size={16} />
                         </div>
                         <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Captured</div>
-                            <div className="font-black text-slate-700 text-lg leading-none">{displayedCaptured}</div>
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Captured</div>
+                            <div className="font-black text-slate-700 text-base leading-none">{displayedCaptured}</div>
                         </div>
                     </div>
                 </div>
@@ -199,34 +200,34 @@ export function PvPGameOverModal({
 
                 {/* Badge */}
                 <div
-                    className={`bg-gradient-to-r ${theme.badgeGradient} text-white text-center py-2.5 rounded-xl mb-6 font-bold text-xs tracking-widest shadow-md transform transition-all duration-500 delay-500 ${isVisible ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}
+                    className={`bg-gradient-to-r ${theme.badgeGradient} text-white text-center py-2 rounded-xl mb-4 font-bold text-[10px] sm:text-xs tracking-widest shadow-md transform transition-all duration-500 delay-500 ${isVisible ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}
                 >
                     {theme.badge}
                 </div>
 
                 {/* Claim Reward Section (Winner Only) */}
                 {isWinner && (
-                    <div className="mb-4">
+                    <div className="mb-3">
                         {!claimed ? (
                             <button
                                 onClick={() => setClaimed(true)}
-                                className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-bold py-4 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                                className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-bold py-3 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
                             >
-                                <Coins size={18} className="group-hover:rotate-12 transition-transform" />
+                                <Coins size={16} className="group-hover:rotate-12 transition-transform" />
                                 <span>CLAIM REWARD 🏆</span>
                             </button>
                         ) : (
-                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-4 animate-fade-in-up">
+                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-3 animate-fade-in-up">
                                 {/* Header */}
-                                <div className="flex items-center justify-center gap-2 mb-3">
-                                    <div className="p-1.5 bg-emerald-100 rounded-full">
-                                        <Coins size={16} className="text-emerald-600" />
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <div className="p-1 bg-emerald-100 rounded-full">
+                                        <Coins size={14} className="text-emerald-600" />
                                     </div>
-                                    <span className="font-bold text-emerald-700 text-sm tracking-wide">REWARD CLAIMED!</span>
+                                    <span className="font-bold text-emerald-700 text-xs tracking-wide">REWARD CLAIMED!</span>
                                 </div>
 
                                 {/* Breakdown */}
-                                <div className="space-y-2 text-sm">
+                                <div className="space-y-1 text-xs">
                                     <div className="flex justify-between items-center">
                                         <span className="text-slate-500">Total Pool</span>
                                         <span className="font-semibold text-slate-700">0.002 ETH</span>
@@ -235,22 +236,22 @@ export function PvPGameOverModal({
                                         <span className="text-slate-500">Platform Fee (1%)</span>
                                         <span className="font-semibold text-red-500">-0.00002 ETH</span>
                                     </div>
-                                    <div className="border-t border-emerald-200 my-2"></div>
+                                    <div className="border-t border-emerald-200 my-1"></div>
                                     <div className="flex justify-between items-center">
                                         <span className="font-bold text-emerald-700">Your Reward</span>
-                                        <span className="font-black text-emerald-600 text-lg">0.00198 ETH</span>
+                                        <span className="font-black text-emerald-600 text-sm">0.00198 ETH</span>
                                     </div>
                                 </div>
 
                                 {/* Success indicator with Basescan link */}
-                                <div className="mt-3 text-center">
-                                    <span className="text-xs text-emerald-600 font-medium">✓ Sent to your wallet</span>
+                                <div className="mt-2 text-center">
+                                    <span className="text-[10px] text-emerald-600 font-medium">✓ Sent to your wallet</span>
                                     {settlementTxHash && (
                                         <a
                                             href={`https://sepolia.basescan.org/tx/${settlementTxHash}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="block mt-2 text-xs text-blue-500 hover:text-blue-600 underline transition-colors"
+                                            className="block mt-1 text-[10px] text-blue-500 hover:text-blue-600 underline transition-colors"
                                         >
                                             🔗 View Transaction on Basescan
                                         </a>
@@ -264,9 +265,9 @@ export function PvPGameOverModal({
                 {/* Exit Button */}
                 <button
                     onClick={onExit}
-                    className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-text-main hover:text-saweria-pink font-bold py-4 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                    className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-text-main hover:text-saweria-pink font-bold py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
                 >
-                    <Home size={18} className="group-hover:-translate-y-0.5 transition-transform" />
+                    <Home size={16} className="group-hover:-translate-y-0.5 transition-transform" />
                     <span>EXIT TO LOBBY</span>
                 </button>
             </div>

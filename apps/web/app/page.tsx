@@ -70,29 +70,31 @@ export default function Home() {
             Start Game
           </Link>
 
-          {/* Wallet Button - Simplified to avoid slow ENS loading */}
-          {!isConnected ? (
-            <Wallet>
-              <ConnectWallet className={styles.walletButton}>
-                <span>Connect Wallet</span>
-              </ConnectWallet>
-            </Wallet>
-          ) : (
-            <Wallet>
-              <ConnectWallet className={styles.walletButtonConnected}>
-                <span className={styles.walletDot} />
-                <span>{formatAddress(address || '')}</span>
-              </ConnectWallet>
-              <WalletDropdown>
-                <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                  <Avatar />
-                  <Name />
-                  <Address />
-                </Identity>
-                <WalletDropdownDisconnect />
-              </WalletDropdown>
-            </Wallet>
-          )}
+          {/* Wallet Button - Wrapped for consistent width */}
+          <div className={styles.walletWrapper}>
+            {!isConnected ? (
+              <Wallet>
+                <ConnectWallet className={styles.walletButton}>
+                  <span>Connect Wallet</span>
+                </ConnectWallet>
+              </Wallet>
+            ) : (
+              <Wallet>
+                <ConnectWallet className={styles.walletButtonConnected}>
+                  <span className={styles.walletDot} />
+                  <span>{formatAddress(address || '')}</span>
+                </ConnectWallet>
+                <WalletDropdown>
+                  <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+                    <Avatar />
+                    <Name />
+                    <Address />
+                  </Identity>
+                  <WalletDropdownDisconnect />
+                </WalletDropdown>
+              </Wallet>
+            )}
+          </div>
         </div>
 
         {/* Connected Info - Only show chain badge */}
