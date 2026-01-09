@@ -1,4 +1,4 @@
-# BasePixelWar
+# BasePixelWar - Your Game
 **Real-Time Decentralized Pixel Battle on Base Blockchain**
 
 ## Problem Background
