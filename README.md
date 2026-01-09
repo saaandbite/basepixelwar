@@ -52,7 +52,7 @@ The project runs two main databases via Docker Compose:
 -   [Redis](https://redis.io/): In-memory store.
 -   Foundry & Solidity: Smart Contracts.
 
-## How to Run the Application
+## How to Run the Application1`
 
 ### Prerequisites
 -   Node.js >= 18

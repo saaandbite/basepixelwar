@@ -427,12 +427,22 @@ function cancelPaymentAndRefund(roomId: string, reason: string) {
 
     console.log(`[Payment] Cancelling room ${roomId}: ${reason}`);
 
-    // Check if any player paid - if so, need to trigger on-chain refund
-    // TODO: Call smart contract cancelGame(onChainGameId) for refund
+    // Check if any player paid - if so, trigger on-chain refund
     if (RoomManager.hasAnyPlayerPaid(room) && room.onChainGameId) {
-        console.log(`[Payment] Need to refund on-chain game ${room.onChainGameId}`);
-        // This would require backend signer to call cancelGame on the contract
-        // For now, we just log it - actual implementation needs private key management
+        console.log(`[Payment] Triggering on-chain refund for game ${room.onChainGameId}`);
+
+        // Call smart contract cancelGame to refund all players who paid
+        contractService.cancelGame(room.onChainGameId)
+            .then(txHash => {
+                if (txHash) {
+                    console.log(`[Payment] ✅ Refund successful for game ${room.onChainGameId}. Tx: ${txHash}`);
+                } else {
+                    console.error(`[Payment] ❌ Refund failed for game ${room.onChainGameId} - cancelGame returned null`);
+                }
+            })
+            .catch(err => {
+                console.error(`[Payment] ❌ Refund error for game ${room.onChainGameId}:`, err);
+            });
     }
 
     // Notify players
