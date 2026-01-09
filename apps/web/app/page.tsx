@@ -136,7 +136,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <p>Built on Base L2 • Powered by OnchainKit</p>
+        <p>"Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2"</p>
       </footer>
     </div>
   );
