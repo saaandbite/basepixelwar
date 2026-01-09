@@ -260,6 +260,24 @@ canvas {
   z-index: 0;
 }
 
+/* Saweria Pink Grid Pattern */
+.bg-grid-pattern-pink {
+  position: relative;
+}
+
+.bg-grid-pattern-pink::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 131, 149, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 131, 149, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: grid-fade 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Particle Dust Effect */
 .particle-dust {
   position: absolute;

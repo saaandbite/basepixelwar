@@ -69,37 +69,37 @@ export function PvPGameOverModal({
         setIsVisible(true);
     }, []);
 
-    // Theme Configuration
+    // Theme Configuration - Saweria Style
     const theme = isWinner ? {
-        gradient: 'from-blue-600 to-indigo-600',
-        bgGradient: 'from-blue-50 to-indigo-50',
-        borderColor: 'border-blue-200',
-        textColor: 'text-blue-600',
+        gradient: 'from-saweria-pink to-saweria-pink-light',
+        bgGradient: 'from-saweria-coral to-saweria-cream',
+        borderColor: 'border-saweria-pink-light',
+        textColor: 'text-saweria-pink',
         icon: Trophy,
-        title: 'VICTORY!',
+        title: 'VICTORY! 🎉',
         subtext: 'YOU CONQUERED THE ARENA!',
-        badge: 'DOMINATION ACHIEVED!',
-        badgeGradient: 'from-blue-500 to-indigo-600'
+        badge: '🏆 DOMINATION ACHIEVED!',
+        badgeGradient: 'from-saweria-pink to-saweria-pink-dark'
     } : isDraw ? {
-        gradient: 'from-slate-500 to-slate-600',
+        gradient: 'from-slate-400 to-slate-500',
         bgGradient: 'from-slate-50 to-slate-100',
         borderColor: 'border-slate-200',
-        textColor: 'text-slate-600',
-        icon: Ban, // Or Handshake if available, Ban looks like "Stop/Tie"
+        textColor: 'text-slate-500',
+        icon: Ban,
         title: 'DRAW',
         subtext: 'A PERFECTLY MATCHED BATTLE!',
-        badge: 'STALEMATE',
-        badgeGradient: 'from-slate-500 to-slate-600'
+        badge: '🤝 STALEMATE',
+        badgeGradient: 'from-slate-400 to-slate-500'
     } : {
-        gradient: 'from-red-600 to-orange-600',
+        gradient: 'from-red-400 to-orange-400',
         bgGradient: 'from-red-50 to-orange-50',
         borderColor: 'border-red-200',
-        textColor: 'text-red-600',
-        icon: Swords, // Crossed swords for defeat/battle
+        textColor: 'text-red-500',
+        icon: Swords,
         title: 'DEFEAT',
         subtext: 'BETTER LUCK NEXT TIME!',
-        badge: 'MATCH COMPLETED',
-        badgeGradient: 'from-red-500 to-orange-600'
+        badge: '⚔️ MATCH COMPLETED',
+        badgeGradient: 'from-red-400 to-orange-400'
     };
 
     // Animated Values
@@ -210,10 +210,10 @@ export function PvPGameOverModal({
                         {!claimed ? (
                             <button
                                 onClick={() => setClaimed(true)}
-                                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                                className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-bold py-4 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group"
                             >
                                 <Coins size={18} className="group-hover:rotate-12 transition-transform" />
-                                <span>CLAIM REWARD</span>
+                                <span>CLAIM REWARD 🏆</span>
                             </button>
                         ) : (
                             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-2xl p-4 animate-fade-in-up">
@@ -264,7 +264,7 @@ export function PvPGameOverModal({
                 {/* Exit Button */}
                 <button
                     onClick={onExit}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                    className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-text-main hover:text-saweria-pink font-bold py-4 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group"
                 >
                     <Home size={18} className="group-hover:-translate-y-0.5 transition-transform" />
                     <span>EXIT TO LOBBY</span>

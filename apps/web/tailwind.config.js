@@ -7,13 +7,26 @@ export default {
     theme: {
         extend: {
             colors: {
-                primary: "#FF6B6B", // Vibrant Coral Red (CPU)
-                secondary: "#4CC9F0", // Vibrant Sky Blue (Player)
+                // Saweria Theme Colors
+                primary: "#FF8395", // Saweria Coral Pink
+                secondary: "#FDB1BD", // Saweria Soft Pink
+                "saweria-pink": "#FF8395",
+                "saweria-pink-light": "#FDB1BD",
+                "saweria-pink-dark": "#E57384",
+                "saweria-cream": "#FFF8F4",
+                "saweria-coral": "#FFE5E5",
+                "saweria-accent": "#FFCDD2",
+                "saweria-white": "#FFFFFF",
+                // Surface & Text
                 "surface-light": "#FFFFFF",
+                "card-bg": "#FFFFFF",
+                "text-main": "#333333",
+                "text-muted": "#666666",
+                accent: "#F9C74F", // Meteor Gold
+                success: "#4CAF50",
+                // Game Colors (preserved for gameplay)
                 "game-red": "#FF8888",
                 "game-blue": "#72C4FF",
-                accent: "#F9C74F", // Meteor Gold
-                "text-main": "#333340",
                 "powerup-purple": "#9D4EDD",
                 "powerup-green": "#4CAF50",
                 "powerup-orange": "#FF9800",

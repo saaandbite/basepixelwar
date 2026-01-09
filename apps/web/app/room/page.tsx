@@ -216,34 +216,34 @@ export default function RoomPage() {
     const error = multiplayerError || walletError || transactionError;
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-purple-900 to-violet-950 flex flex-col items-center justify-center p-6 bg-grid-pattern">
+        <div className="min-h-screen bg-gradient-to-b from-saweria-cream to-saweria-coral flex flex-col items-center justify-center p-6 bg-grid-pattern-pink">
             <div className="max-w-md w-full relative z-10">
                 {/* Logo Section */}
                 <div className="flex flex-col items-center mb-8">
                     <div className="flex items-center gap-2 mb-2">
-                        <Swords className="text-emerald-400" size={32} />
-                        <h1 className="text-3xl font-extrabold text-white tracking-tight">PixelWar</h1>
+                        <Swords className="text-saweria-pink" size={32} />
+                        <h1 className="text-3xl font-extrabold text-text-main tracking-tight">PixelWar</h1>
                     </div>
-                    <p className="text-purple-200 text-center text-sm sm:text-base">Player vs Player Arena</p>
+                    <p className="text-text-muted text-center text-sm sm:text-base">Player vs Player Arena</p>
                 </div>
 
                 {/* Wallet Status */}
                 <div className="flex items-center justify-center gap-4 mb-4">
                     {/* Server Status */}
-                    <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-emerald-400' :
+                    <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-full border border-saweria-coral">
+                        <div className={`w-3 h-3 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-success' :
                             connectionStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
                             }`}></div>
-                        <span className="text-purple-300 text-xs">
+                        <span className="text-text-muted text-xs">
                             {connectionStatus === 'connected' ? 'Server' :
                                 connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
                         </span>
                     </div>
 
                     {/* Wallet Status */}
-                    <div className="flex items-center gap-2">
-                        <Wallet className={`w-4 h-4 ${isWalletConnected ? 'text-emerald-400' : 'text-red-400'}`} />
-                        <span className="text-purple-300 text-xs">
+                    <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-full border border-saweria-coral">
+                        <Wallet className={`w-4 h-4 ${isWalletConnected ? 'text-success' : 'text-red-400'}`} />
+                        <span className="text-text-muted text-xs">
                             {isWalletConnected && walletAddress
                                 ? formatAddress(walletAddress)
                                 : 'Not Connected'}
@@ -253,13 +253,13 @@ export default function RoomPage() {
 
                 {/* Chain Warning */}
                 {isWalletConnected && !isOnCorrectChain && (
-                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4 flex items-center gap-3">
-                        <AlertTriangle className="text-yellow-400 flex-shrink-0" size={20} />
+                    <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4 flex items-center gap-3">
+                        <AlertTriangle className="text-amber-500 flex-shrink-0" size={20} />
                         <div className="flex-1">
-                            <p className="text-yellow-300 text-sm">Wrong network detected</p>
+                            <p className="text-amber-700 text-sm font-medium">Wrong network detected</p>
                             <button
                                 onClick={switchToBase}
-                                className="text-yellow-400 hover:text-yellow-300 text-xs underline mt-1"
+                                className="text-amber-600 hover:text-amber-800 text-xs underline mt-1 font-medium"
                             >
                                 Switch to Base
                             </button>
@@ -269,29 +269,29 @@ export default function RoomPage() {
 
                 {/* Error Message */}
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-6 text-red-300 text-sm text-center">
+                    <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-3 mb-6 text-red-600 text-sm text-center font-medium">
                         {error}
                     </div>
                 )}
 
                 {/* Input & Buttons (Main Card) */}
-                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-purple-700 shadow-2xl">
+                <div className="bg-white rounded-3xl p-6 border-2 border-saweria-coral shadow-lg">
 
                     {!isServerConnected ? (
                         <div className="flex flex-col items-center justify-center py-8 gap-3">
-                            <Loader2 className="animate-spin text-purple-300" size={32} />
-                            <p className="text-purple-200">Connecting to server...</p>
+                            <Loader2 className="animate-spin text-saweria-pink" size={32} />
+                            <p className="text-text-muted">Connecting to server...</p>
                         </div>
                     ) : matchmakingStatus === 'idle' ? (
                         <>
                             {/* Wallet Connection Required Notice */}
                             {!isWalletConnected && (
-                                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                                <div className="bg-saweria-coral/30 border-2 border-saweria-pink-light rounded-2xl p-4 mb-4">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <Wallet className="text-purple-400" size={20} />
-                                        <span className="text-purple-200 font-medium text-sm">Wallet Required</span>
+                                        <Wallet className="text-saweria-pink" size={20} />
+                                        <span className="text-text-main font-semibold text-sm">Wallet Required</span>
                                     </div>
-                                    <p className="text-purple-300 text-xs">
+                                    <p className="text-text-muted text-xs">
                                         Connect your wallet to play and earn rewards. Entry fee: {getBidAmount()}
                                     </p>
                                 </div>
@@ -299,13 +299,13 @@ export default function RoomPage() {
 
                             {/* Player Name Section */}
                             {isWalletConnected && walletAddress && (
-                                <div className="mb-4 bg-purple-800/30 border border-purple-600/50 rounded-lg p-4">
+                                <div className="mb-4 bg-saweria-coral/20 border-2 border-saweria-pink-light rounded-2xl p-4">
                                     <div className="flex items-center justify-between mb-2">
-                                        <label className="text-purple-300 text-xs">Playing as</label>
+                                        <label className="text-text-muted text-xs font-medium">Playing as</label>
                                         {!isEditingName && (
                                             <button
                                                 onClick={() => setIsEditingName(true)}
-                                                className="text-purple-400 hover:text-purple-300 transition-colors"
+                                                className="text-saweria-pink hover:text-saweria-pink-dark transition-colors"
                                                 title="Edit name"
                                             >
                                                 <Edit2 size={14} />
@@ -320,24 +320,24 @@ export default function RoomPage() {
                                                 value={customName}
                                                 onChange={(e) => setCustomName(e.target.value)}
                                                 placeholder={ensName || formatAddress(walletAddress)}
-                                                className="flex-1 bg-purple-900/50 border border-purple-600 rounded-lg px-3 py-2 text-white placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm"
+                                                className="flex-1 bg-white border-2 border-saweria-pink-light rounded-xl px-3 py-2 text-text-main placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-saweria-pink text-sm"
                                                 autoFocus
                                             />
                                             <button
                                                 onClick={handleSaveName}
-                                                className="p-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-white transition-colors"
+                                                className="p-2 bg-success hover:bg-success/90 rounded-xl text-white transition-colors"
                                             >
                                                 <Check size={16} />
                                             </button>
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-saweria-pink to-saweria-pink-light flex items-center justify-center text-white font-bold text-sm shadow-lg">
                                                 {displayName.slice(0, 2).toUpperCase()}
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-white font-semibold">{displayName}</p>
-                                                <p className="text-purple-400 text-xs">
+                                                <p className="text-text-main font-semibold">{displayName}</p>
+                                                <p className="text-text-muted text-xs">
                                                     {isLoadingENS ? (
                                                         <span className="flex items-center gap-1">
                                                             <Loader2 className="animate-spin" size={10} />
@@ -360,7 +360,7 @@ export default function RoomPage() {
                             <button
                                 onClick={handleJoinQueue}
                                 disabled={isWalletConnecting || isTransactionLoading}
-                                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-3 rounded-xl mb-3 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-semibold py-3 rounded-full mb-3 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isWalletConnecting ? (
                                     <>
@@ -384,7 +384,7 @@ export default function RoomPage() {
                                     </>
                                 ) : (
                                     <>
-                                        <Swords className="text-yellow-300" size={20} />
+                                        <Swords size={20} />
                                         <span className="text-sm sm:text-base">Find Match</span>
                                     </>
                                 )}
@@ -398,7 +398,7 @@ export default function RoomPage() {
                                     sessionStorage.setItem('ai_mode', 'true');
                                     router.push('/game');
                                 }}
-                                className="w-full border-2 border-purple-500 hover:border-emerald-400 text-purple-300 hover:text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300"
+                                className="w-full border-2 border-saweria-coral hover:border-saweria-pink text-text-muted hover:text-saweria-pink font-medium py-3 rounded-full flex items-center justify-center gap-2 transition-all duration-300 bg-white"
                             >
                                 <Bot size={20} />
                                 <span className="text-sm sm:text-base">Play vs AI Instead</span>
@@ -407,22 +407,22 @@ export default function RoomPage() {
                     ) : matchmakingStatus === 'queue' ? (
                         <div className="flex flex-col items-center py-6 gap-4">
                             <div className="relative">
-                                <div className="w-16 h-16 border-4 border-purple-500/30 rounded-full"></div>
-                                <div className="absolute inset-0 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+                                <div className="w-16 h-16 border-4 border-saweria-coral rounded-full"></div>
+                                <div className="absolute inset-0 border-4 border-saweria-pink border-t-transparent rounded-full animate-spin"></div>
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <span className="text-2xl">🔍</span>
                                 </div>
                             </div>
                             <div className="text-center">
-                                <p className="text-white font-medium text-lg">Finding Opponent...</p>
-                                <p className="text-purple-300 text-sm mt-1">Queue Position: #{queuePosition}</p>
-                                <p className="text-emerald-400 text-xs mt-2">
+                                <p className="text-text-main font-semibold text-lg">Finding Opponent...</p>
+                                <p className="text-text-muted text-sm mt-1">Queue Position: #{queuePosition}</p>
+                                <p className="text-saweria-pink text-xs mt-2 font-medium">
                                     Playing as: {displayName}
                                 </p>
                             </div>
                             <button
                                 onClick={leaveQueue}
-                                className="mt-2 text-red-400 hover:text-red-300 text-sm hover:underline transition-colors"
+                                className="mt-2 text-red-500 hover:text-red-600 text-sm hover:underline transition-colors font-medium"
                             >
                                 Cancel Search
                             </button>
@@ -430,51 +430,51 @@ export default function RoomPage() {
                     ) : matchmakingStatus === 'found' && paymentStatus ? (
                         // Pay & Play Confirmation
                         <div className="flex flex-col items-center py-3 gap-3">
-                            <Swords className="text-emerald-400" size={32} />
-                            <p className="text-emerald-400 font-bold text-lg">Match Found!</p>
+                            <Swords className="text-saweria-pink" size={32} />
+                            <p className="text-saweria-pink font-bold text-lg">🎉 Match Found!</p>
 
-                            <p className="text-purple-200 text-sm">
-                                vs <span className="text-white font-semibold">{opponent?.name || 'Unknown'}</span>
+                            <p className="text-text-muted text-sm">
+                                vs <span className="text-text-main font-semibold">{opponent?.name || 'Unknown'}</span>
                             </p>
 
                             {/* Payment Status - Compact */}
                             <div className="flex items-center gap-4 my-1">
                                 <div className="flex flex-col items-center">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player1Paid ? 'bg-emerald-500 text-white' : 'bg-purple-800 text-purple-400'
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player1Paid ? 'bg-success text-white' : 'bg-saweria-coral text-saweria-pink'
                                         }`}>
                                         {paymentStatus.player1Paid ? '✓' : '1'}
                                     </div>
-                                    <p className="text-xs text-purple-300 mt-0.5">
+                                    <p className="text-xs text-text-muted mt-0.5">
                                         {isFirstPlayer ? 'You' : 'Opponent'}
                                     </p>
                                 </div>
-                                <span className="text-purple-500 text-sm font-medium">VS</span>
+                                <span className="text-saweria-pink text-sm font-bold">VS</span>
                                 <div className="flex flex-col items-center">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player2Paid ? 'bg-emerald-500 text-white' : 'bg-purple-800 text-purple-400'
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player2Paid ? 'bg-success text-white' : 'bg-saweria-coral text-saweria-pink'
                                         }`}>
                                         {paymentStatus.player2Paid ? '✓' : '2'}
                                     </div>
-                                    <p className="text-xs text-purple-300 mt-0.5">
+                                    <p className="text-xs text-text-muted mt-0.5">
                                         {!isFirstPlayer ? 'You' : 'Opponent'}
                                     </p>
                                 </div>
                             </div>
 
                             {/* Timer */}
-                            <p className="text-purple-400 text-xs">
-                                Time: <span className={`font-mono font-bold ${paymentTimeLeft <= 10 ? 'text-red-400' : 'text-white'}`}>{paymentTimeLeft}s</span>
+                            <p className="text-text-muted text-xs">
+                                Time: <span className={`font-mono font-bold ${paymentTimeLeft <= 10 ? 'text-red-500' : 'text-text-main'}`}>{paymentTimeLeft}s</span>
                             </p>
 
                             {/* Entry Fee - Compact */}
-                            <div className="bg-purple-800/50 px-4 py-2 rounded-lg w-full text-center border border-purple-600/50">
-                                <p className="text-purple-400 text-xs uppercase tracking-wider">Entry Fee</p>
-                                <p className="text-lg font-bold text-white">{getBidAmount()}</p>
-                                <p className="text-purple-400 text-xs">Winner takes 0.00198 ETH</p>
+                            <div className="bg-saweria-coral/30 px-4 py-2 rounded-2xl w-full text-center border-2 border-saweria-pink-light">
+                                <p className="text-text-muted text-xs uppercase tracking-wider font-medium">Entry Fee</p>
+                                <p className="text-lg font-bold text-text-main">{getBidAmount()}</p>
+                                <p className="text-saweria-pink text-xs font-medium">Winner takes 0.00198 ETH 🏆</p>
                             </div>
 
                             {/* Error */}
                             {gameVault.error && (
-                                <p className="text-red-400 text-xs text-center">{gameVault.error}</p>
+                                <p className="text-red-500 text-xs text-center font-medium">{gameVault.error}</p>
                             )}
 
                             {/* Buttons - Compact */}
@@ -482,16 +482,16 @@ export default function RoomPage() {
                                 <button
                                     onClick={handleCancelPayment}
                                     disabled={gameVault.isLoading}
-                                    className="flex-1 py-2 bg-purple-800/80 text-purple-300 rounded-lg text-sm font-medium hover:bg-purple-700 transition disabled:opacity-50"
+                                    className="flex-1 py-2 bg-white border-2 border-saweria-coral text-text-muted rounded-full text-sm font-medium hover:border-red-300 hover:text-red-500 transition disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handlePayToPlay}
                                     disabled={gameVault.isLoading || (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) || (!isFirstPlayer && !paymentStatus.onChainGameId)}
-                                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-1.5 ${(isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid)
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
+                                    className={`flex-1 py-2 rounded-full text-sm font-semibold transition flex items-center justify-center gap-1.5 ${(isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid)
+                                        ? 'bg-success text-white'
+                                        : 'bg-gradient-to-r from-saweria-pink to-saweria-pink-light text-white hover:from-saweria-pink-dark hover:to-saweria-pink'
                                         } disabled:opacity-70`}
                                 >
                                     {gameVault.isLoading ? (
@@ -501,41 +501,41 @@ export default function RoomPage() {
                                     ) : (!isFirstPlayer && !paymentStatus.onChainGameId) ? (
                                         <><Loader2 className="animate-spin" size={14} /> Waiting for opponent...</>
                                     ) : (
-                                        'Pay & Play'
+                                        'Pay & Play 🚀'
                                     )}
                                 </button>
                             </div>
                         </div>
                     ) : matchmakingStatus === 'found' ? (
                         <div className="flex flex-col items-center py-6 gap-4">
-                            <Swords className="text-emerald-400 animate-bounce" size={48} />
+                            <Swords className="text-saweria-pink animate-bounce" size={48} />
                             <div className="text-center">
-                                <p className="text-emerald-400 font-bold text-xl">Match Found!</p>
-                                <p className="text-purple-200 mt-2">
-                                    Opponent: <span className="text-white font-semibold">{opponent?.name || 'Unknown'}</span>
+                                <p className="text-saweria-pink font-bold text-xl">🎉 Match Found!</p>
+                                <p className="text-text-muted mt-2">
+                                    Opponent: <span className="text-text-main font-semibold">{opponent?.name || 'Unknown'}</span>
                                 </p>
-                                <Loader2 className="animate-spin mx-auto mt-3 text-purple-400" size={24} />
+                                <Loader2 className="animate-spin mx-auto mt-3 text-saweria-pink" size={24} />
                             </div>
                         </div>
                     ) : matchmakingStatus === 'countdown' ? (
                         <div className="flex flex-col items-center py-4 gap-4">
-                            <p className="text-purple-300 text-sm uppercase tracking-widest">Game Starting In</p>
-                            <div className="text-7xl font-extrabold text-white animate-pulse drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">
+                            <p className="text-text-muted text-sm uppercase tracking-widest font-medium">Game Starting In</p>
+                            <div className="text-7xl font-extrabold text-saweria-pink animate-pulse drop-shadow-lg">
                                 {countdown}
                             </div>
-                            <div className="flex items-center gap-6 mt-4 opacity-80">
+                            <div className="flex items-center gap-6 mt-4 opacity-90">
                                 <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-blue-500' : 'bg-red-500'} text-white`}>
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-game-blue' : 'bg-game-red'} text-white`}>
                                         {displayName.slice(0, 2).toUpperCase()}
                                     </div>
-                                    <span className="text-xs text-purple-300">{displayName}</span>
+                                    <span className="text-xs text-text-muted font-medium">{displayName}</span>
                                 </div>
-                                <Swords size={24} className="text-purple-400" />
+                                <Swords size={24} className="text-saweria-pink" />
                                 <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-red-500' : 'bg-blue-500'} text-white`}>
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-game-red' : 'bg-game-blue'} text-white`}>
                                         {opponent?.name?.slice(0, 2).toUpperCase() || 'VS'}
                                     </div>
-                                    <span className="text-xs text-purple-300">{opponent?.name}</span>
+                                    <span className="text-xs text-text-muted font-medium">{opponent?.name}</span>
                                 </div>
                             </div>
                         </div>
@@ -544,17 +544,17 @@ export default function RoomPage() {
 
                 {/* Game Features */}
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                    <div className="flex flex-col items-center p-3 rounded-xl hover:bg-white/5 transition-colors duration-300">
-                        <PaintBucket className="text-blue-400 mb-2 drop-shadow-md" size={24} />
-                        <span className="text-purple-300 text-xs sm:text-sm font-medium">Paint the arena</span>
+                    <div className="flex flex-col items-center p-4 rounded-2xl bg-white/80 border-2 border-saweria-coral hover:border-saweria-pink transition-all duration-300 shadow-sm hover:shadow-md">
+                        <PaintBucket className="text-game-blue mb-2" size={24} />
+                        <span className="text-text-main text-xs sm:text-sm font-medium">Paint the arena</span>
                     </div>
-                    <div className="flex flex-col items-center p-3 rounded-xl hover:bg-white/5 transition-colors duration-300">
-                        <Zap className="text-yellow-400 mb-2 drop-shadow-md" size={24} />
-                        <span className="text-purple-300 text-xs sm:text-sm font-medium">Use power-ups</span>
+                    <div className="flex flex-col items-center p-4 rounded-2xl bg-white/80 border-2 border-saweria-coral hover:border-saweria-pink transition-all duration-300 shadow-sm hover:shadow-md">
+                        <Zap className="text-amber-500 mb-2" size={24} />
+                        <span className="text-text-main text-xs sm:text-sm font-medium">Use power-ups</span>
                     </div>
-                    <div className="flex flex-col items-center p-3 rounded-xl hover:bg-white/5 transition-colors duration-300">
-                        <Crown className="text-amber-400 mb-2 drop-shadow-md" size={24} />
-                        <span className="text-purple-300 text-xs sm:text-sm font-medium">Capture golden pixels</span>
+                    <div className="flex flex-col items-center p-4 rounded-2xl bg-white/80 border-2 border-saweria-coral hover:border-saweria-pink transition-all duration-300 shadow-sm hover:shadow-md">
+                        <Crown className="text-amber-500 mb-2" size={24} />
+                        <span className="text-text-main text-xs sm:text-sm font-medium">Capture golden pixels</span>
                     </div>
                 </div>
             </div>
