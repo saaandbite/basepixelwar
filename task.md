@@ -55,30 +55,3 @@ basepixelwar/
 ├── packages/
 │   ├── contracts/  --> Solidity (Foundry)
 │   └── shared/     --> KESEPAKATAN BERSAMA (Types.ts)
-```
-
----
-
-## 🛑 Blockers & Critical Improvements (Post-Analysis)
-
-### Phase 1: Quality Assurance (Fixing the Zero-Test Problem)
-- [ ] **Backend Testing** (`apps/server`)
-    - [ ] Setup Jest/Vitest environment.
-    - [ ] Write Unit Tests for `roomManager.ts` (Game Logic).
-    - [ ] Write Integration Tests for API Endpoints.
-- [ ] **Frontend Testing** (`apps/web`)
-    - [ ] Setup Testing Library.
-    - [ ] Component tests for Critical UI (Canvas/Wallet).
-
-### Phase 2: DevOps & Documentation
-- [ ] **CI/CD Pipeline**
-    - [ ] Create `.github/workflows/ci.yml` (Lint, Build, Test).
-- [ ] **Documentation**
-    - [ ] Create `apps/server/README.md` (API Docs).
-    - [ ] Create `apps/web/README.md` (Setup & Env).
-
-### Phase 3: Security & Stability
-- [ ] **Smart Contract Integration**
-    - [ ] Verify `backendSigner` rotation mechanism reliability.
-- [ ] **TigerBeetle Resilience**
-    - [ ] Test data recovery scenarios.
