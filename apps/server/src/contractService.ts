@@ -94,7 +94,7 @@ export class ContractService {
         const address = process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS || process.env.GAME_VAULT_ADDRESS;
 
         if (!pk || !address) {
-            console.error('\n❌ [ContractService] CRITICAL CONFIG ERROR');
+            console.error('\n [ContractService] CRITICAL CONFIG ERROR');
             if (!pk) console.error('   -> PRIVATE_KEY is missing');
             if (!address) console.error('   -> GAME_VAULT_ADDRESS is missing');
             console.error('   Contract features disabled.\n');
@@ -122,8 +122,8 @@ export class ContractService {
             });
 
             this.isConfigured = true;
-            console.log(`[ContractService] ✅ Initialized with Wallet: ${this.account.address}`);
-            console.log(`[ContractService] 🏛️ Contract: ${address}`);
+            console.log(`[ContractService]  Initialized with Wallet: ${this.account.address}`);
+            console.log(`[ContractService]  Contract: ${address}`);
         } catch (error) {
             console.error('[ContractService] Initialization failed:', error);
         }
@@ -134,7 +134,7 @@ export class ContractService {
      */
     private async waitForTransaction(hash: Hash): Promise<{ success: boolean; error?: string }> {
         try {
-            console.log(`[ContractService] ⏳ Waiting for tx confirmation: ${hash}`);
+            console.log(`[ContractService]  Waiting for tx confirmation: ${hash}`);
 
             const receipt = await this.client.waitForTransactionReceipt({
                 hash,
@@ -142,14 +142,14 @@ export class ContractService {
             });
 
             if (receipt.status === 'success') {
-                console.log(`[ContractService] ✅ Transaction confirmed in block ${receipt.blockNumber}`);
+                console.log(`[ContractService]  Transaction confirmed in block ${receipt.blockNumber}`);
                 return { success: true };
             } else {
-                console.error(`[ContractService] ❌ Transaction REVERTED in block ${receipt.blockNumber}`);
+                console.error(`[ContractService]  Transaction REVERTED in block ${receipt.blockNumber}`);
                 return { success: false, error: 'Transaction reverted' };
             }
         } catch (error: any) {
-            console.error(`[ContractService] ❌ Transaction confirmation failed:`, error?.message || error);
+            console.error(`[ContractService]  Transaction confirmation failed:`, error?.message || error);
             return { success: false, error: error?.message || 'Unknown error' };
         }
     }
@@ -238,11 +238,11 @@ export class ContractService {
 
             console.log(`[ContractService] Server Address: ${serverAddress}`);
             console.log(`[ContractService] Contract Signer: ${contractSigner}`);
-            console.log(`[ContractService] Match: ${isMatch ? '✅ YES' : '❌ NO'}`);
+            console.log(`[ContractService] Match: ${isMatch ? ' YES' : ' NO'}`);
 
             if (!isMatch) {
-                console.error(`[ContractService] ⚠️ CRITICAL: Server wallet does NOT match contract's backendSigner!`);
-                console.error(`[ContractService] ⚠️ Settlement transactions WILL FAIL with NotBackendSigner error!`);
+                console.error(`[ContractService]  CRITICAL: Server wallet does NOT match contract's backendSigner!`);
+                console.error(`[ContractService]  Settlement transactions WILL FAIL with NotBackendSigner error!`);
             }
 
             return { serverAddress, contractSigner: contractSigner as string, isMatch };

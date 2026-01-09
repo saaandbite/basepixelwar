@@ -3,6 +3,7 @@
 // PvP Game Page - Separate from AI mode for cleaner architecture
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import { usePvPGame } from './hooks/usePvPGame';
 import { PvPGameCanvas } from './components/PvPGameCanvas';
 import { PvPGameNavbar } from './components/PvPGameNavbar';
@@ -201,7 +202,7 @@ export function PvPGamePage() {
                                     ? 'bg-green-500 text-white'
                                     : 'bg-slate-200 text-slate-400'
                                     }`}>
-                                    {pvp.paymentStatus.player1Paid ? '✓' : '1'}
+                                    {pvp.paymentStatus.player1Paid ? <Check size={16} /> : '1'}
                                 </div>
                                 <p className="text-sm text-slate-500 mt-2">
                                     {pvp.isFirstPlayer ? 'You' : 'Opponent'}

@@ -314,13 +314,11 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, projectiles: Proj
         ctx.fill();
 
         // Bomb Icon/Detail
-        if (isInkBomb) {
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('💣', 0, 1);
-        }
+        // Draw simple fuse spark instead of emoji
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFDD00';
+        ctx.fill();
 
         ctx.restore();
     });

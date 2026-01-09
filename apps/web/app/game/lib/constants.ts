@@ -51,7 +51,7 @@ export const WEAPON_MODES = {
         paintRadius: 1,
         speed: 6,           // Slower speed (was 10) -> 360px/sec
         name: 'Machine Gun',
-        icon: '🔫',
+
         description: 'Fast shots, small area',
         maxDuration: 5000,    // 5 seconds usage
         recoveryDuration: 3000, // 3 seconds cooldown
@@ -64,7 +64,7 @@ export const WEAPON_MODES = {
         spreadAngles: [-0.2, 0, 0.2],
         maxLifetime: 60,    // Need longer lifetime to cover same distance at slower speed
         name: 'Shotgun',
-        icon: '💥',
+
         description: '3-way spread, medium range',
         maxDuration: 3000,     // 3 seconds usage
         recoveryDuration: 5000, // 5 seconds cooldown
@@ -76,7 +76,7 @@ export const WEAPON_MODES = {
         speed: 9,           // Increased speed (was 5) to allow full map range
         gravity: 0.08,      // Lower gravity for floatier arc at slower speed (was 0.10)
         name: 'Ink Bomb',
-        icon: '💣',
+
         description: 'Arc shot, massive explosion',
         maxDuration: 1,        // 1 Shot (Special Logic)
         recoveryDuration: 7000, // 7 seconds cooldown

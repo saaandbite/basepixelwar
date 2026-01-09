@@ -1,5 +1,6 @@
 // import { GOLDEN_PIXEL_SPAWN_INTERVAL, GAME_DURATION } from '../lib/constants'; // Unused
 import type { GoldenPixel } from '../types';
+import { User, Swords } from 'lucide-react';
 
 interface GameNavbarProps {
     scoreBlue: number;
@@ -37,7 +38,7 @@ export function GameNavbar({
             {/* Left: Blue Score */}
             <div className="flex items-center gap-2 min-w-[80px]">
                 <div className="w-9 h-9 rounded-xl bg-[#4CC9F0] flex items-center justify-center shadow-sm border-2 border-white">
-                    <span className="text-base">👤</span>
+                    <User size={20} className="text-white" />
                 </div>
                 <div className="flex flex-col items-start leading-tight">
                     <span className="text-[10px] font-semibold text-slate-400 uppercase">You</span>
@@ -59,7 +60,7 @@ export function GameNavbar({
                     <span className="text-base font-bold text-[#FF6B6B] tabular-nums">{scoreRed}%</span>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-[#FF6B6B] flex items-center justify-center shadow-sm border-2 border-white">
-                    <span className="text-base">😈</span>
+                    <Swords size={20} className="text-white" />
                 </div>
             </div>
         </div>

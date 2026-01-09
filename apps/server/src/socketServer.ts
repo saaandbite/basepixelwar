@@ -435,13 +435,13 @@ function cancelPaymentAndRefund(roomId: string, reason: string) {
         contractService.cancelGame(room.onChainGameId)
             .then(txHash => {
                 if (txHash) {
-                    console.log(`[Payment] ✅ Refund successful for game ${room.onChainGameId}. Tx: ${txHash}`);
+                    console.log(`[Payment]  Refund successful for game ${room.onChainGameId}. Tx: ${txHash}`);
                 } else {
-                    console.error(`[Payment] ❌ Refund failed for game ${room.onChainGameId} - cancelGame returned null`);
+                    console.error(`[Payment]  Refund failed for game ${room.onChainGameId} - cancelGame returned null`);
                 }
             })
             .catch(err => {
-                console.error(`[Payment] ❌ Refund error for game ${room.onChainGameId}:`, err);
+                console.error(`[Payment]  Refund error for game ${room.onChainGameId}:`, err);
             });
     }
 

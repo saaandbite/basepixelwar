@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, Flag, Home, Target, Swords, Ban, Coins, ExternalLink } from 'lucide-react';
+import { Trophy, Flag, Home, Target, Swords, Ban, Coins, ExternalLink, Check } from 'lucide-react';
 
 interface PvPGameOverModalProps {
     myTeam: 'blue' | 'red';
@@ -76,9 +76,9 @@ export function PvPGameOverModal({
         borderColor: 'border-saweria-pink-light',
         textColor: 'text-saweria-pink',
         icon: Trophy,
-        title: 'VICTORY! 🎉',
+        title: 'VICTORY!',
         subtext: 'YOU CONQUERED THE ARENA!',
-        badge: '🏆 DOMINATION ACHIEVED!',
+        badge: 'DOMINATION ACHIEVED!',
         badgeGradient: 'from-saweria-pink to-saweria-pink-dark'
     } : isDraw ? {
         gradient: 'from-slate-400 to-slate-500',
@@ -88,7 +88,7 @@ export function PvPGameOverModal({
         icon: Ban,
         title: 'DRAW',
         subtext: 'A PERFECTLY MATCHED BATTLE!',
-        badge: '🤝 STALEMATE',
+        badge: 'STALEMATE',
         badgeGradient: 'from-slate-400 to-slate-500'
     } : {
         gradient: 'from-red-400 to-orange-400',
@@ -98,7 +98,7 @@ export function PvPGameOverModal({
         icon: Swords,
         title: 'DEFEAT',
         subtext: 'BETTER LUCK NEXT TIME!',
-        badge: '⚔️ MATCH COMPLETED',
+        badge: 'MATCH COMPLETED',
         badgeGradient: 'from-red-400 to-orange-400'
     };
 
@@ -214,7 +214,7 @@ export function PvPGameOverModal({
                                 className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-bold py-3 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
                             >
                                 <Coins size={16} className="group-hover:rotate-12 transition-transform" />
-                                <span>CLAIM REWARD 🏆</span>
+                                <span>CLAIM REWARD</span>
                             </button>
                         ) : (
                             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-4 animate-fade-in-up">
@@ -246,7 +246,7 @@ export function PvPGameOverModal({
                                 {/* Success indicator with Basescan link */}
                                 <div className="mt-4 text-center space-y-1">
                                     <div className="text-xs text-emerald-700 font-semibold flex items-center justify-center gap-1">
-                                        <span>✓</span> Sent to your wallet
+                                        <Check size={12} /> Sent to your wallet
                                     </div>
                                     {settlementTxHash && (
                                         <a

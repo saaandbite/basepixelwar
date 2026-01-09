@@ -8,7 +8,7 @@ import { useMultiplayer } from '../game/hooks/useMultiplayer';
 import { useWallet, formatAddress, isCorrectChain } from '../contexts/WalletContext';
 import { useGameVault, GameMode } from '../hooks/useGameVault';
 import { useENSName } from '../hooks/useENSName';
-import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check, Bot } from 'lucide-react';
+import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check, Bot, Search, Trophy, Sparkles } from 'lucide-react';
 import styles from './room.module.css';
 import '../game/game.css';
 
@@ -351,7 +351,7 @@ export default function RoomPage() {
                             <div className="w-16 h-16 border-4 border-gray-100 rounded-full"></div>
                             <div className="absolute inset-0 border-4 border-pink-400 border-t-transparent rounded-full animate-spin"></div>
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-2xl">🔍</span>
+                                <Search size={28} className="text-pink-500" />
                             </div>
                         </div>
                         <div className="text-center">
@@ -368,14 +368,16 @@ export default function RoomPage() {
                 ) : matchmakingStatus === 'found' && paymentStatus ? (
                     // Payment Flow (Simplified visually for new card)
                     <div className="flex flex-col items-center py-3 gap-3">
-                        <p className="text-pink-500 font-bold text-lg">🎉 Match Found!</p>
+                        <p className="text-pink-500 font-bold text-lg flex items-center gap-2">
+                            <Sparkles size={20} /> Match Found!
+                        </p>
 
                         {/* Compact Match Info */}
                         <div className="flex items-center gap-4 my-2 w-full justify-center">
                             <div className="flex flex-col items-center">
                                 <span className="font-bold text-gray-700">You</span>
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mt-1 ${paymentStatus.player1Paid ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
-                                    {paymentStatus.player1Paid ? '✓' : '1'}
+                                    {paymentStatus.player1Paid ? <Check size={16} /> : '1'}
                                 </div>
                             </div>
                             <span className="font-bold text-gray-400">VS</span>
@@ -387,10 +389,18 @@ export default function RoomPage() {
                             </div>
                         </div>
 
+                        {/* Timer */}
+                        <p className="text-gray-500 text-xs">
+                            Time: <span className={`font-mono font-bold ${paymentTimeLeft <= 10 ? 'text-red-500' : 'text-gray-800'}`}>{paymentTimeLeft}s</span>
+                        </p>
+
                         {/* Fee Visual */}
                         <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 w-full text-center">
                             <span className="text-xs text-gray-500 uppercase font-bold">Entry Fee</span>
                             <div className="text-xl font-black text-gray-800">{getBidAmount()}</div>
+                            <p className="text-pink-500 text-xs font-bold mt-1 flex items-center justify-center gap-1">
+                                Winner takes 0.00198 ETH <Trophy size={14} />
+                            </p>
                         </div>
 
                         {/* Buttons */}
@@ -404,9 +414,17 @@ export default function RoomPage() {
                             <button
                                 onClick={handlePayToPlay}
                                 disabled={gameVault.isLoading || (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) || (!isFirstPlayer && !paymentStatus.onChainGameId)}
-                                className="flex-1 py-3 bg-pink-500 text-white rounded-full font-bold hover:bg-pink-600 disabled:opacity-50"
+                                className="flex-1 py-3 bg-pink-500 text-white rounded-full font-bold hover:bg-pink-600 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                {gameVault.isLoading ? 'Processing...' : 'Pay & Play'}
+                                {gameVault.isLoading ? (
+                                    <><Loader2 className="animate-spin" size={16} /> Confirming...</>
+                                ) : (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) ? (
+                                    'Waiting...'
+                                ) : (!isFirstPlayer && !paymentStatus.onChainGameId) ? (
+                                    <><Loader2 className="animate-spin" size={16} /> Waiting for opponent...</>
+                                ) : (
+                                    'Pay & Play'
+                                )}
                             </button>
                         </div>
                     </div>

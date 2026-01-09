@@ -4,6 +4,7 @@
 
 import { GOLDEN_PIXEL_SPAWN_INTERVAL, GAME_DURATION } from '../lib/constants';
 import type { GoldenPixel } from '../types';
+import { Zap, Coins } from 'lucide-react';
 
 interface GoldenPixelIndicatorProps {
     goldenPixel: GoldenPixel | null;
@@ -46,7 +47,7 @@ export function GoldenPixelIndicator({
                 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
                 bg-gradient-to-br from-[#FF6B35] to-[#ff9500] text-white shadow-[0_0_20px_rgba(255,107,53,0.6)] animate-pulse
             `}>
-                <div className="text-base animate-pulse">⚡</div>
+                <Zap size={16} className="animate-pulse" />
                 <div className="flex flex-col leading-[1.1]">
                     <span className="text-[11px] uppercase tracking-wider">FRENZY!</span>
                     <span className="text-sm font-bold">{frenzyTimeLeft.toFixed(1)}s</span>
@@ -79,7 +80,7 @@ export function GoldenPixelIndicator({
                 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
                 bg-gradient-to-br from-[#FFD700] to-[#ffc107] text-[#7c5800] shadow-[0_0_15px_rgba(255,215,0,0.5)] animate-pulse
             `}>
-                <div className="text-sm animate-[spin_1s_linear_infinite]">🪙</div>
+                <Coins size={14} className="animate-[spin_2s_linear_infinite]" />
                 <span className="text-[11px] uppercase tracking-wider font-bold">CAPTURE!</span>
             </div>
         );
