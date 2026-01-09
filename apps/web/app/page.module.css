@@ -146,7 +146,7 @@
 
 /* Wallet wrapper to force full width */
 .walletWrapper {
-  width: 100%;
+  width: 250px;
   display: flex;
   justify-content: center;
 }
@@ -174,8 +174,9 @@
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
+  border: none;
   text-decoration: none;
-  min-width: 200px;
+  width: 250px;
 }
 
 .startButton {
@@ -378,10 +379,6 @@
   }
 }
 
-.buttonIcon {
-  font-size: 1.3rem;
-}
-
 /* Features */
 .features {
   display: flex;
@@ -414,7 +411,8 @@
 }
 
 .featureIcon {
-  font-size: 1.3rem;
+  width: 24px;
+  height: 24px;
 }
 
 /* Footer */
@@ -469,10 +467,15 @@
   .startButton,
   .walletButton,
   .walletButtonConnected {
-    width: 100%;
+    width: 100% !important;
     min-width: auto;
     padding: 14px 24px;
     font-size: 1rem;
+  }
+
+  .walletWrapper {
+    width: 100% !important;
+    min-width: auto;
   }
 
   .connectedInfo {

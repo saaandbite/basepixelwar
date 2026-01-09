@@ -15,6 +15,14 @@ import {
   Name,
   Identity,
 } from "@coinbase/onchainkit/identity";
+import {
+  Gamepad2,
+  Wallet as WalletIcon,
+  Swords,
+  Coins,
+  Trophy,
+  AlertTriangle
+} from "lucide-react";
 
 export default function Home() {
   const {
@@ -56,7 +64,8 @@ export default function Home() {
         {/* Chain Warning */}
         {isConnected && !isOnCorrectChain && (
           <div className={styles.warningMessage}>
-            <span>⚠️ Wrong network detected. Please switch to Base.</span>
+            <AlertTriangle className="w-5 h-5" />
+            <span>Wrong network detected. Please switch to Base.</span>
             <button onClick={switchToBase} className={styles.switchButton}>
               Switch to Base
             </button>
@@ -66,7 +75,7 @@ export default function Home() {
         {/* Buttons */}
         <div className={styles.buttonContainer}>
           <Link href="/room" className={styles.startButton}>
-            <span className={styles.buttonIcon}>🎮</span>
+            <Gamepad2 className="w-6 h-6" />
             Start Game
           </Link>
 
@@ -75,6 +84,7 @@ export default function Home() {
             {!isConnected ? (
               <Wallet>
                 <ConnectWallet className={styles.walletButton}>
+                  <WalletIcon className="w-5 h-5 mr-2" />
                   <span>Connect Wallet</span>
                 </ConnectWallet>
               </Wallet>
@@ -109,15 +119,15 @@ export default function Home() {
         {/* Features */}
         <div className={styles.features}>
           <div className={styles.featureItem}>
-            <span className={styles.featureIcon}>⚔️</span>
+            <Swords className={styles.featureIcon} />
             <span>Real-time Battles</span>
           </div>
           <div className={styles.featureItem}>
-            <span className={styles.featureIcon}>💰</span>
+            <Coins className={styles.featureIcon} />
             <span>Win Rewards</span>
           </div>
           <div className={styles.featureItem}>
-            <span className={styles.featureIcon}>🏆</span>
+            <Trophy className={styles.featureIcon} />
             <span>Climb Leaderboard</span>
           </div>
         </div>
