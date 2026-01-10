@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 8080",
+    "dev": "PORT=${WEB_PORT:-8080} next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",

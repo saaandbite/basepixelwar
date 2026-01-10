@@ -31,7 +31,7 @@ contractService.verifySigner().then(result => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 
 // Create HTTP server
 const httpServer = createServer((req, res) => {
