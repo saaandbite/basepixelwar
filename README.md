@@ -28,36 +28,87 @@ The result? A game that is exciting to play without interruption, but with guara
 
 ## Status: Active MVP
 We are currently in **Phase 1 (Proof of Concept)**.
-*   ✅ **Gameplay**: 1vs1 Battles are Live.
-*   ✅ **Blockchain**: Escrow & Payout Contracts are deployed on Base Sepolia.
-*   🚧 **Database**: Redis & TigerBeetle integration is **In Progress**.
-*   🔮 **Future Features**: Leaderboards, Guilds, and NFTs are planned for Q3 2026.
+*   **Gameplay**: 1vs1 Battles are Live.
+*   **Blockchain**: Escrow & Payout Contracts are deployed on Base Sepolia.
+*   **Database**: Redis & TigerBeetle integration is **In Progress**.
+*   **Future Features**: Leaderboards, Guilds, and NFTs are planned for Q3 2026.
 
 ## Roadmap: The Journey to Mainnet
-Our development strategy focuses on MVP stability before feature expansion.
 
-### Phase 1: Proof of Concept (Current - Hackathon MVP)
-*Status: Live on Base Sepolia Testnet*
-*   **Hybrid Architecture**: Next.js Frontend integration with Base Smart Contract.
-*   **1vs1 Wagering**: Implementation of basic wagering features and automated prize withdrawal.
-*   **Wallet Integration**: Using OnchainKit for seamless onboarding (Smart Wallet Support).
-*   **Mid-Submission ( Jan 12)**: Validation of Fund Flows and wallet connection stability.
+Roadmap ini disusun berdasarkan pengalaman langsung tim selama membangun dan menguji MVP PixelWar di Base Sepolia. Fokus utama kami adalah memastikan fitur inti benar-benar playable dan stabil terlebih dahulu, sebelum melakukan ekspansi fitur dan skala ekosistem menuju Mainnet.
 
-### Phase 2: Security & Experience (Q2 2026)
-*   **Anti-Cheat System**: Enhancing Off-Chain server security to validate player input (preventing speed hacks).
-*   **Contract Audit**: Security audit on the payoutWinner function (Access Control & Reentrancy Check).
-*   **Mobile Optimization**: UI/UX refinement to be 100% responsive in in-app wallet browsers (MetaMask Mobile).
+---
 
-### Phase 3: Mainnet Launch (Q3 2026)
-*   **Go Live on Base**: Deployment to Base Mainnet using real ETH.
-*   **Leaderboard System**: Weekly rankings for players with the highest Win Rate.
-*   **Community Guilds**: Simple clan features for the community base.
+### Phase 1: Proof of Concept
 
-### Phase 4: Future Vision (Q4 2026)
-*   **The "MCL" Protocol (Weekly Tournament)**: Automated weekly tournaments with a bracket system.
-*   **Generative Trophy NFT**: Tournament winners receive a unique NFT Trophy generated based on their victory data.
+**Status:** Current – Hackathon MVP
+**Network:** Live on Base Sepolia Testnet
 
-> "Pioneering the Hybrid-Wagering Model on Base: The speed of Web2 gaming meets the security of Base L2 settlements."
+Pada fase ini, kami memvalidasi ide inti PixelWar sebagai game PvP berbasis on-chain yang dapat dimainkan secara nyata, bukan sekadar konsep.
+
+**Cakupan Pengembangan:**
+
+* **Hybrid Architecture**
+  Integrasi Next.js sebagai frontend dengan Base Smart Contract untuk logika on-chain, serta server off-chain untuk sinkronisasi gameplay.
+* **1 vs 1 Wagering**
+  Implementasi mekanisme taruhan dasar antar pemain dengan pencairan hadiah otomatis melalui smart contract.
+* **Wallet Integration**
+  Menggunakan OnchainKit untuk onboarding wallet yang lebih sederhana dan cepat, termasuk dukungan Smart Wallet.
+* **Mid-Submission (12 Jan)**
+  Validasi alur dana (*flow of funds*) serta pengujian stabilitas koneksi wallet berdasarkan hasil playtest dan simulasi transaksi.
+
+---
+
+### Phase 2: Security & Experience
+
+**Target:** Q2 2026
+
+Setelah MVP tervalidasi, fase ini berfokus pada penguatan keamanan sistem serta peningkatan pengalaman bermain berdasarkan feedback pengguna.
+
+**Fokus Utama:**
+
+* **Anti-Cheat System**
+  Peningkatan validasi di server off-chain untuk memastikan input pemain tetap fair dan mencegah eksploitasi seperti speed hack.
+* **Smart Contract Audit**
+  Audit keamanan pada fungsi `payoutWinner`, dengan fokus pada *access control* dan potensi *reentrancy*.
+* **Mobile Optimization**
+  Penyempurnaan UI/UX agar berjalan optimal di browser in-app wallet, terutama MetaMask Mobile.
+
+---
+
+### Phase 3: Mainnet Launch
+
+**Target:** Q3 2026
+
+Fase ini menandai transisi PixelWar dari lingkungan testnet menuju ekosistem Mainnet secara penuh.
+
+**Rencana Implementasi:**
+
+* **Go Live on Base Mainnet**
+  Deployment smart contract ke Base Mainnet menggunakan ETH asli.
+* **Leaderboard System**
+  Sistem peringkat mingguan untuk mendorong kompetisi berdasarkan *win rate* pemain.
+* **Community Guilds**
+  Fitur klan sederhana untuk membangun interaksi komunitas dan kompetisi berbasis tim.
+
+---
+
+### Phase 4: Future Vision
+
+**Target:** Q4 2026
+
+Tahap jangka panjang untuk memperluas ekosistem kompetitif PixelWar dan memberikan nilai berkelanjutan bagi pemain.
+
+**Pengembangan Lanjutan:**
+
+* **The "MCL" Protocol (Weekly Tournament)**
+  Turnamen mingguan otomatis dengan sistem bracket yang dikelola secara on-chain.
+* **Generative Trophy NFT**
+  Pemenang turnamen akan menerima Trophy NFT unik yang digenerate berdasarkan data kemenangan dan performa mereka.
+
+---
+
+> PixelWar dikembangkan sebagai arena kompetitif on-chain yang menyeimbangkan transparansi blockchain, gameplay real-time, dan pengalaman pengguna yang adil.
 
 ---
 
