@@ -9,7 +9,9 @@ import {
     Flag,
     Coins,
     Trophy,
-    Zap
+    Zap,
+    Lightbulb,
+    Link2
 } from "lucide-react";
 
 export default function HelpOverlay() {
@@ -17,20 +19,17 @@ export default function HelpOverlay() {
 
     return (
         <>
-            {/* Floating Button - Saweria Theme */}
+            {/* Floating Button - Icon Only */}
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3 bg-white text-gray-800 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 font-bold group border-2 border-[#FFE5E5]"
+                className="fixed bottom-6 right-6 z-50 p-3.5 bg-white text-[#FF8BA7] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:scale-105 group border-2 border-[#FFE5E5]"
                 aria-label="Help & Guide"
             >
-                <span className="bg-[#FFE5E5] text-[#FF8BA7] p-1.5 rounded-full group-hover:rotate-12 transition-transform">
-                    <HelpCircle size={18} />
-                </span>
-                <span>Help</span>
+                <HelpCircle size={24} className="group-hover:rotate-12 transition-transform" />
 
                 {/* Tooltip */}
-                <span className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none transform translate-y-2 group-hover:translate-y-0 text-center">
-                    Need help? Click for PixelWar game guide
+                <span className="absolute right-0 bottom-full mb-2 w-32 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-center whitespace-nowrap">
+                    Game Guide
                 </span>
             </button>
 
@@ -43,7 +42,10 @@ export default function HelpOverlay() {
                         {/* Header */}
                         <div className="sticky top-0 bg-white/95 backdrop-blur z-10 p-4 sm:p-6 border-b border-[#FFE5E5] flex items-center justify-between shrink-0">
                             <h2 className="text-xl sm:text-2xl font-black text-gray-800 flex items-center gap-2">
-                                <span className="text-[#FF8BA7]">🎮</span> PixelWar Guide
+                                <span className="w-8 h-8 rounded-lg bg-[#FFE5E5] text-[#FF8BA7] flex items-center justify-center">
+                                    <Gamepad2 size={20} />
+                                </span>
+                                PixelWar Guide
                             </h2>
                             <button
                                 onClick={() => setIsOpen(false)}
@@ -64,7 +66,10 @@ export default function HelpOverlay() {
                             {/* How to Play Steps */}
                             <section>
                                 <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <span className="text-2xl">🕹️</span> How to Play
+                                    <span className="w-7 h-7 rounded-lg bg-[#FFE5E5] text-[#FF8BA7] flex items-center justify-center">
+                                        <Gamepad2 size={16} />
+                                    </span>
+                                    How to Play
                                 </h3>
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     <div className="p-4 rounded-xl bg-[#FFFAFA] hover:bg-white hover:shadow-md border border-[#FFE5E5] transition-all">
@@ -109,7 +114,10 @@ export default function HelpOverlay() {
                                 {/* Tips */}
                                 <section className="bg-[#FFF8F4] p-5 rounded-xl border border-[#FFCDD2]">
                                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                        <span className="text-xl">💡</span> Pro Tips
+                                        <span className="w-7 h-7 rounded-lg bg-[#FFE5E5] text-[#FF8BA7] flex items-center justify-center">
+                                            <Lightbulb size={16} />
+                                        </span>
+                                        Pro Tips
                                     </h3>
                                     <ul className="space-y-2">
                                         <li className="flex gap-2 text-sm text-gray-700 items-start">
@@ -136,7 +144,10 @@ export default function HelpOverlay() {
                                 {/* Network Info */}
                                 <section className="bg-[#FFF8F4] p-5 rounded-xl border border-[#FFCDD2]">
                                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                        <span className="text-xl">🔗</span> Network Info
+                                        <span className="w-7 h-7 rounded-lg bg-[#FFE5E5] text-[#FF8BA7] flex items-center justify-center">
+                                            <Link2 size={16} />
+                                        </span>
+                                        Network Info
                                     </h3>
                                     <p className="text-sm text-gray-700">
                                         This game runs on <strong className="text-[#FF8BA7]">Base Network</strong> with instant on-chain settlement for maximum security and transparency.
@@ -162,7 +173,7 @@ export default function HelpOverlay() {
                                     onClick={() => { setIsOpen(false); }}
                                     className="flex-1 py-3 px-6 bg-[#FF8BA7] hover:bg-[#FF7B9C] text-white font-bold rounded-xl shadow-lg shadow-[#FF8BA7]/30 transition-all transform hover:-translate-y-0.5"
                                 >
-                                    Start Playing 🚀
+                                    Start Playing
                                 </button>
                             </div>
 

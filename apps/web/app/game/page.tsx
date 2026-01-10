@@ -8,7 +8,6 @@ import { GAME_WIDTH, GAME_HEIGHT } from './lib/constants';
 
 import { GameCanvas } from './components/GameCanvas';
 import { GameNavbar } from './components/GameNavbar';
-import { GameInstructions } from './components/GameInstructions';
 import { GameOverModal } from './components/GameOverModal';
 import { PowerupIndicator } from './components/PowerupIndicator';
 import { PowerupEffect } from './components/PowerupEffect';
@@ -93,6 +92,15 @@ function AIGamePage() {
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    // Auto-start game when mounted (skip instructions overlay)
+    useEffect(() => {
+        if (isMounted && !uiState.gameStarted && !uiState.gameActive) {
+            initAudio();
+            resetGame(GAME_WIDTH, GAME_HEIGHT);
+            startGame(playSound);
+        }
+    }, [isMounted, uiState.gameStarted, uiState.gameActive, initAudio, resetGame, startGame, playSound]);
 
     // Audio sync
     useEffect(() => {
@@ -217,9 +225,9 @@ function AIGamePage() {
     const showControlPanel = isMounted;
 
     return (
-        <div className="h-screen w-full bg-slate-100 overflow-hidden flex flex-col items-center justify-center p-2">
-            {/* Unified Game Card - "One Body" */}
-            <div className="relative flex flex-col w-full max-w-[420px] bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-slate-900/5 h-auto max-h-full">
+        <div className="game-container bg-slate-50 h-[100dvh] flex flex-col overflow-hidden">
+            {/* Unified Game Card - Matches PvP layout */}
+            <div className="max-w-[420px] mx-auto w-full h-full flex flex-col bg-white shadow-2xl relative">
 
                 {isMounted ? (
                     <>
@@ -237,7 +245,7 @@ function AIGamePage() {
                         </div>
 
                         {/* 2. Game Canvas (Middle of Card) */}
-                        <div className="relative w-full flex-1 min-h-0">
+                        <div className="flex-1 relative bg-slate-100 overflow-hidden">
                             {/* Wrapper to hold the canvas and overlays */}
                             <GameCanvas
                                 gameStateRef={gameStateRef}
@@ -301,12 +309,7 @@ function AIGamePage() {
                             </div>
                         )}
 
-                        {/* Global Overlays (Cover entire Card) */}
-                        {!uiState.gameStarted && (
-                            <div className="absolute inset-0 z-[100]">
-                                <GameInstructions onStart={handleStart} />
-                            </div>
-                        )}
+                        {/* Game Over Overlay */}
 
                         {isGameOver && (
                             <div className="absolute inset-0 z-[100]">
