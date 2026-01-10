@@ -8,7 +8,6 @@ import { GAME_WIDTH, GAME_HEIGHT } from './lib/constants';
 
 import { GameCanvas } from './components/GameCanvas';
 import { GameNavbar } from './components/GameNavbar';
-import { GameInstructions } from './components/GameInstructions';
 import { GameOverModal } from './components/GameOverModal';
 import { PowerupIndicator } from './components/PowerupIndicator';
 import { PowerupEffect } from './components/PowerupEffect';
@@ -25,18 +24,22 @@ export default function GamePage() {
     const router = useRouter();
     const [isPvP, setIsPvP] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [hasValidSession, setHasValidSession] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
         const pvpMode = sessionStorage.getItem('pvp_mode') === 'true';
         const roomId = sessionStorage.getItem('pvp_room_id');
         const aiMode = sessionStorage.getItem('ai_mode') === 'true';
 
         // Session Guard: Must have explicit mode to be here
         if (!pvpMode && !aiMode) {
+            // No valid session, redirect to room
             router.push('/room');
             return;
         }
+
+        // Valid session exists
+        setHasValidSession(true);
 
         // PvP Check
         if (pvpMode && roomId) {
@@ -49,10 +52,13 @@ export default function GamePage() {
             sessionStorage.removeItem('pvp_room_id');
             sessionStorage.removeItem('pvp_team');
         }
+
+        setMounted(true);
     }, [router]);
 
-    if (!mounted) {
-        return <div className="game-container flex items-center justify-center h-screen">Loading...</div>;
+    // Show loading while checking session or redirecting
+    if (!mounted || !hasValidSession) {
+        return <div className="game-container flex items-center justify-center h-screen bg-slate-50 text-slate-500">Loading...</div>;
     }
 
     if (isPvP) {
@@ -93,6 +99,15 @@ function AIGamePage() {
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    // Auto-start game when mounted (skip instructions overlay)
+    useEffect(() => {
+        if (isMounted && !uiState.gameStarted && !uiState.gameActive) {
+            initAudio();
+            resetGame(GAME_WIDTH, GAME_HEIGHT);
+            startGame(playSound);
+        }
+    }, [isMounted, uiState.gameStarted, uiState.gameActive, initAudio, resetGame, startGame, playSound]);
 
     // Audio sync
     useEffect(() => {
@@ -158,6 +173,15 @@ function AIGamePage() {
         startGame(playSound);
     }, [resetGame, startGame, playSound]);
 
+    const handleExit = useCallback(() => {
+        // Clear session and return to room selection
+        sessionStorage.removeItem('ai_mode');
+        sessionStorage.removeItem('pvp_mode');
+        sessionStorage.removeItem('pvp_room_id');
+        sessionStorage.removeItem('pvp_team');
+        window.location.href = '/room';
+    }, []);
+
     const handleResize = useCallback(
         () => {
             // No-op for now as we enforce fixed size
@@ -217,9 +241,9 @@ function AIGamePage() {
     const showControlPanel = isMounted;
 
     return (
-        <div className="h-screen w-full bg-slate-100 overflow-hidden flex flex-col items-center justify-center p-2">
-            {/* Unified Game Card - "One Body" */}
-            <div className="relative flex flex-col w-full max-w-[420px] bg-white shadow-2xl rounded-xl overflow-hidden ring-1 ring-slate-900/5 h-auto max-h-full">
+        <div className="game-container bg-slate-50 h-[100dvh] flex flex-col overflow-hidden">
+            {/* Unified Game Card - Matches PvP layout */}
+            <div className="max-w-[420px] mx-auto w-full h-full flex flex-col bg-white shadow-2xl relative">
 
                 {isMounted ? (
                     <>
@@ -237,7 +261,7 @@ function AIGamePage() {
                         </div>
 
                         {/* 2. Game Canvas (Middle of Card) */}
-                        <div className="relative w-full flex-1 min-h-0">
+                        <div className="flex-1 relative bg-slate-100 overflow-hidden">
                             {/* Wrapper to hold the canvas and overlays */}
                             <GameCanvas
                                 gameStateRef={gameStateRef}
@@ -301,12 +325,7 @@ function AIGamePage() {
                             </div>
                         )}
 
-                        {/* Global Overlays (Cover entire Card) */}
-                        {!uiState.gameStarted && (
-                            <div className="absolute inset-0 z-[100]">
-                                <GameInstructions onStart={handleStart} />
-                            </div>
-                        )}
+                        {/* Game Over Overlay */}
 
                         {isGameOver && (
                             <div className="absolute inset-0 z-[100]">
@@ -315,6 +334,7 @@ function AIGamePage() {
                                     maxCombo={uiState.maxCombo}
                                     powerupsCollected={uiState.totalPowerupsCollected}
                                     onPlayAgain={handlePlayAgain}
+                                    onExit={handleExit}
                                 />
                             </div>
                         )}

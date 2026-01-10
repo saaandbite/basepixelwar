@@ -8,7 +8,8 @@ import { useMultiplayer } from '../game/hooks/useMultiplayer';
 import { useWallet, formatAddress, isCorrectChain } from '../contexts/WalletContext';
 import { useGameVault, GameMode } from '../hooks/useGameVault';
 import { useENSName } from '../hooks/useENSName';
-import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check, Bot } from 'lucide-react';
+import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check, Bot, Search, Trophy, Sparkles } from 'lucide-react';
+import styles from './room.module.css';
 import '../game/game.css';
 
 export default function RoomPage() {
@@ -215,347 +216,247 @@ export default function RoomPage() {
 
     const error = multiplayerError || walletError || transactionError;
 
+    // Start of styles insertion for import - moving to top
+    // Note: This needs to be done carefully to preserve imports
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-saweria-cream to-saweria-coral flex flex-col items-center justify-center p-6 bg-grid-pattern-pink">
-            <div className="max-w-md w-full relative z-10">
-                {/* Logo Section */}
-                <div className="flex flex-col items-center mb-8">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Swords className="text-saweria-pink" size={32} />
-                        <h1 className="text-3xl font-extrabold text-text-main tracking-tight">PixelWar</h1>
-                    </div>
-                    <p className="text-text-muted text-center text-sm sm:text-base">Player vs Player Arena</p>
+        <div className={styles.container}>
+            <div className={styles.backgroundGrid} />
+
+            {/* Logo Section */}
+            <div className={styles.header}>
+                <h1 className={styles.logoTitle}>
+                    <span className={styles.pixel}>Pixel</span>
+                    <span className={styles.war}>War</span>
+                </h1>
+                <p className={styles.subtitle}>Player vs Player Arena</p>
+            </div>
+
+            {/* Status Badges */}
+            <div className={styles.statusContainer}>
+                <div className={styles.statusBadge}>
+                    <div className={`
+                        ${styles.statusDot} 
+                        ${connectionStatus === 'connected' ? styles.connected :
+                            connectionStatus === 'connecting' ? styles.connecting : styles.offline}
+                    `} />
+                    <span>Server</span>
                 </div>
 
-                {/* Wallet Status */}
-                <div className="flex items-center justify-center gap-4 mb-4">
-                    {/* Server Status */}
-                    <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-full border border-saweria-coral">
-                        <div className={`w-3 h-3 rounded-full animate-pulse ${connectionStatus === 'connected' ? 'bg-success' :
-                            connectionStatus === 'connecting' ? 'bg-yellow-400' : 'bg-red-400'
-                            }`}></div>
-                        <span className="text-text-muted text-xs">
-                            {connectionStatus === 'connected' ? 'Server' :
-                                connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
-                        </span>
-                    </div>
-
-                    {/* Wallet Status */}
-                    <div className="flex items-center gap-2 bg-white/80 px-3 py-1.5 rounded-full border border-saweria-coral">
-                        <Wallet className={`w-4 h-4 ${isWalletConnected ? 'text-success' : 'text-red-400'}`} />
-                        <span className="text-text-muted text-xs">
-                            {isWalletConnected && walletAddress
-                                ? formatAddress(walletAddress)
-                                : 'Not Connected'}
-                        </span>
-                    </div>
+                <div className={styles.walletBadge}>
+                    <Wallet size={14} />
+                    <span>{isWalletConnected && walletAddress ? formatAddress(walletAddress) : '0x...'}</span>
                 </div>
+            </div>
 
-                {/* Chain Warning */}
-                {isWalletConnected && !isOnCorrectChain && (
-                    <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-3 mb-4 flex items-center gap-3">
-                        <AlertTriangle className="text-amber-500 flex-shrink-0" size={20} />
-                        <div className="flex-1">
-                            <p className="text-amber-700 text-sm font-medium">Wrong network detected</p>
+            {/* Error Message */}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-6 text-red-600 text-sm text-center font-medium max-w-md w-full z-10">
+                    {error}
+                </div>
+            )}
+
+            {/* Main Card */}
+            <div className={styles.mainCard}>
+
+                {!isServerConnected ? (
+                    <div className="flex flex-col items-center justify-center py-8 gap-3">
+                        <Loader2 className="animate-spin text-pink-500" size={32} />
+                        <p className="text-gray-500">Connecting to server...</p>
+                    </div>
+                ) : matchmakingStatus === 'idle' ? (
+                    <>
+                        {/* Player Info Section */}
+                        <div className={styles.playerInfoCard}>
+                            <span className={styles.playingAsLabel}>Playing as</span>
+
+                            <div className={styles.playerDetails}>
+                                <div className={styles.avatar}>
+                                    {isWalletConnected ? displayName.slice(0, 2).toUpperCase() : '?'}
+                                </div>
+                                <div className={styles.playerText}>
+                                    <span className={styles.playerName}>
+                                        {isWalletConnected ? displayName : 'Connect Wallet'}
+                                    </span>
+                                    <span className={styles.walletName}>
+                                        {isWalletConnected ? 'MetaMask Wallet' : 'No Wallet Connected'}
+                                    </span>
+                                </div>
+                                {isWalletConnected && !isEditingName && (
+                                    <Edit2
+                                        size={16}
+                                        className={styles.editButton}
+                                        onClick={() => setIsEditingName(true)}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Name Editing Input (if active) */}
+                        {isEditingName && (
+                            <div className="flex items-center gap-2 mb-4">
+                                <input
+                                    type="text"
+                                    value={customName}
+                                    onChange={(e) => setCustomName(e.target.value)}
+                                    placeholder={ensName || (walletAddress ? formatAddress(walletAddress) : '')}
+                                    className="flex-1 border-2 border-pink-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-400"
+                                    autoFocus
+                                />
+                                <button
+                                    onClick={handleSaveName}
+                                    className="p-2 bg-green-500 hover:bg-green-600 rounded-xl text-white transition-colors"
+                                >
+                                    <Check size={16} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Buttons */}
+                        <button
+                            onClick={handleJoinQueue}
+                            disabled={isWalletConnecting || isTransactionLoading}
+                            className={styles.findMatchButton}
+                        >
+                            {isWalletConnecting ? (
+                                <><Loader2 className="animate-spin" size={20} /> Connecting...</>
+                            ) : isTransactionLoading ? (
+                                <><Loader2 className="animate-spin" size={20} /> Processing...</>
+                            ) : !isWalletConnected ? (
+                                <><Wallet size={20} /> Connect to Play</>
+                            ) : !isOnCorrectChain ? (
+                                <><AlertTriangle size={20} /> Switch Network</>
+                            ) : (
+                                <><Swords size={20} /> Find Match</>
+                            )}
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                sessionStorage.removeItem('pvp_mode');
+                                sessionStorage.removeItem('pvp_room_id');
+                                sessionStorage.removeItem('pvp_team');
+                                sessionStorage.setItem('ai_mode', 'true');
+                                router.push('/game');
+                            }}
+                            className={styles.playAiButton}
+                        >
+                            <Bot size={18} />
+                            Play vs AI Instead
+                        </button>
+                    </>
+                ) : matchmakingStatus === 'queue' ? (
+                    <div className="flex flex-col items-center py-6 gap-4">
+                        <div className="relative">
+                            <div className="w-16 h-16 border-4 border-gray-100 rounded-full"></div>
+                            <div className="absolute inset-0 border-4 border-pink-400 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Search size={28} className="text-pink-500" />
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <p className="font-bold text-lg text-gray-800">Finding Opponent...</p>
+                            <p className="text-gray-500 text-sm mt-1">Queue Position: #{queuePosition}</p>
+                        </div>
+                        <button
+                            onClick={leaveQueue}
+                            className="mt-2 text-red-500 hover:text-red-600 text-sm hover:underline font-medium"
+                        >
+                            Cancel Search
+                        </button>
+                    </div>
+                ) : matchmakingStatus === 'found' && paymentStatus ? (
+                    // Payment Flow (Simplified visually for new card)
+                    <div className="flex flex-col items-center py-3 gap-3">
+                        <p className="text-pink-500 font-bold text-lg flex items-center gap-2">
+                            <Sparkles size={20} /> Match Found!
+                        </p>
+
+                        {/* Compact Match Info */}
+                        <div className="flex items-center gap-4 my-2 w-full justify-center">
+                            <div className="flex flex-col items-center">
+                                <span className="font-bold text-gray-700">You</span>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mt-1 ${paymentStatus.player1Paid ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
+                                    {paymentStatus.player1Paid ? <Check size={16} /> : '1'}
+                                </div>
+                            </div>
+                            <span className="font-bold text-gray-400">VS</span>
+                            <div className="flex flex-col items-center">
+                                <span className="font-bold text-gray-700">Opponent</span>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mt-1 ${paymentStatus.player2Paid ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
+                                    {paymentStatus.player2Paid ? '✓' : '2'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Timer */}
+                        <p className="text-gray-500 text-xs">
+                            Time: <span className={`font-mono font-bold ${paymentTimeLeft <= 10 ? 'text-red-500' : 'text-gray-800'}`}>{paymentTimeLeft}s</span>
+                        </p>
+
+                        {/* Fee Visual */}
+                        <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 w-full text-center">
+                            <span className="text-xs text-gray-500 uppercase font-bold">Entry Fee</span>
+                            <div className="text-xl font-black text-gray-800">{getBidAmount()}</div>
+                            <p className="text-pink-500 text-xs font-bold mt-1 flex items-center justify-center gap-1">
+                                Winner takes 0.00198 ETH <Trophy size={14} />
+                            </p>
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-3 w-full mt-2">
                             <button
-                                onClick={switchToBase}
-                                className="text-amber-600 hover:text-amber-800 text-xs underline mt-1 font-medium"
+                                onClick={handleCancelPayment}
+                                className="flex-1 py-3 border border-gray-200 rounded-full text-gray-500 font-medium hover:bg-gray-50"
                             >
-                                Switch to Base
+                                Cancel
                             </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Error Message */}
-                {error && (
-                    <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-3 mb-6 text-red-600 text-sm text-center font-medium">
-                        {error}
-                    </div>
-                )}
-
-                {/* Input & Buttons (Main Card) */}
-                <div className="bg-white rounded-3xl p-6 border-2 border-saweria-coral shadow-lg">
-
-                    {!isServerConnected ? (
-                        <div className="flex flex-col items-center justify-center py-8 gap-3">
-                            <Loader2 className="animate-spin text-saweria-pink" size={32} />
-                            <p className="text-text-muted">Connecting to server...</p>
-                        </div>
-                    ) : matchmakingStatus === 'idle' ? (
-                        <>
-                            {/* Wallet Connection Required Notice */}
-                            {!isWalletConnected && (
-                                <div className="bg-saweria-coral/30 border-2 border-saweria-pink-light rounded-2xl p-4 mb-4">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Wallet className="text-saweria-pink" size={20} />
-                                        <span className="text-text-main font-semibold text-sm">Wallet Required</span>
-                                    </div>
-                                    <p className="text-text-muted text-xs">
-                                        Connect your wallet to play and earn rewards. Entry fee: {getBidAmount()}
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Player Name Section */}
-                            {isWalletConnected && walletAddress && (
-                                <div className="mb-4 bg-saweria-coral/20 border-2 border-saweria-pink-light rounded-2xl p-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-text-muted text-xs font-medium">Playing as</label>
-                                        {!isEditingName && (
-                                            <button
-                                                onClick={() => setIsEditingName(true)}
-                                                className="text-saweria-pink hover:text-saweria-pink-dark transition-colors"
-                                                title="Edit name"
-                                            >
-                                                <Edit2 size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {isEditingName ? (
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="text"
-                                                value={customName}
-                                                onChange={(e) => setCustomName(e.target.value)}
-                                                placeholder={ensName || formatAddress(walletAddress)}
-                                                className="flex-1 bg-white border-2 border-saweria-pink-light rounded-xl px-3 py-2 text-text-main placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-saweria-pink text-sm"
-                                                autoFocus
-                                            />
-                                            <button
-                                                onClick={handleSaveName}
-                                                className="p-2 bg-success hover:bg-success/90 rounded-xl text-white transition-colors"
-                                            >
-                                                <Check size={16} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-saweria-pink to-saweria-pink-light flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                                                {displayName.slice(0, 2).toUpperCase()}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-text-main font-semibold">{displayName}</p>
-                                                <p className="text-text-muted text-xs">
-                                                    {isLoadingENS ? (
-                                                        <span className="flex items-center gap-1">
-                                                            <Loader2 className="animate-spin" size={10} />
-                                                            Checking ENS...
-                                                        </span>
-                                                    ) : ensName ? (
-                                                        `ENS: ${ensName}`
-                                                    ) : customName ? (
-                                                        `Wallet: ${formatAddress(walletAddress)}`
-                                                    ) : (
-                                                        'MetaMask Wallet'
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
                             <button
-                                onClick={handleJoinQueue}
-                                disabled={isWalletConnecting || isTransactionLoading}
-                                className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-semibold py-3 rounded-full mb-3 flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={handlePayToPlay}
+                                disabled={gameVault.isLoading || (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) || (!isFirstPlayer && !paymentStatus.onChainGameId)}
+                                className="flex-1 py-3 bg-pink-500 text-white rounded-full font-bold hover:bg-pink-600 disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                {isWalletConnecting ? (
-                                    <>
-                                        <Loader2 className="animate-spin" size={20} />
-                                        <span className="text-sm sm:text-base">Connecting Wallet...</span>
-                                    </>
-                                ) : isTransactionLoading ? (
-                                    <>
-                                        <Loader2 className="animate-spin" size={20} />
-                                        <span className="text-sm sm:text-base">Processing...</span>
-                                    </>
-                                ) : !isWalletConnected ? (
-                                    <>
-                                        <Wallet size={20} />
-                                        <span className="text-sm sm:text-base">Connect Wallet to Play</span>
-                                    </>
-                                ) : !isOnCorrectChain ? (
-                                    <>
-                                        <AlertTriangle size={20} />
-                                        <span className="text-sm sm:text-base">Switch to Base Network</span>
-                                    </>
+                                {gameVault.isLoading ? (
+                                    <><Loader2 className="animate-spin" size={16} /> Confirming...</>
+                                ) : (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) ? (
+                                    'Waiting...'
+                                ) : (!isFirstPlayer && !paymentStatus.onChainGameId) ? (
+                                    <><Loader2 className="animate-spin" size={16} /> Waiting for opponent...</>
                                 ) : (
-                                    <>
-                                        <Swords size={20} />
-                                        <span className="text-sm sm:text-base">Find Match</span>
-                                    </>
+                                    'Pay & Play'
                                 )}
                             </button>
-
-                            <button
-                                onClick={() => {
-                                    sessionStorage.removeItem('pvp_mode');
-                                    sessionStorage.removeItem('pvp_room_id');
-                                    sessionStorage.removeItem('pvp_team');
-                                    sessionStorage.setItem('ai_mode', 'true');
-                                    router.push('/game');
-                                }}
-                                className="w-full border-2 border-saweria-coral hover:border-saweria-pink text-text-muted hover:text-saweria-pink font-medium py-3 rounded-full flex items-center justify-center gap-2 transition-all duration-300 bg-white"
-                            >
-                                <Bot size={20} />
-                                <span className="text-sm sm:text-base">Play vs AI Instead</span>
-                            </button>
-                        </>
-                    ) : matchmakingStatus === 'queue' ? (
-                        <div className="flex flex-col items-center py-6 gap-4">
-                            <div className="relative">
-                                <div className="w-16 h-16 border-4 border-saweria-coral rounded-full"></div>
-                                <div className="absolute inset-0 border-4 border-saweria-pink border-t-transparent rounded-full animate-spin"></div>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-2xl">🔍</span>
-                                </div>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-text-main font-semibold text-lg">Finding Opponent...</p>
-                                <p className="text-text-muted text-sm mt-1">Queue Position: #{queuePosition}</p>
-                                <p className="text-saweria-pink text-xs mt-2 font-medium">
-                                    Playing as: {displayName}
-                                </p>
-                            </div>
-                            <button
-                                onClick={leaveQueue}
-                                className="mt-2 text-red-500 hover:text-red-600 text-sm hover:underline transition-colors font-medium"
-                            >
-                                Cancel Search
-                            </button>
                         </div>
-                    ) : matchmakingStatus === 'found' && paymentStatus ? (
-                        // Pay & Play Confirmation
-                        <div className="flex flex-col items-center py-3 gap-3">
-                            <Swords className="text-saweria-pink" size={32} />
-                            <p className="text-saweria-pink font-bold text-lg">🎉 Match Found!</p>
-
-                            <p className="text-text-muted text-sm">
-                                vs <span className="text-text-main font-semibold">{opponent?.name || 'Unknown'}</span>
-                            </p>
-
-                            {/* Payment Status - Compact */}
-                            <div className="flex items-center gap-4 my-1">
-                                <div className="flex flex-col items-center">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player1Paid ? 'bg-success text-white' : 'bg-saweria-coral text-saweria-pink'
-                                        }`}>
-                                        {paymentStatus.player1Paid ? '✓' : '1'}
-                                    </div>
-                                    <p className="text-xs text-text-muted mt-0.5">
-                                        {isFirstPlayer ? 'You' : 'Opponent'}
-                                    </p>
-                                </div>
-                                <span className="text-saweria-pink text-sm font-bold">VS</span>
-                                <div className="flex flex-col items-center">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-base font-bold transition-all ${paymentStatus.player2Paid ? 'bg-success text-white' : 'bg-saweria-coral text-saweria-pink'
-                                        }`}>
-                                        {paymentStatus.player2Paid ? '✓' : '2'}
-                                    </div>
-                                    <p className="text-xs text-text-muted mt-0.5">
-                                        {!isFirstPlayer ? 'You' : 'Opponent'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Timer */}
-                            <p className="text-text-muted text-xs">
-                                Time: <span className={`font-mono font-bold ${paymentTimeLeft <= 10 ? 'text-red-500' : 'text-text-main'}`}>{paymentTimeLeft}s</span>
-                            </p>
-
-                            {/* Entry Fee - Compact */}
-                            <div className="bg-saweria-coral/30 px-4 py-2 rounded-2xl w-full text-center border-2 border-saweria-pink-light">
-                                <p className="text-text-muted text-xs uppercase tracking-wider font-medium">Entry Fee</p>
-                                <p className="text-lg font-bold text-text-main">{getBidAmount()}</p>
-                                <p className="text-saweria-pink text-xs font-medium">Winner takes 0.00198 ETH 🏆</p>
-                            </div>
-
-                            {/* Error */}
-                            {gameVault.error && (
-                                <p className="text-red-500 text-xs text-center font-medium">{gameVault.error}</p>
-                            )}
-
-                            {/* Buttons - Compact */}
-                            <div className="flex gap-2 w-full">
-                                <button
-                                    onClick={handleCancelPayment}
-                                    disabled={gameVault.isLoading}
-                                    className="flex-1 py-2 bg-white border-2 border-saweria-coral text-text-muted rounded-full text-sm font-medium hover:border-red-300 hover:text-red-500 transition disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handlePayToPlay}
-                                    disabled={gameVault.isLoading || (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) || (!isFirstPlayer && !paymentStatus.onChainGameId)}
-                                    className={`flex-1 py-2 rounded-full text-sm font-semibold transition flex items-center justify-center gap-1.5 ${(isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid)
-                                        ? 'bg-success text-white'
-                                        : 'bg-gradient-to-r from-saweria-pink to-saweria-pink-light text-white hover:from-saweria-pink-dark hover:to-saweria-pink'
-                                        } disabled:opacity-70`}
-                                >
-                                    {gameVault.isLoading ? (
-                                        <><Loader2 className="animate-spin" size={14} /> Confirming...</>
-                                    ) : (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) ? (
-                                        'Waiting...'
-                                    ) : (!isFirstPlayer && !paymentStatus.onChainGameId) ? (
-                                        <><Loader2 className="animate-spin" size={14} /> Waiting for opponent...</>
-                                    ) : (
-                                        'Pay & Play 🚀'
-                                    )}
-                                </button>
-                            </div>
+                    </div>
+                ) : matchmakingStatus === 'found' ? (
+                    <div className="flex flex-col items-center py-8 gap-4">
+                        <Swords className="text-pink-500 animate-bounce" size={48} />
+                        <div className="text-center">
+                            <p className="text-pink-500 font-bold text-xl">Match Found!</p>
+                            <p className="text-gray-500">Connecting...</p>
                         </div>
-                    ) : matchmakingStatus === 'found' ? (
-                        <div className="flex flex-col items-center py-6 gap-4">
-                            <Swords className="text-saweria-pink animate-bounce" size={48} />
-                            <div className="text-center">
-                                <p className="text-saweria-pink font-bold text-xl">🎉 Match Found!</p>
-                                <p className="text-text-muted mt-2">
-                                    Opponent: <span className="text-text-main font-semibold">{opponent?.name || 'Unknown'}</span>
-                                </p>
-                                <Loader2 className="animate-spin mx-auto mt-3 text-saweria-pink" size={24} />
-                            </div>
-                        </div>
-                    ) : matchmakingStatus === 'countdown' ? (
-                        <div className="flex flex-col items-center py-4 gap-4">
-                            <p className="text-text-muted text-sm uppercase tracking-widest font-medium">Game Starting In</p>
-                            <div className="text-7xl font-extrabold text-saweria-pink animate-pulse drop-shadow-lg">
-                                {countdown}
-                            </div>
-                            <div className="flex items-center gap-6 mt-4 opacity-90">
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-game-blue' : 'bg-game-red'} text-white`}>
-                                        {displayName.slice(0, 2).toUpperCase()}
-                                    </div>
-                                    <span className="text-xs text-text-muted font-medium">{displayName}</span>
-                                </div>
-                                <Swords size={24} className="text-saweria-pink" />
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-lg ${myTeam === 'blue' ? 'bg-game-red' : 'bg-game-blue'} text-white`}>
-                                        {opponent?.name?.slice(0, 2).toUpperCase() || 'VS'}
-                                    </div>
-                                    <span className="text-xs text-text-muted font-medium">{opponent?.name}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ) : null}
+                    </div>
+                ) : matchmakingStatus === 'countdown' ? (
+                    <div className="flex flex-col items-center py-6 gap-4">
+                        <p className="text-gray-400 text-sm uppercase font-bold">Game Starting In</p>
+                        <div className="text-6xl font-black text-pink-500">{countdown}</div>
+                    </div>
+                ) : null}
+            </div>
+
+            {/* Bottom Features */}
+            <div className={styles.featuresGrid}>
+                <div className={styles.featureCard}>
+                    <PaintBucket className={`${styles.featureIcon} ${styles.blue}`} size={20} />
+                    <span className={styles.featureText}>Paint the arena</span>
                 </div>
-
-                {/* Game Features */}
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                    <div className="flex flex-col items-center p-4 rounded-2xl bg-white/80 border-2 border-saweria-coral hover:border-saweria-pink transition-all duration-300 shadow-sm hover:shadow-md">
-                        <PaintBucket className="text-game-blue mb-2" size={24} />
-                        <span className="text-text-main text-xs sm:text-sm font-medium">Paint the arena</span>
-                    </div>
-                    <div className="flex flex-col items-center p-4 rounded-2xl bg-white/80 border-2 border-saweria-coral hover:border-saweria-pink transition-all duration-300 shadow-sm hover:shadow-md">
-                        <Zap className="text-amber-500 mb-2" size={24} />
-                        <span className="text-text-main text-xs sm:text-sm font-medium">Use power-ups</span>
-                    </div>
-                    <div className="flex flex-col items-center p-4 rounded-2xl bg-white/80 border-2 border-saweria-coral hover:border-saweria-pink transition-all duration-300 shadow-sm hover:shadow-md">
-                        <Crown className="text-amber-500 mb-2" size={24} />
-                        <span className="text-text-main text-xs sm:text-sm font-medium">Capture golden pixels</span>
-                    </div>
+                <div className={styles.featureCard}>
+                    <Zap className={styles.featureIcon} size={20} />
+                    <span className={styles.featureText}>Use power-ups</span>
+                </div>
+                <div className={styles.featureCard}>
+                    <Crown className={styles.featureIcon} size={20} />
+                    <span className={styles.featureText}>Capture golden pixels</span>
                 </div>
             </div>
         </div>

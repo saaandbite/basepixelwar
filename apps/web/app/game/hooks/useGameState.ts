@@ -328,7 +328,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         case 'GAME_UPDATE': {
             if (!state.gameActive) return state;
 
-            const newState = { ...state };
+            // OPTIMIZATION: Mutate state in-place for game loop to avoid GC pressure
+            // const newState = { ...state }; // Removed shallow copy
+            const newState = state; // Alias for code compatibility
             const now = Date.now();
 
             // Shake disabled for performance
@@ -416,13 +418,37 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             });
 
             // Player shooting with INK ECONOMY & USAGE LIMITS
-            const weaponConfig = WEAPON_MODES[newState.player.weaponMode];
-            const inkCost = newState.player.isFrenzy ? 0 : weaponConfig.cost;
-            const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
+            let currentWeaponMode = newState.player.weaponMode;
+            const weaponConfig = WEAPON_MODES[currentWeaponMode];
 
             // Get current weapon state
-            const currentWeaponState = newState.player.weaponStates[newState.player.weaponMode];
-            const isWeaponOverheated = currentWeaponState.isOverheated;
+            let currentWeaponState = newState.player.weaponStates[currentWeaponMode];
+            let isWeaponOverheated = currentWeaponState.isOverheated;
+
+            // AUTO-SWITCH LOGIC: Only between Machine Gun and Shotgun (exclude Ink Bomb)
+            if (isWeaponOverheated && currentWeaponMode !== 'inkBomb') {
+                // Try to auto-switch to the other primary weapon
+                const alternateWeapon: WeaponMode = currentWeaponMode === 'machineGun' ? 'shotgun' : 'machineGun';
+                const alternateState = newState.player.weaponStates[alternateWeapon];
+                const alternateConfig = WEAPON_MODES[alternateWeapon];
+                const hasEnoughInkForAlternate = newState.player.isFrenzy || newState.player.ink >= alternateConfig.cost;
+
+                // Switch if alternate weapon is available (not overheated and has ink)
+                if (!alternateState.isOverheated && hasEnoughInkForAlternate) {
+                    currentWeaponMode = alternateWeapon;
+                    newState.player = {
+                        ...newState.player,
+                        weaponMode: alternateWeapon,
+                    };
+                    // Update references for firing logic
+                    currentWeaponState = alternateState;
+                    isWeaponOverheated = alternateState.isOverheated;
+                }
+            }
+
+            const activeWeaponConfig = WEAPON_MODES[currentWeaponMode];
+            const inkCost = newState.player.isFrenzy ? 0 : activeWeaponConfig.cost;
+            const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
 
             // Can fire if NOT overheated
             const canFire = !isWeaponOverheated;
@@ -491,59 +517,73 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
             // Enemy logic - different for AI vs PvP
             if (!newState.isPvPMode) {
-                // === AI MODE: Full enemy AI logic ===
+                // === AI MODE: Player-like behavior with random attacks ===
 
-                // Enemy AI targeting
+                // Enemy AI timing
                 newState.enemy = { ...newState.enemy, moveTimer: (newState.enemy.moveTimer || 0) + 1 };
-                newState.enemy.difficulty = Math.min(
-                    0.3 + ((GAME_DURATION - newState.timeLeft) / GAME_DURATION) * 0.5,
-                    0.9
-                );
 
-                if (newState.enemy.moveTimer! > 30 - newState.enemy.difficulty! * 20) {
-                    const blueTerritory = findLargestTerritory(
-                        newState.grid,
-                        'blue',
-                        newState.cols,
-                        newState.rows
-                    );
-                    if (blueTerritory && Math.random() < newState.enemy.difficulty!) {
-                        const tx = blueTerritory.x * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 60;
-                        const ty = blueTerritory.y * GRID_SIZE + GRID_SIZE / 2 + (Math.random() - 0.5) * 60;
-                        const dx = tx - newState.enemy.x;
-                        const dy = ty - newState.enemy.y;
-                        newState.enemy.targetAngle = Math.atan2(dy, dx);
-                    } else {
-                        const tx = Math.random() * (newState.cols * GRID_SIZE);
-                        const ty = (newState.rows * GRID_SIZE) / 2 + Math.random() * ((newState.rows * GRID_SIZE) / 3);
-                        const dx = tx - newState.enemy.x;
-                        const dy = ty - newState.enemy.y;
-                        newState.enemy.targetAngle = Math.atan2(dy, dx);
-                    }
+                // Random weapon switching (every 3-8 seconds)
+                if (!newState.enemy.weaponSwitchTimer) {
+                    newState.enemy.weaponSwitchTimer = 180 + Math.floor(Math.random() * 300); // 3-8 seconds at 60fps
+                }
+                newState.enemy.weaponSwitchTimer--;
+                if (newState.enemy.weaponSwitchTimer <= 0) {
+                    const weapons: WeaponMode[] = ['machineGun', 'shotgun', 'inkBomb'];
+                    const newWeapon: WeaponMode = weapons[Math.floor(Math.random() * weapons.length)]!;
+                    newState.enemy = {
+                        ...newState.enemy,
+                        weaponMode: newWeapon,
+                        weaponSwitchTimer: 180 + Math.floor(Math.random() * 300),
+                    };
+                }
+
+                // Random target selection (every 1-3 seconds)
+                if (newState.enemy.moveTimer! > 60 + Math.random() * 120) {
+                    // Random position on the grid (player side - bottom half)
+                    const tx = Math.random() * (newState.cols * GRID_SIZE);
+                    const ty = (newState.rows * GRID_SIZE) * 0.4 + Math.random() * (newState.rows * GRID_SIZE * 0.5);
+                    const dx = tx - newState.enemy.x;
+                    const dy = ty - newState.enemy.y;
+                    newState.enemy.targetAngle = Math.atan2(dy, dx);
+                    // Set targetPos for ballistic targeting (ink bomb uses this)
+                    newState.enemy.targetPos = { x: tx, y: ty };
                     newState.enemy.moveTimer = 0;
                 }
 
-                // Smooth rotation (AI mode)
-                const rotationSpeed = 0.05 + newState.enemy.difficulty! * 0.1;
+                // Smooth rotation (player-like)
+                const rotationSpeed = 0.08;
                 newState.enemy.angle += (newState.enemy.targetAngle! - newState.enemy.angle) * rotationSpeed;
 
-                // Enemy fire (AI mode - constant firing)
-                newState.enemy.cooldown--;
-                if (newState.enemy.cooldown <= 0) {
-                    const bullets = createBullet(newState.enemy, 'red', 0.2);
-                    newState.projectiles = [...newState.projectiles, ...bullets];
+                // Random firing pattern (not constant - like a player)
+                // 70% chance to be "firing" each update cycle
+                const shouldFire = Math.random() < 0.7;
 
-                    newState.enemy = {
-                        ...newState.enemy,
-                        cooldown: FIRE_RATE - Math.floor(newState.enemy.difficulty! * 3),
-                    };
-                    action.playSound('shoot');
+                if (shouldFire) {
+                    const enemyWeaponConfig = WEAPON_MODES[newState.enemy.weaponMode || 'machineGun'];
+                    const enemyInkCost = newState.enemy.isFrenzy ? 0 : enemyWeaponConfig.cost;
+                    const enemyHasEnoughInk = newState.enemy.isFrenzy || newState.enemy.ink >= enemyInkCost;
+
+                    newState.enemy.cooldown--;
+                    if (newState.enemy.cooldown <= 0 && enemyHasEnoughInk) {
+                        const bullets = createWeaponBullet(newState.enemy, 'red', newState.enemy.weaponMode || 'machineGun');
+                        newState.projectiles = [...newState.projectiles, ...bullets];
+
+                        newState.enemy = {
+                            ...newState.enemy,
+                            cooldown: enemyWeaponConfig.fireRate,
+                            ink: newState.enemy.ink - enemyInkCost,
+                        };
+                        action.playSound('shoot');
+                    }
+                } else {
+                    // Not firing - just cooldown decay
+                    if (newState.enemy.cooldown > 0) {
+                        newState.enemy.cooldown--;
+                    }
                 }
 
-                // Enemy Special Powerup Usage AI
+                // Enemy Powerup Usage (simplified - use shield when available and projectile close)
                 const enemyPowerups = newState.enemy.powerups!;
-
-                // Use Shield if projectile is close
                 if (enemyPowerups.shield > 0) {
                     const incomingBullet = newState.projectiles.find(p =>
                         p.team === 'blue' && Math.hypot(p.x - newState.enemy.x, p.y - newState.enemy.y) < 150
@@ -553,14 +593,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                         newState.enemy.powerups!.shield--;
                         action.playSound('powerup');
 
-                        // Activate GLOBAL SHIELD for enemy
                         newState.globalShield = {
                             active: true,
                             endTime: Date.now() + 5000,
                             team: 'red'
                         };
 
-                        // Create enemy shield activation particles
                         const shieldParticles: Particle[] = [];
                         for (let i = 0; i < 30; i++) {
                             const angle = Math.random() * Math.PI * 2;
@@ -1228,8 +1266,8 @@ export function useGameState(initialWidth: number = 400, initialHeight: number =
     const lastUiSyncRef = useRef<number>(0);
     const syncUI = useCallback((state: GameState, force: boolean = false) => {
         const now = Date.now();
-        // Limit UI updates to ~30 FPS (every 33ms) or forced events
-        if (!force && now - lastUiSyncRef.current < 33) return;
+        // Limit UI updates to ~15 FPS (every 66ms) or forced events for performance
+        if (!force && now - lastUiSyncRef.current < 66) return;
 
         const score = calculateScore(state.grid, state.cols, state.rows);
 

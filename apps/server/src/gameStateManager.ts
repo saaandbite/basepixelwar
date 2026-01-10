@@ -118,7 +118,7 @@ export interface PvPGameState {
 const GRID_SIZE = 15;
 const GRID_COLS = 26; // 390 / 15
 const GRID_ROWS = 44; // 660 / 15
-const GAME_DURATION = 30; // Matched client (updated to 30s)
+const GAME_DURATION = 90; // Matched client (updated to 90s)
 const GAME_WIDTH = 390;
 const GAME_HEIGHT = 660;
 const INK_MAX = 100;
@@ -1002,19 +1002,19 @@ function endGame(roomId: string) {
 
     if (room && room.onChainGameId) {
         console.log(`\n==================================================`);
-        console.log(`[GameStateManager] 🏛️ STARTING SETTLEMENT FOR GAME ${room.onChainGameId}`);
+        console.log(`[GameStateManager]  STARTING SETTLEMENT FOR GAME ${room.onChainGameId}`);
         console.log(`==================================================`);
 
         if (winner !== 'draw') {
             const winnerTeam = winner;
             const winnerPlayer = room.players.find(p => p.team === winnerTeam);
 
-            console.log(`[GameStateManager] 🏆 Winner Team: ${winnerTeam.toUpperCase()}`);
-            console.log(`[GameStateManager] 👤 Winner Name: ${winnerPlayer?.name}`);
-            console.log(`[GameStateManager] 💼 Wallet Addr: ${winnerPlayer?.walletAddress || 'MISSING ❌'}`);
+            console.log(`[GameStateManager]  Winner Team: ${winnerTeam.toUpperCase()}`);
+            console.log(`[GameStateManager]  Winner Name: ${winnerPlayer?.name}`);
+            console.log(`[GameStateManager]  Wallet Addr: ${winnerPlayer?.walletAddress || 'MISSING '}`);
 
             if (winnerPlayer && winnerPlayer.walletAddress) {
-                console.log(`[GameStateManager] 🚀 Initiating finalizeGame1vs1 transaction...`);
+                console.log(`[GameStateManager]  Initiating finalizeGame1vs1 transaction...`);
 
                 try {
                     contractService.finalizeGame1vs1(
@@ -1022,8 +1022,8 @@ function endGame(roomId: string) {
                         winnerPlayer.walletAddress
                     ).then((tx: string | null) => {
                         if (tx) {
-                            console.log(`\n✅ [GameStateManager] SETTLEMENT SUCCESS!`);
-                            console.log(`🔗 Ref: https://sepolia.basescan.org/tx/${tx}`);
+                            console.log(`\n [GameStateManager] SETTLEMENT SUCCESS!`);
+                            console.log(` Ref: https://sepolia.basescan.org/tx/${tx}`);
                             console.log(`==================================================\n`);
 
                             // Emit settlement complete to room with tx hash
@@ -1035,7 +1035,7 @@ function endGame(roomId: string) {
                                 basescanUrl: `https://sepolia.basescan.org/tx/${tx}`
                             });
                         } else {
-                            console.error(`\n❌ [GameStateManager] SETTLEMENT FAILED (See above for details)`);
+                            console.error(`\n [GameStateManager] SETTLEMENT FAILED (See above for details)`);
                             console.error(`==================================================\n`);
 
                             // Emit settlement failed
@@ -1045,7 +1045,7 @@ function endGame(roomId: string) {
                             });
                         }
                     }).catch((err: unknown) => {
-                        console.error(`\n❌ [GameStateManager] SETTLEMENT EXCEPTION:`, err);
+                        console.error(`\n [GameStateManager] SETTLEMENT EXCEPTION:`, err);
                         console.error(`==================================================\n`);
 
                         io.to(roomId).emit('settlement_complete', {
@@ -1054,21 +1054,21 @@ function endGame(roomId: string) {
                         });
                     });
                 } catch (error) {
-                    console.error(`\n❌ [GameStateManager] CRITICAL ERROR calling finalizeGame1vs1:`, error);
+                    console.error(`\n [GameStateManager] CRITICAL ERROR calling finalizeGame1vs1:`, error);
                     console.error(`==================================================\n`);
                 }
             } else {
-                console.error(`\n❌ [GameStateManager] ABORTED: Winner has no wallet address!`);
+                console.error(`\n [GameStateManager] ABORTED: Winner has no wallet address!`);
                 console.error(`==================================================\n`);
             }
         } else {
-            console.log(`[GameStateManager] 🤝 Game Draw - No settlement required.`);
+            console.log(`[GameStateManager]  Game Draw - No settlement required.`);
             console.log(`==================================================\n`);
         }
     } else {
         // Only log if we expected a settlement but data is missing
         if (room && !room.onChainGameId) {
-            console.warn(`[GameStateManager] ⚠️ Room finished but NO onChainGameId found. Was this a test game?`);
+            console.warn(`[GameStateManager]  Room finished but NO onChainGameId found. Was this a test game?`);
         }
     }
     // END: On-Chain Settlement

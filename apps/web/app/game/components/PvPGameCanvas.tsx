@@ -23,12 +23,13 @@ interface PvPGameCanvasProps {
     gameState: SyncedGameState | null;
     myTeam: 'blue' | 'red';
     onPlayerInput: (angle: number, firing: boolean, targetPos?: { x: number; y: number }) => void;
-    localAngle: number | null; // New prop for client-side prediction
 }
 
-export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: PvPGameCanvasProps) {
+export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const lastAngleRef = useRef<number>(0); // Track last angle for mouseUp/Leave
+    // Track if we have local input to override server state
+    const hasLocalInputRef = useRef<boolean>(false);
 
     const isFlipped = myTeam === 'red';
 
@@ -109,9 +110,9 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
         }
 
         // 8. Draw Cannons
-        // Client-side prediction: Override angle for my cannon
-        const p1Angle = myTeam === 'blue' && localAngle !== null ? localAngle : player1.angle;
-        const p2Angle = myTeam === 'red' && localAngle !== null ? localAngle : player2.angle;
+        // Client-side prediction: Override angle for my cannon using Ref
+        const p1Angle = myTeam === 'blue' && hasLocalInputRef.current ? lastAngleRef.current : player1.angle;
+        const p2Angle = myTeam === 'red' && hasLocalInputRef.current ? lastAngleRef.current : player2.angle;
 
         const p1Cannon: Cannon = {
             ...player1,
@@ -203,6 +204,7 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput, localAngle }: 
 
         // Save angle for use in mouseUp/Leave events
         lastAngleRef.current = angle;
+        hasLocalInputRef.current = true;
 
         onPlayerInput(angle, isDown, { x: cx, y: cy });
     }, [gameState, myTeam, isFlipped, onPlayerInput]);

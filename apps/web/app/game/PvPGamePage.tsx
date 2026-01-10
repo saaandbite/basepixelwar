@@ -3,6 +3,7 @@
 // PvP Game Page - Separate from AI mode for cleaner architecture
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import { usePvPGame } from './hooks/usePvPGame';
 import { PvPGameCanvas } from './components/PvPGameCanvas';
 import { PvPGameNavbar } from './components/PvPGameNavbar';
@@ -48,10 +49,41 @@ export function PvPGamePage() {
 
     // Get My Ink Level
     let myInk = 0;
+    let myWeaponStates: Record<'machineGun' | 'shotgun' | 'inkBomb', { usage: number; isOverheated: boolean; cooldownEndTime: number }> | undefined;
+    let myIsFrenzy = false;
+
     if (pvp.gameState && pvp.myTeam) {
-        if (pvp.myTeam === 'blue') myInk = pvp.gameState.player1.ink;
-        else myInk = pvp.gameState.player2.ink;
+        if (pvp.myTeam === 'blue') {
+            myInk = pvp.gameState.player1.ink;
+            myWeaponStates = pvp.gameState.player1.weaponStates;
+            myIsFrenzy = !!pvp.gameState.player1.isFrenzy;
+        } else {
+            myInk = pvp.gameState.player2.ink;
+            myWeaponStates = pvp.gameState.player2.weaponStates;
+            myIsFrenzy = !!pvp.gameState.player2.isFrenzy;
+        }
     }
+
+    // AUTO-SWITCH WEAPON: Only between Machine Gun and Shotgun (exclude Ink Bomb)
+    useEffect(() => {
+        if (!myWeaponStates) return;
+
+        // Only auto-switch for machineGun and shotgun
+        if (weaponMode === 'inkBomb') return;
+
+        const currentState = myWeaponStates[weaponMode];
+        if (!currentState.isOverheated) return;
+
+        // Current weapon is overheated, try to switch to alternate
+        const alternateWeapon = weaponMode === 'machineGun' ? 'shotgun' : 'machineGun';
+        const alternateState = myWeaponStates[alternateWeapon];
+        const alternateInkCost = alternateWeapon === 'machineGun' ? 1 : 5; // From constants
+        const hasEnoughInk = myIsFrenzy || myInk >= alternateInkCost;
+
+        if (!alternateState.isOverheated && hasEnoughInk) {
+            setWeaponMode(alternateWeapon);
+        }
+    }, [weaponMode, myWeaponStates, myInk, myIsFrenzy]);
 
     // Track Stats
     const [stats, setStats] = useState({ currentTiles: 0, totalCaptured: 0 });
@@ -201,7 +233,7 @@ export function PvPGamePage() {
                                     ? 'bg-green-500 text-white'
                                     : 'bg-slate-200 text-slate-400'
                                     }`}>
-                                    {pvp.paymentStatus.player1Paid ? '✓' : '1'}
+                                    {pvp.paymentStatus.player1Paid ? <Check size={16} /> : '1'}
                                 </div>
                                 <p className="text-sm text-slate-500 mt-2">
                                     {pvp.isFirstPlayer ? 'You' : 'Opponent'}
@@ -395,7 +427,6 @@ export function PvPGamePage() {
                             gameState={pvp.gameState}
                             myTeam={pvp.myTeam || 'blue'}
                             onPlayerInput={handlePlayerInput}
-                            localAngle={pvp.localAngle}
                         />
                     </div>
 

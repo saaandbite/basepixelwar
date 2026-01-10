@@ -1,0 +1,324 @@
+/* Room Page Styles - Enhanced Color Hierarchy */
+.container {
+    /* Level 1: Primary Colors - Brand Identity */
+    --pink-primary: #FF8BA7;
+    --pink-primary-hover: #FF7B9C;
+    --pink-primary-active: #FF6B8C;
+
+    /* Level 2: Secondary Colors - Supporting Elements */
+    --pink-secondary: #FFC6C6;
+    --pink-light: #FFE5E5;
+    --pink-lightest: #FFFAFA;
+
+    /* Level 3: Accent Colors - Functional */
+    --success: #4CAF50;
+    --success-hover: #43A047;
+    --warning: #F59E0B;
+    --error: #E53935;
+    --info: #3B82F6;
+
+    /* Level 4: Text Hierarchy - Optimized Contrast */
+    --text-primary: #1F2937;
+    --text-secondary: #4B5563;
+    --text-tertiary: #6B7280;
+    --text-muted: #9CA3AF;
+
+    /* Level 5: Background & Surface */
+    --surface-white: #FFFFFF;
+    --surface-overlay: rgba(0, 0, 0, 0.5);
+
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #FFE5E5 0%, #FFC6C6 100%);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Background Pattern */
+.backgroundGrid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-bottom: 32px;
+    position: relative;
+    z-index: 10;
+}
+
+.logoTitle {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    letter-spacing: -1.5px;
+}
+
+.pixel {
+    color: var(--pink-primary);
+}
+
+.war {
+    color: var(--text-primary);
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Status Badges */
+.statusContainer {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 10;
+}
+
+.statusBadge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface-white);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.statusDot.connected {
+    background-color: #4CAF50;
+}
+
+.statusDot.connecting {
+    background-color: #FFC107;
+}
+
+.statusDot.offline {
+    background-color: #F44336;
+}
+
+.walletBadge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: white;
+    border: 2px solid var(--success);
+    color: var(--success);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Main Card */
+.mainCard {
+    background: var(--surface-white);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Player Info Section */
+.playerInfoCard {
+    background: var(--surface-white);
+    border: 2px solid var(--pink-light);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.playingAsLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: block;
+}
+
+.playerDetails {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--pink-primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.playerText {
+    display: flex;
+    flex-direction: column;
+}
+
+.playerName {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.walletName {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.editButton {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    color: var(--pink-primary);
+    cursor: pointer;
+}
+
+/* Action Buttons */
+.findMatchButton {
+    width: 100%;
+    background: var(--pink-primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(255, 139, 167, 0.3);
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+}
+
+.findMatchButton:hover {
+    transform: translateY(-2px);
+    background: var(--pink-primary-hover);
+    box-shadow: 0 4px 12px rgba(255, 139, 167, 0.4);
+}
+
+.findMatchButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.playAiButton {
+    width: 100%;
+    background: white;
+    color: var(--text-tertiary);
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 14px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+}
+
+.playAiButton:hover {
+    border-color: var(--pink-primary);
+    color: var(--pink-primary);
+}
+
+/* Bottom Features */
+.featuresGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 32px;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 10;
+}
+
+.featureCard {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.featureIcon {
+    color: var(--warning);
+}
+
+.featureIcon.blue {
+    color: var(--info);
+}
+
+.featureText {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+@media (max-width: 640px) {
+    .logoTitle {
+        font-size: 2rem;
+    }
+
+    .featuresGrid {
+        gap: 8px;
+    }
+
+    .featureCard {
+        padding: 12px 6px;
+    }
+}

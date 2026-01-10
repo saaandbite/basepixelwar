@@ -1,23 +1,118 @@
-# BasePixelWar - Your Game
-**Real-Time Decentralized Pixel Battle on Base Blockchain**
+# PixelWar
+> "Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2."
 
-## Problem Background
-In traditional gaming, players often lack control or transparency over game mechanics. Match outcomes and incentives are fully controlled by closed centralized servers (black boxes). This creates doubts regarding fair play and true asset ownership. Pure blockchain solutions are often too slow for real-time games, necessitating a hybrid approach.
+## Elevator Pitch
+PixelWar is a Skill-Based Wagering platform that combines the speed of Web2 gameplay with Web3 financial security.
 
-## Project Objectives
-1.  **Transparent Fairness**: Ensure final game outcomes are validated and recorded on-chain.
-2.  **High-Performance Gameplay**: Provide a responsive (low latency) gaming experience without sacrificing Web3 security.
-3.  **Community Ownership**: Provide real incentives to players through a faction system (Bull vs Bear) and on-chain rewards.
+We recognize that Fully On-Chain Games are often slow and expensive. Therefore, PixelWar adopts a Hybrid Architecture approach:
+1.  **Off-Chain Gameplay**: 1vs1 battles run in real-time (lag-free) on the game server for maximum user experience.
+2.  **On-Chain Settlement**: All fund flows (Betting & Rewards) are processed directly by Smart Contracts on the Base L2 network.
 
-## Solution Offered
-BasePixelWar implements a **Hybrid On-Chain/Off-Chain** architecture. The game runs in real-time using a fast WebSocket server for a smooth user experience, while final results, scores, and reward distributions are executed via Smart Contracts on the Base network. This combines "Web2 speed" with "Web3 trust".
+The result? A game that is exciting to play without interruption, but with guaranteed transparent, automatic, and trustless prize payouts.
 
-## Key Features
--   **Real-Time Multiplayer**: Instant grid updates for all players via Socket.IO.
--   **Competitive Factions**: Choose your side, Bull Faction or Bear Faction, and dominate the territory.
--   **On-Chain Rewards**: Winners and contributors are validated and rewarded directly via Smart Contract.
--   **Dual-Database System**: TigerBeetle for precise financial in-game balances, and Redis for high-speed caching.
--   **Wallet Integration**: Secure login using Web3 wallets (like MetaMask/Coinbase Wallet).
+## Key Features (Current MVP)
+*   **Zero-Latency Gameplay**:
+    Mechanics run on a custom-built Node.js WebSocket server, ensuring smooth real-time 1vs1 battles.
+*   **Trustless Settlement**:
+    Prize pool management is fully automated via Base Smart Contract. No manual payouts.
+*   **Secure Wallet Login**:
+    Integrated with OnchainKit for seamless wallet connection and transaction signing.
+*   **Hybrid Sync Engine**:
+    State synchronization between Client (React) and Server ensuring fair play with validation logic.
+
+## Technical Flow (Implemented)
+1.  **Staking**: Player approves 0.001 ETH tx.
+2.  **Lobby**: Player waits in queue for opponent.
+3.  **Battle**: 90-second match on WebSocket server.
+4.  **Result**: Winner declared, server triggers On-Chain Payout.
+
+## Status: Active MVP
+We are currently in **Phase 1 (Proof of Concept)**.
+*   **Gameplay**: 1vs1 Battles are Live.
+*   **Blockchain**: Escrow & Payout Contracts are deployed on Base Sepolia.
+*   **Database**: Redis & TigerBeetle integration is **In Progress**.
+*   **Future Features**: Leaderboards, Guilds, and NFTs are planned for Q3 2026.
+
+## Roadmap: The Journey to Mainnet
+
+Roadmap ini disusun berdasarkan pengalaman langsung tim selama membangun dan menguji MVP PixelWar di Base Sepolia. Fokus utama kami adalah memastikan fitur inti benar-benar playable dan stabil terlebih dahulu, sebelum melakukan ekspansi fitur dan skala ekosistem menuju Mainnet.
+
+---
+
+### Phase 1: Proof of Concept
+
+**Status:** Current – Hackathon MVP
+**Network:** Live on Base Sepolia Testnet
+
+Pada fase ini, kami memvalidasi ide inti PixelWar sebagai game PvP berbasis on-chain yang dapat dimainkan secara nyata, bukan sekadar konsep.
+
+**Cakupan Pengembangan:**
+
+* **Hybrid Architecture**
+  Integrasi Next.js sebagai frontend dengan Base Smart Contract untuk logika on-chain, serta server off-chain untuk sinkronisasi gameplay.
+* **1 vs 1 Wagering**
+  Implementasi mekanisme taruhan dasar antar pemain dengan pencairan hadiah otomatis melalui smart contract.
+* **Wallet Integration**
+  Menggunakan OnchainKit untuk onboarding wallet yang lebih sederhana dan cepat, termasuk dukungan Smart Wallet.
+* **Mid-Submission (12 Jan)**
+  Validasi alur dana (*flow of funds*) serta pengujian stabilitas koneksi wallet berdasarkan hasil playtest dan simulasi transaksi.
+
+---
+
+### Phase 2: Security & Experience
+
+**Target:** Q2 2026
+
+Setelah MVP tervalidasi, fase ini berfokus pada penguatan keamanan sistem serta peningkatan pengalaman bermain berdasarkan feedback pengguna.
+
+**Fokus Utama:**
+
+* **Anti-Cheat System**
+  Peningkatan validasi di server off-chain untuk memastikan input pemain tetap fair dan mencegah eksploitasi seperti speed hack.
+* **Smart Contract Audit**
+  Audit keamanan pada fungsi `payoutWinner`, dengan fokus pada *access control* dan potensi *reentrancy*.
+* **Mobile Optimization**
+  Penyempurnaan UI/UX agar berjalan optimal di browser in-app wallet, terutama MetaMask Mobile.
+
+---
+
+### Phase 3: Mainnet Launch
+
+**Target:** Q3 2026
+
+Fase ini menandai transisi PixelWar dari lingkungan testnet menuju ekosistem Mainnet secara penuh.
+
+**Rencana Implementasi:**
+
+* **Go Live on Base Mainnet**
+  Deployment smart contract ke Base Mainnet menggunakan ETH asli.
+* **Leaderboard System**
+  Sistem peringkat mingguan untuk mendorong kompetisi berdasarkan *win rate* pemain.
+* **Community Guilds**
+  Fitur klan sederhana untuk membangun interaksi komunitas dan kompetisi berbasis tim.
+
+---
+
+### Phase 4: Future Vision
+
+**Target:** Q4 2026
+
+Tahap jangka panjang untuk memperluas ekosistem kompetitif PixelWar dan memberikan nilai berkelanjutan bagi pemain.
+
+**Pengembangan Lanjutan:**
+
+* **The "MCL" Protocol (Weekly Tournament)**
+  Turnamen mingguan otomatis dengan sistem bracket yang dikelola secara on-chain.
+* **Generative Trophy NFT**
+  Pemenang turnamen akan menerima Trophy NFT unik yang digenerate berdasarkan data kemenangan dan performa mereka.
+
+---
+
+> PixelWar dikembangkan sebagai arena kompetitif on-chain yang menyeimbangkan transparansi blockchain, gameplay real-time, dan pengalaman pengguna yang adil.
+
+---
+
+## Technical Documentation
 
 ## Project Structure & Architecture
 This is a **Turborepo monorepo**. Here are the main components:
@@ -106,19 +201,16 @@ To change faction theme colors, edit `tailwind.config.js` in the `extend.colors`
 
 ## Troubleshooting
 
-### Server TypeScript Error
-If you encounter `SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]: TypeScript enum is not supported in strip-only mode`, we have handled this by using `tsx`. Ensure you run the server via the `pnpm dev` script.
-
 ### Docker Issues
 If containers fail to start:
 1.  Ensure Docker Desktop is running.
-2.  Check if ports `3004`, `6379`, or `8085` are occupied.
+2.  Check if ports `3005`, `6379`, or `8085` are occupied.
 3.  Restart services: `pnpm db:down` then `pnpm db:up` again.
 
 ## Development Team
--   **[Your Name/Developer 1]**: Fullstack Developer & Blockchain Engineer
--   **[Member 2]**: Frontend Designer (Placeholder)
--   **[Member 3]**: Backend Specialist (Placeholder)
+-   **Haris Sandi Purna Yudha**: Fullstack Developer & Blockchain Engineer
+-   **Roro Ayu Savera Wijaya**: Frontend Designer (Placeholder)
+-   **Ahmad Dedad**: Backend Specialist (Placeholder)
 
 ## Additional Notes
 Use the following commands for other utilities:

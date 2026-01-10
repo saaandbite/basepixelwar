@@ -4,6 +4,7 @@
 
 import { memo } from 'react';
 import { COLORS } from '../lib/constants';
+import { Infinity as InfinityIcon } from 'lucide-react';
 
 interface InkBarProps {
     ink: number;
@@ -48,7 +49,7 @@ function InkBarComponent({ ink, maxInk,
             {/* Ink value */}
             <div className={`shrink-0 text-xs font-bold tabular-nums min-w-[32px] text-right ${isFrenzy ? 'text-[#FF6B35]' : 'text-slate-600'}`}>
                 {isFrenzy ? (
-                    <span className="animate-pulse">∞</span>
+                    <InfinityIcon size={14} className="animate-pulse" />
                 ) : (
                     <span>{Math.floor(ink)}</span>
                 )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Home } from 'lucide-react';
 
 // Game Over Modal Component
 
@@ -9,6 +10,7 @@ interface GameOverModalProps {
     maxCombo: number;
     powerupsCollected: number;
     onPlayAgain: () => void;
+    onExit: () => void;
 }
 
 export function GameOverModal({
@@ -16,6 +18,7 @@ export function GameOverModal({
     maxCombo,
     powerupsCollected,
     onPlayAgain,
+    onExit,
 }: GameOverModalProps) {
     // Determine result
     let title: string;
@@ -23,7 +26,7 @@ export function GameOverModal({
     let iconSvg: React.ReactElement;
 
     if (blueScore > 60) {
-        title = '🎉 EPIC VICTORY!';
+        title = 'EPIC VICTORY!';
         titleClass = 'font-display text-3xl font-bold text-saweria-pink';
         iconSvg = (
             <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-saweria-pink">
@@ -36,7 +39,7 @@ export function GameOverModal({
             </svg>
         );
     } else if (blueScore > 50) {
-        title = '👏 GREAT WIN!';
+        title = 'GREAT WIN!';
         titleClass = 'font-display text-3xl font-bold text-saweria-pink';
         iconSvg = (
             <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-saweria-pink-dark">
@@ -120,7 +123,16 @@ export function GameOverModal({
                         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                         <path d="M3 3v5h5" />
                     </svg>
-                    PLAY AGAIN 🚀
+                    PLAY AGAIN
+                </button>
+
+                {/* Exit to Lobby Button */}
+                <button
+                    onClick={onExit}
+                    className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-gray-700 hover:text-saweria-pink font-bold py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group mt-3"
+                >
+                    <Home size={18} className="group-hover:-translate-y-0.5 transition-transform" />
+                    EXIT TO LOBBY
                 </button>
             </div>
         </div>

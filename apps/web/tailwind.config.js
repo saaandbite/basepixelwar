@@ -6,6 +6,19 @@ export default {
     ],
     theme: {
         extend: {
+            fontSize: {
+                // Display sizes for hero/landing sections
+                'display-lg': ['4.5rem', { lineHeight: '1.1', letterSpacing: '-0.02em' }], // 72px
+                'display-md': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.02em' }],   // 48px
+                'display-sm': ['2rem', { lineHeight: '1.2', letterSpacing: '-0.01em' }],   // 32px
+
+                // Enhanced heading sizes
+                'h1': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.01em' }],      // 48px
+                'h2': ['2.25rem', { lineHeight: '1.2', letterSpacing: '-0.01em' }],   // 36px
+                'h3': ['1.75rem', { lineHeight: '1.3' }],                             // 28px
+                'h4': ['1.5rem', { lineHeight: '1.4' }],                              // 24px
+                'h5': ['1.25rem', { lineHeight: '1.4' }],                             // 20px
+            },
             colors: {
                 // Saweria Theme Colors
                 primary: "#FF8395", // Saweria Coral Pink
