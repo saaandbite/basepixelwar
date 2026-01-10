@@ -11,7 +11,6 @@ import {
     Trophy,
     Zap
 } from "lucide-react";
-import styles from "../page.module.css"; // Reuse some styles or create new ones? Let's use clean tailwind for this component to be safe and independent.
 
 export default function HelpOverlay() {
     const [isOpen, setIsOpen] = useState(false);
@@ -71,37 +70,37 @@ export default function HelpOverlay() {
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center"><Zap size={16} /></span>
-                                            1. Connect Wallet
+                                            1. Connect & Pay
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Hubungkan wallet kamu untuk mulai bermain.</p>
+                                        <p className="text-sm text-gray-600 pl-10">Hubungkan wallet (Base Network) dan bayar entry fee 0.001 ETH.</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center"><Gamepad2 size={16} /></span>
-                                            2. Start Game
+                                            2. Aim & Shoot
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Masuk ke arena dan pilih wilayah target.</p>
+                                        <p className="text-sm text-gray-600 pl-10"><strong>Tap/Klik & Tahan</strong> untuk menembak. Geser untuk mengarahkan meriam.</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center"><Swords size={16} /></span>
-                                            3. Battle Real-Time
+                                            3. Weapons & Ink
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Bertarung melawan pemain lain secara langsung.</p>
+                                        <p className="text-sm text-gray-600 pl-10">Pilih senjata: <strong>Machine Gun</strong> (Cepat), <strong>Shotgun</strong> (Spread), atau <strong>Ink Bomb</strong> (Area). Perhatikan Ink Level!</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center"><Flag size={16} /></span>
-                                            4. Claim Territory
+                                            4. Capture Territory
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Menangkan pertarungan untuk menguasai area.</p>
+                                        <p className="text-sm text-gray-600 pl-10">Warnai grid sebanyak mungkin. Tangkap <strong>Golden Pixel</strong> untuk mode FRENZY!</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all sm:col-span-2">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center"><Coins size={16} /></span>
-                                            5. Earn Rewards
+                                            5. Win Rewards
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Dapatkan reward dan naikkan peringkat leaderboard.</p>
+                                        <p className="text-sm text-gray-600 pl-10">Pemenang mendapatkan <strong>0.00198 ETH</strong> langsung ke wallet (Instant Settlement).</p>
                                     </div>
                                 </div>
                             </section>
@@ -110,17 +109,17 @@ export default function HelpOverlay() {
                                 {/* Tips */}
                                 <section className="bg-yellow-50/50 p-5 rounded-xl border border-yellow-100">
                                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                        <span className="text-xl">⚠️</span> Tips Singkat
+                                        <span className="text-xl">⚠️</span> Pro Tips
                                     </h3>
                                     <ul className="space-y-2">
                                         <li className="flex gap-2 text-sm text-gray-700">
-                                            <span className="text-yellow-500">•</span> Perhatikan timing serangan
+                                            <span className="text-yellow-500">•</span> Gunakan <strong>Ink Bomb</strong> untuk merebut area besar musuh.
                                         </li>
                                         <li className="flex gap-2 text-sm text-gray-700">
-                                            <span className="text-yellow-500">•</span> Pilih wilayah dengan strategi
+                                            <span className="text-yellow-500">•</span> <strong>Machine Gun</strong> bagus untuk menagkap Golden Pixel dengan cepat.
                                         </li>
                                         <li className="flex gap-2 text-sm text-gray-700">
-                                            <span className="text-yellow-500">•</span> Semakin sering menang, semakin tinggi ranking kamu
+                                            <span className="text-yellow-500">•</span> Buat <strong>Combo</strong> capture untuk skor lebih tinggi!
                                         </li>
                                     </ul>
                                 </section>
@@ -151,7 +150,7 @@ export default function HelpOverlay() {
                                     Close Guide
                                 </button>
                                 <button
-                                    onClick={() => { setIsOpen(false); /* Add any start game logic if needed */ }}
+                                    onClick={() => { setIsOpen(false); }}
                                     className="flex-1 py-3 px-6 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-200 transition-all transform hover:-translate-y-0.5"
                                 >
                                     Start Playing 🚀
