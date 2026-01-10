@@ -18,13 +18,16 @@ import type {
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
+// Nginx Proxy Setup:
+// We return EMPTY string so Socket.io connects to window.location.origin
+// This works perfectly with the Nginx reverse proxy Setup ( / -> web, /socket.io -> server )
 const getServerUrl = () => {
+    // Still respect env var if explicitly set (for dev/testing without nginx)
     if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
-    if (typeof window !== 'undefined') {
-        const protocol = window.location.protocol;
-        return `${protocol}//${window.location.hostname}:3000`;
-    }
-    return 'http://localhost:3000';
+
+    // In production with Nginx, we want a relative connection
+    // Socket.io will automatically append /socket.io to the current URL
+    return undefined;
 };
 
 const SERVER_URL = getServerUrl();

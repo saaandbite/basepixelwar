@@ -43,13 +43,11 @@ export interface MultiplayerState {
     isFirstPlayer: boolean;
 }
 
+// Nginx Proxy Setup:
 const getServerUrl = () => {
     if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
-    if (typeof window !== 'undefined') {
-        const protocol = window.location.protocol;
-        return `${protocol}//${window.location.hostname}:3000`;
-    }
-    return 'http://localhost:3000';
+    // Return undefined to let Socket.io connect significantly to the current window.location
+    return undefined;
 };
 
 const SERVER_URL = getServerUrl();
