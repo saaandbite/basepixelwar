@@ -7,6 +7,7 @@
     "setup:check": "echo 'Checking dependencies...' && pnpm --version && docker --version && docker compose version && (forge --version || echo 'Foundry not installed. Run: pnpm setup:foundry')",
     "build": "turbo run build",
     "build:contracts": "cd packages/contracts && forge build",
+    "start": "turbo run start",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
