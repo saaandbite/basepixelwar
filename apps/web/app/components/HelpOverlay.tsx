@@ -30,7 +30,7 @@ export default function HelpOverlay() {
 
                 {/* Tooltip */}
                 <span className="absolute right-0 bottom-full mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none transform translate-y-2 group-hover:translate-y-0 text-center">
-                    Butuh bantuan? Klik untuk panduan bermain PixelWar
+                    Need help? Click for PixelWar game guide
                 </span>
             </button>
 
@@ -58,13 +58,13 @@ export default function HelpOverlay() {
 
                             {/* Intro */}
                             <div className="bg-pink-50 p-4 rounded-xl border border-pink-100 text-pink-900 leading-relaxed font-medium">
-                                PixelWar adalah arena PvP real-time di mana pemain bertarung untuk menguasai wilayah dan mendapatkan reward secara on-chain.
+                                PixelWar is a real-time PvP arena where players fight to control territory and earn rewards on-chain.
                             </div>
 
                             {/* How to Play Steps */}
                             <section>
                                 <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                    <span className="text-2xl">🕹️</span> Cara Bermain
+                                    <span className="text-2xl">🕹️</span> How to Play
                                 </h3>
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
@@ -72,35 +72,35 @@ export default function HelpOverlay() {
                                             <span className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center"><Zap size={16} /></span>
                                             1. Connect & Pay
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Hubungkan wallet (Base Network) dan bayar entry fee 0.001 ETH.</p>
+                                        <p className="text-sm text-gray-600 pl-10">Connect wallet (Base Network) and pay 0.001 ETH entry fee.</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center"><Gamepad2 size={16} /></span>
                                             2. Aim & Shoot
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10"><strong>Tap/Klik & Tahan</strong> untuk menembak. Geser untuk mengarahkan meriam.</p>
+                                        <p className="text-sm text-gray-600 pl-10"><strong>Tap/Click & Hold</strong> to shoot. Slide to aim the cannon.</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center"><Swords size={16} /></span>
                                             3. Weapons & Ink
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Pilih senjata: <strong>Machine Gun</strong> (Cepat), <strong>Shotgun</strong> (Spread), atau <strong>Ink Bomb</strong> (Area). Perhatikan Ink Level!</p>
+                                        <p className="text-sm text-gray-600 pl-10">Choose weapon: <strong>Machine Gun</strong> (Fast), <strong>Shotgun</strong> (Spread), or <strong>Ink Bomb</strong> (Area). Watch your Ink Level!</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center"><Flag size={16} /></span>
                                             4. Capture Territory
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Warnai grid sebanyak mungkin. Tangkap <strong>Golden Pixel</strong> untuk mode FRENZY!</p>
+                                        <p className="text-sm text-gray-600 pl-10">Color as many grids as possible. Capture the <strong>Golden Pixel</strong> for FRENZY mode!</p>
                                     </div>
                                     <div className="p-4 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md border border-transparent hover:border-gray-200 transition-all sm:col-span-2">
                                         <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                             <span className="w-8 h-8 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center"><Coins size={16} /></span>
                                             5. Win Rewards
                                         </div>
-                                        <p className="text-sm text-gray-600 pl-10">Pemenang mendapatkan <strong>0.00198 ETH</strong> langsung ke wallet (Instant Settlement).</p>
+                                        <p className="text-sm text-gray-600 pl-10">Winner gets <strong>0.00198 ETH</strong> sent directly to wallet (Instant Settlement).</p>
                                     </div>
                                 </div>
                             </section>
@@ -115,19 +115,19 @@ export default function HelpOverlay() {
                                         <li className="flex gap-2 text-sm text-gray-700 items-start">
                                             <span className="text-yellow-500 mt-0.5">•</span>
                                             <span>
-                                                Gunakan <strong>Ink Bomb</strong> untuk merebut area besar musuh.
+                                                Use <strong>Ink Bomb</strong> to capture large enemy areas.
                                             </span>
                                         </li>
                                         <li className="flex gap-2 text-sm text-gray-700 items-start">
                                             <span className="text-yellow-500 mt-0.5">•</span>
                                             <span>
-                                                <strong>Machine Gun</strong> bagus untuk menangkap Golden Pixel dengan cepat.
+                                                <strong>Machine Gun</strong> is good for capturing the Golden Pixel quickly.
                                             </span>
                                         </li>
                                         <li className="flex gap-2 text-sm text-gray-700 items-start">
                                             <span className="text-yellow-500 mt-0.5">•</span>
                                             <span>
-                                                Buat <strong>Combo</strong> capture untuk skor lebih tinggi!
+                                                Create <strong>Capture Combos</strong> for higher scores!
                                             </span>
                                         </li>
                                     </ul>
@@ -139,7 +139,7 @@ export default function HelpOverlay() {
                                         <span className="text-xl">🔗</span> Network Info
                                     </h3>
                                     <p className="text-sm text-blue-900">
-                                        Game ini berjalan di <strong>Base Network</strong> dengan settlement on-chain instan untuk keamanan dan transparansi maksimal.
+                                        This game runs on <strong>Base Network</strong> with instant on-chain settlement for maximum security and transparency.
                                     </p>
                                 </section>
                             </div>
@@ -147,8 +147,8 @@ export default function HelpOverlay() {
                             {/* Goal */}
                             <div className="text-center p-6 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl text-white shadow-lg">
                                 <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
-                                <h3 className="font-bold text-lg mb-2 text-yellow-400">Tujuan Game</h3>
-                                <p className="text-gray-300">Kuasai wilayah sebanyak mungkin, kalahkan lawan, dan jadilah penguasa PixelWar.</p>
+                                <h3 className="font-bold text-lg mb-2 text-yellow-400">Game Goal</h3>
+                                <p className="text-gray-300">Control as much territory as possible, defeat opponents, and become the ruler of PixelWar.</p>
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-3 pt-2">
