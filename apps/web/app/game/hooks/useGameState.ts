@@ -418,13 +418,37 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             });
 
             // Player shooting with INK ECONOMY & USAGE LIMITS
-            const weaponConfig = WEAPON_MODES[newState.player.weaponMode];
-            const inkCost = newState.player.isFrenzy ? 0 : weaponConfig.cost;
-            const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
+            let currentWeaponMode = newState.player.weaponMode;
+            const weaponConfig = WEAPON_MODES[currentWeaponMode];
 
             // Get current weapon state
-            const currentWeaponState = newState.player.weaponStates[newState.player.weaponMode];
-            const isWeaponOverheated = currentWeaponState.isOverheated;
+            let currentWeaponState = newState.player.weaponStates[currentWeaponMode];
+            let isWeaponOverheated = currentWeaponState.isOverheated;
+
+            // AUTO-SWITCH LOGIC: Only between Machine Gun and Shotgun (exclude Ink Bomb)
+            if (isWeaponOverheated && currentWeaponMode !== 'inkBomb') {
+                // Try to auto-switch to the other primary weapon
+                const alternateWeapon: WeaponMode = currentWeaponMode === 'machineGun' ? 'shotgun' : 'machineGun';
+                const alternateState = newState.player.weaponStates[alternateWeapon];
+                const alternateConfig = WEAPON_MODES[alternateWeapon];
+                const hasEnoughInkForAlternate = newState.player.isFrenzy || newState.player.ink >= alternateConfig.cost;
+
+                // Switch if alternate weapon is available (not overheated and has ink)
+                if (!alternateState.isOverheated && hasEnoughInkForAlternate) {
+                    currentWeaponMode = alternateWeapon;
+                    newState.player = {
+                        ...newState.player,
+                        weaponMode: alternateWeapon,
+                    };
+                    // Update references for firing logic
+                    currentWeaponState = alternateState;
+                    isWeaponOverheated = alternateState.isOverheated;
+                }
+            }
+
+            const activeWeaponConfig = WEAPON_MODES[currentWeaponMode];
+            const inkCost = newState.player.isFrenzy ? 0 : activeWeaponConfig.cost;
+            const hasEnoughInk = newState.player.isFrenzy || newState.player.ink >= inkCost;
 
             // Can fire if NOT overheated
             const canFire = !isWeaponOverheated;

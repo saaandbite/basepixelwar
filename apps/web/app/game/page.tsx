@@ -24,18 +24,22 @@ export default function GamePage() {
     const router = useRouter();
     const [isPvP, setIsPvP] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [hasValidSession, setHasValidSession] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
         const pvpMode = sessionStorage.getItem('pvp_mode') === 'true';
         const roomId = sessionStorage.getItem('pvp_room_id');
         const aiMode = sessionStorage.getItem('ai_mode') === 'true';
 
         // Session Guard: Must have explicit mode to be here
         if (!pvpMode && !aiMode) {
+            // No valid session, redirect to room
             router.push('/room');
             return;
         }
+
+        // Valid session exists
+        setHasValidSession(true);
 
         // PvP Check
         if (pvpMode && roomId) {
@@ -48,10 +52,13 @@ export default function GamePage() {
             sessionStorage.removeItem('pvp_room_id');
             sessionStorage.removeItem('pvp_team');
         }
+
+        setMounted(true);
     }, [router]);
 
-    if (!mounted) {
-        return <div className="game-container flex items-center justify-center h-screen">Loading...</div>;
+    // Show loading while checking session or redirecting
+    if (!mounted || !hasValidSession) {
+        return <div className="game-container flex items-center justify-center h-screen bg-slate-50 text-slate-500">Loading...</div>;
     }
 
     if (isPvP) {
