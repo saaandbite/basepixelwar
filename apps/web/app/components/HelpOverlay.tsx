@@ -112,14 +112,23 @@ export default function HelpOverlay() {
                                         <span className="text-xl">⚠️</span> Pro Tips
                                     </h3>
                                     <ul className="space-y-2">
-                                        <li className="flex gap-2 text-sm text-gray-700">
-                                            <span className="text-yellow-500">•</span> Gunakan <strong>Ink Bomb</strong> untuk merebut area besar musuh.
+                                        <li className="flex gap-2 text-sm text-gray-700 items-start">
+                                            <span className="text-yellow-500 mt-0.5">•</span>
+                                            <span>
+                                                Gunakan <strong>Ink Bomb</strong> untuk merebut area besar musuh.
+                                            </span>
                                         </li>
-                                        <li className="flex gap-2 text-sm text-gray-700">
-                                            <span className="text-yellow-500">•</span> <strong>Machine Gun</strong> bagus untuk menagkap Golden Pixel dengan cepat.
+                                        <li className="flex gap-2 text-sm text-gray-700 items-start">
+                                            <span className="text-yellow-500 mt-0.5">•</span>
+                                            <span>
+                                                <strong>Machine Gun</strong> bagus untuk menangkap Golden Pixel dengan cepat.
+                                            </span>
                                         </li>
-                                        <li className="flex gap-2 text-sm text-gray-700">
-                                            <span className="text-yellow-500">•</span> Buat <strong>Combo</strong> capture untuk skor lebih tinggi!
+                                        <li className="flex gap-2 text-sm text-gray-700 items-start">
+                                            <span className="text-yellow-500 mt-0.5">•</span>
+                                            <span>
+                                                Buat <strong>Combo</strong> capture untuk skor lebih tinggi!
+                                            </span>
                                         </li>
                                     </ul>
                                 </section>
