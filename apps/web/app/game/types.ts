@@ -69,6 +69,7 @@ export interface Cannon {
     cooldown: number;
     targetAngle?: number;
     moveTimer?: number;
+    weaponSwitchTimer?: number; // Timer for AI weapon switching
     difficulty?: number;
     targetPos?: { x: number; y: number }; // For ballistic targeting
     powerups?: {

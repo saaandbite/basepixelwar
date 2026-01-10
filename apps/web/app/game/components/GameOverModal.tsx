@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Home } from 'lucide-react';
 
 // Game Over Modal Component
 
@@ -9,6 +10,7 @@ interface GameOverModalProps {
     maxCombo: number;
     powerupsCollected: number;
     onPlayAgain: () => void;
+    onExit: () => void;
 }
 
 export function GameOverModal({
@@ -16,6 +18,7 @@ export function GameOverModal({
     maxCombo,
     powerupsCollected,
     onPlayAgain,
+    onExit,
 }: GameOverModalProps) {
     // Determine result
     let title: string;
@@ -121,6 +124,15 @@ export function GameOverModal({
                         <path d="M3 3v5h5" />
                     </svg>
                     PLAY AGAIN
+                </button>
+
+                {/* Exit to Lobby Button */}
+                <button
+                    onClick={onExit}
+                    className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-gray-700 hover:text-saweria-pink font-bold py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group mt-3"
+                >
+                    <Home size={18} className="group-hover:-translate-y-0.5 transition-transform" />
+                    EXIT TO LOBBY
                 </button>
             </div>
         </div>

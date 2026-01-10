@@ -166,6 +166,15 @@ function AIGamePage() {
         startGame(playSound);
     }, [resetGame, startGame, playSound]);
 
+    const handleExit = useCallback(() => {
+        // Clear session and return to room selection
+        sessionStorage.removeItem('ai_mode');
+        sessionStorage.removeItem('pvp_mode');
+        sessionStorage.removeItem('pvp_room_id');
+        sessionStorage.removeItem('pvp_team');
+        window.location.href = '/room';
+    }, []);
+
     const handleResize = useCallback(
         () => {
             // No-op for now as we enforce fixed size
@@ -318,6 +327,7 @@ function AIGamePage() {
                                     maxCombo={uiState.maxCombo}
                                     powerupsCollected={uiState.totalPowerupsCollected}
                                     onPlayAgain={handlePlayAgain}
+                                    onExit={handleExit}
                                 />
                             </div>
                         )}
