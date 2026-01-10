@@ -36,13 +36,13 @@ export default function HelpOverlay() {
 
             {/* Overlay Modal */}
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[100] sm:flex sm:items-center sm:justify-center sm:p-4 bg-white sm:bg-black/50 sm:backdrop-blur-sm animate-in fade-in duration-200">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 relative"
+                        className="bg-white rounded-none sm:rounded-2xl shadow-none sm:shadow-2xl w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200 relative flex flex-col"
                     >
                         {/* Header */}
-                        <div className="sticky top-0 bg-white/95 backdrop-blur z-10 p-6 border-b border-gray-100 flex items-center justify-between">
-                            <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2">
+                        <div className="sticky top-0 bg-white/95 backdrop-blur z-10 p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between shrink-0">
+                            <h2 className="text-xl sm:text-2xl font-black text-gray-800 flex items-center gap-2">
                                 <span className="text-pink-500">🎮</span> PixelWar Guide
                             </h2>
                             <button
@@ -54,7 +54,7 @@ export default function HelpOverlay() {
                         </div>
 
                         {/* Content */}
-                        <div className="p-6 space-y-8">
+                        <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 flex-1">
 
                             {/* Intro */}
                             <div className="bg-pink-50 p-4 rounded-xl border border-pink-100 text-pink-900 leading-relaxed font-medium">
@@ -63,7 +63,7 @@ export default function HelpOverlay() {
 
                             {/* How to Play Steps */}
                             <section>
-                                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                                     <span className="text-2xl">🕹️</span> How to Play
                                 </h3>
                                 <div className="grid sm:grid-cols-2 gap-4">
@@ -151,7 +151,7 @@ export default function HelpOverlay() {
                                 <p className="text-gray-300">Control as much territory as possible, defeat opponents, and become the ruler of PixelWar.</p>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                            <div className="flex flex-col sm:flex-row gap-3 pt-2 pb-6 sm:pb-0">
                                 <button
                                     onClick={() => setIsOpen(false)}
                                     className="flex-1 py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"
