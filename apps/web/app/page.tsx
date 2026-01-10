@@ -23,6 +23,7 @@ import {
   Trophy,
   AlertTriangle
 } from "lucide-react";
+import HelpOverlay from "./components/HelpOverlay";
 
 export default function Home() {
   const {
@@ -138,6 +139,8 @@ export default function Home() {
       <footer className={styles.footer}>
         <p>"Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2"</p>
       </footer>
+
+      <HelpOverlay />
     </div>
   );
 }
