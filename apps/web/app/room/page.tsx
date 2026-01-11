@@ -56,7 +56,7 @@ export default function RoomPage() {
     const { isLoading: isTransactionLoading, error: transactionError, getBidAmount } = gameVault;
 
     // Payment countdown timer
-    const [paymentTimeLeft, setPaymentTimeLeft] = useState(60);
+    const [paymentTimeLeft, setPaymentTimeLeft] = useState(90);
 
     const isOnCorrectChain = isCorrectChain(chainId);
 

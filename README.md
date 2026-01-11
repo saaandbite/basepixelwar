@@ -184,7 +184,7 @@ Run frontend and backend simultaneously:
 ```bash
 pnpm dev
 ```
--   Web App: http://localhost:5173 (or 3000)
+-   Web App: http://localhost:8080 (or 3000)
 -   Server: http://localhost:3000
 
 To run separately:

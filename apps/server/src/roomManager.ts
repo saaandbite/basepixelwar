@@ -9,7 +9,7 @@ const playerRoomMap: Map<string, string> = new Map(); // playerId -> roomId
 const matchmakingQueue: PvPPlayer[] = [];
 
 // Payment timeout duration (60 seconds)
-const PAYMENT_TIMEOUT_MS = 60000;
+const PAYMENT_TIMEOUT_MS = 90000;
 
 // Utility untuk generate room ID
 function generateRoomId(): string {

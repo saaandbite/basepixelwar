@@ -112,7 +112,7 @@ function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
             socket1.data.roomId = room.id;
             socket2.data.roomId = room.id;
 
-            const deadline = room.paymentDeadline || Date.now() + 60000;
+            const deadline = room.paymentDeadline || Date.now() + 90000;
 
             // Notify pending payment (not match_found yet)
             socket1.emit('pending_payment', {
@@ -404,10 +404,10 @@ function startPaymentTimeout(roomId: string) {
             console.log(`[Payment] Timeout for room ${roomId}`);
             cancelPaymentAndRefund(roomId, 'Payment timeout');
         }
-    }, 60000); // 60 seconds
+    }, 90000); // 90 seconds
 
     paymentTimeouts.set(roomId, timeout);
-    console.log(`[Payment] Started 60s timeout for room ${roomId}`);
+    console.log(`[Payment] Started 90s timeout for room ${roomId}`);
 }
 
 function clearPaymentTimeout(roomId: string) {
