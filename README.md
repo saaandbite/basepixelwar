@@ -35,7 +35,7 @@ We are currently in **Phase 1 (Proof of Concept)**.
 
 ## Roadmap: The Journey to Mainnet
 
-Roadmap ini disusun berdasarkan pengalaman langsung tim selama membangun dan menguji MVP PixelWar di Base Sepolia. Fokus utama kami adalah memastikan fitur inti benar-benar playable dan stabil terlebih dahulu, sebelum melakukan ekspansi fitur dan skala ekosistem menuju Mainnet.
+This roadmap is built based on the team's direct experience building and testing the PixelWar MVP on Base Sepolia. Our primary focus is ensuring core features are truly playable and stable before expanding features and scaling the ecosystem towards Mainnet.
 
 ---
 
@@ -44,18 +44,18 @@ Roadmap ini disusun berdasarkan pengalaman langsung tim selama membangun dan men
 **Status:** Current – Hackathon MVP
 **Network:** Live on Base Sepolia Testnet
 
-Pada fase ini, kami memvalidasi ide inti PixelWar sebagai game PvP berbasis on-chain yang dapat dimainkan secara nyata, bukan sekadar konsep.
+In this phase, we are validating the core idea of PixelWar as a real-world playable on-chain PvP game, not just a concept.
 
-**Cakupan Pengembangan:**
+**Development Scope:**
 
 * **Hybrid Architecture**
-  Integrasi Next.js sebagai frontend dengan Base Smart Contract untuk logika on-chain, serta server off-chain untuk sinkronisasi gameplay.
+  Integration of Next.js as the frontend with Base Smart Contracts for on-chain logic, and an off-chain server for gameplay synchronization.
 * **1 vs 1 Wagering**
-  Implementasi mekanisme taruhan dasar antar pemain dengan pencairan hadiah otomatis melalui smart contract.
+  Implementation of basic wagering mechanisms between players with automatic prize distribution via smart contracts.
 * **Wallet Integration**
-  Menggunakan OnchainKit untuk onboarding wallet yang lebih sederhana dan cepat, termasuk dukungan Smart Wallet.
+  Using OnchainKit for simpler and faster wallet onboarding, including Smart Wallet support.
 * **Mid-Submission (12 Jan)**
-  Validasi alur dana (*flow of funds*) serta pengujian stabilitas koneksi wallet berdasarkan hasil playtest dan simulasi transaksi.
+  Validation of the flow of funds and testing wallet connection stability based on playtest results and transaction simulations.
 
 ---
 
@@ -63,16 +63,16 @@ Pada fase ini, kami memvalidasi ide inti PixelWar sebagai game PvP berbasis on-c
 
 **Target:** Q2 2026
 
-Setelah MVP tervalidasi, fase ini berfokus pada penguatan keamanan sistem serta peningkatan pengalaman bermain berdasarkan feedback pengguna.
+Once the MVP is validated, this phase focuses on strengthening system security and improving the gaming experience based on user feedback.
 
-**Fokus Utama:**
+**Main Focus:**
 
 * **Anti-Cheat System**
-  Peningkatan validasi di server off-chain untuk memastikan input pemain tetap fair dan mencegah eksploitasi seperti speed hack.
+  Improved validation on the off-chain server to ensure player input remains fair and prevent exploits like speed hacks.
 * **Smart Contract Audit**
-  Audit keamanan pada fungsi `payoutWinner`, dengan fokus pada *access control* dan potensi *reentrancy*.
+  Security audit of the `payoutWinner` function, focusing on access control and potential reentrancy.
 * **Mobile Optimization**
-  Penyempurnaan UI/UX agar berjalan optimal di browser in-app wallet, terutama MetaMask Mobile.
+  UI/UX refinements to ensure optimal performance in in-app wallet browsers, especially MetaMask Mobile.
 
 ---
 
@@ -80,16 +80,16 @@ Setelah MVP tervalidasi, fase ini berfokus pada penguatan keamanan sistem serta 
 
 **Target:** Q3 2026
 
-Fase ini menandai transisi PixelWar dari lingkungan testnet menuju ekosistem Mainnet secara penuh.
+This phase marks the transition of PixelWar from the testnet environment to the full Mainnet ecosystem.
 
-**Rencana Implementasi:**
+**Implementation Plan:**
 
 * **Go Live on Base Mainnet**
-  Deployment smart contract ke Base Mainnet menggunakan ETH asli.
+  Smart contract deployment to Base Mainnet using real ETH.
 * **Leaderboard System**
-  Sistem peringkat mingguan untuk mendorong kompetisi berdasarkan *win rate* pemain.
+  Weekly ranking system to encourage competition based on player win rates.
 * **Community Guilds**
-  Fitur klan sederhana untuk membangun interaksi komunitas dan kompetisi berbasis tim.
+  Simple clan features to build community interaction and team-based competition.
 
 ---
 
@@ -97,18 +97,18 @@ Fase ini menandai transisi PixelWar dari lingkungan testnet menuju ekosistem Mai
 
 **Target:** Q4 2026
 
-Tahap jangka panjang untuk memperluas ekosistem kompetitif PixelWar dan memberikan nilai berkelanjutan bagi pemain.
+Long-term stage to expand the PixelWar competitive ecosystem and provide sustainable value for players.
 
-**Pengembangan Lanjutan:**
+**Further Development:**
 
 * **The "MCL" Protocol (Weekly Tournament)**
-  Turnamen mingguan otomatis dengan sistem bracket yang dikelola secara on-chain.
+  Automated weekly tournaments with an on-chain managed bracket system.
 * **Generative Trophy NFT**
-  Pemenang turnamen akan menerima Trophy NFT unik yang digenerate berdasarkan data kemenangan dan performa mereka.
+  Tournament winners will receive unique Trophy NFTs generated based on their victory data and performance.
 
 ---
 
-> PixelWar dikembangkan sebagai arena kompetitif on-chain yang menyeimbangkan transparansi blockchain, gameplay real-time, dan pengalaman pengguna yang adil.
+> PixelWar is developed as an on-chain competitive arena that balances blockchain transparency, real-time gameplay, and a fair user experience.
 
 ---
 
