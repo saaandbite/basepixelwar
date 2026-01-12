@@ -12,7 +12,7 @@
     "dotenv": "^16.4.1",
     "ioredis": "^5.9.1",
     "socket.io": "^4.7.4",
-    "tigerbeetle-node": "^0.15.3",
+    "tigerbeetle-node": "^0.16.67",
     "viem": "^2.7.0"
   },
   "devDependencies": {

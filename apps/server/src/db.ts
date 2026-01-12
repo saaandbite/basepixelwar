@@ -35,10 +35,11 @@ const TREASURY_ACCOUNT_ID = 1n;
 let nextAccountId = 1000n;
 
 // Configuration
+// Format: Just port number (interpreted as 127.0.0.1:PORT) or "host:port"
 const TB_CONFIG = {
     cluster_id: 0n,
     replica_addresses: [
-        `${process.env.TIGERBEETLE_HOST || 'localhost'}:${process.env.TIGERBEETLE_PORT || '3005'}`
+        process.env.TIGERBEETLE_PORT || '3005'
     ],
 };
 
