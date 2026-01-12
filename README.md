@@ -1,6 +1,15 @@
 # PixelWar
 > "Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2."
 
+> **Concept Reference:**
+> This implementation is based on the provided concept.
+> 
+> **Admin Transaction Log:** [https://sepolia.basescan.org/txs?a=0x7bA8ebC043FC93b218D046Eb15A77765D14f47c6](https://sepolia.basescan.org/txs?a=0x7bA8ebC043FC93b218D046Eb15A77765D14f47c6)
+> 
+> **Smart Contract Transaction Log:** [https://sepolia.basescan.org/txs?a=0x089a1619c076b6e844620cf80ea3b981daca3772](https://sepolia.basescan.org/txs?a=0x089a1619c076b6e844620cf80ea3b981daca3772)
+
+---
+
 ## Elevator Pitch
 PixelWar is a Skill-Based Wagering platform that combines the speed of Web2 gameplay with Web3 financial security.
 
