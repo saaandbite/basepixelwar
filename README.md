@@ -139,7 +139,7 @@ This is a **Turborepo monorepo**. Here are the main components:
 
 ## Database Services
 The project runs two main databases via Docker Compose:
--   **TigerBeetle** (Port `3004`): Financial ledger.
+-   **TigerBeetle** (Port `3005`): Financial ledger.
 -   **Redis** (Port `6379`): Data cache & sessions.
 -   **Redis Commander** (Port `8085`): GUI to view Redis data in browser (http://localhost:8085).
 

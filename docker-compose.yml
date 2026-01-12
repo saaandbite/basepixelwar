@@ -16,7 +16,7 @@ services:
     security_opt:
       - seccomp:unconfined
     ports:
-      - "3005:3000" # Expose port 3000 container ke 3004 host
+      - "3005:3000" # Expose port 3000 container ke 3005 host
     volumes:
       # Mapping folder lokal 'tb_data' ke dalam container '/data'
       # Agar data tidak hilang saat container dimatikan.
