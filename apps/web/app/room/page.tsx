@@ -194,6 +194,11 @@ export default function RoomPage() {
             return;
         }
 
+        if (!walletAddress) {
+            console.error('[RoomPage] Wallet connected but address missing');
+            return;
+        }
+
         if (!isOnCorrectChain) {
             await switchToBase();
             return;
@@ -201,13 +206,10 @@ export default function RoomPage() {
 
         // Store player name for game
         sessionStorage.setItem('player_name', displayName);
+        sessionStorage.setItem('wallet_address', walletAddress);
 
-        // Store wallet address for game
-        if (walletAddress) {
-            sessionStorage.setItem('wallet_address', walletAddress);
-        }
-
-        joinQueue(walletAddress || undefined);
+        console.log('[RoomPage] Joining queue with wallet:', walletAddress);
+        joinQueue(walletAddress);
     };
 
     const handleSaveName = () => {

@@ -27,9 +27,13 @@ const getServerUrl = () => {
     if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
 
     // Fallback for local development
-    if (typeof window !== 'undefined' &&
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        return `http://${window.location.hostname}:3000`;
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+            return `${protocol}//${hostname}:3000`;
+        }
     }
 
     // In production with Nginx, we want a relative connection

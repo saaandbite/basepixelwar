@@ -58,6 +58,7 @@ function handleConnection(socket: GameSocket) {
     socket.data.walletAddress = undefined; // Initialize
 
     console.log(`[SocketServer] Client connected: ${playerId}`);
+    socket.emit('connected', playerId);
 
     // Send connection confirmation
     socket.emit('connected', playerId);
@@ -69,7 +70,7 @@ function handleConnection(socket: GameSocket) {
     socket.on('player_input', (input: Parameters<ClientToServerEvents['player_input']>[0]) => handlePlayerInput(socket, input));
     socket.on('create_room', (name: string) => handleCreateRoom(socket, name));
     socket.on('join_room', (roomId: string) => handleJoinRoom(socket, roomId));
-    socket.on('rejoin_game', (roomId: string) => handleRejoinGame(socket, roomId));
+    socket.on('rejoin_game', (roomId: string, walletAddress?: string) => handleRejoinGame(socket, roomId, walletAddress));
     socket.on('leave_room', () => handleLeaveRoom(socket));
     socket.on('disconnect', () => handleDisconnect(socket));
 
@@ -131,69 +132,69 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
 
     // Try to match players
     const match = await RoomManager.tryMatchPlayers();
-    if (match) {
-        const { player1, player2, room } = match;
+    if (!match) return; // No match yet, wait in queue
 
-        // Use socketId directly for reliable socket lookup
-        let socket1 = player1.socketId ? io.sockets.sockets.get(player1.socketId) : undefined;
-        let socket2 = player2.socketId ? io.sockets.sockets.get(player2.socketId) : undefined;
+    const { player1, player2, room } = match;
 
-        // Fallback: If direct lookup failed (stale redis data?), try identity lookup
-        if (!socket1) socket1 = getSocketByPlayerId(player1.id);
-        if (!socket2) socket2 = getSocketByPlayerId(player2.id);
+    // Use socketId directly for reliable socket lookup
+    let socket1 = player1.socketId ? io.sockets.sockets.get(player1.socketId) : undefined;
+    let socket2 = player2.socketId ? io.sockets.sockets.get(player2.socketId) : undefined;
 
-        console.log(`[SocketServer] Match: P1 socketId=${player1.socketId}, P2 socketId=${player2.socketId}`);
-        console.log(`[SocketServer] Match: socket1=${!!socket1?.connected}, socket2=${!!socket2?.connected}`);
+    // Fallback: If direct lookup failed (stale redis data?), try identity lookup
+    if (!socket1) socket1 = getSocketByPlayerId(player1.id);
+    if (!socket2) socket2 = getSocketByPlayerId(player2.id);
 
-        if (socket1 && socket2) {
-            // Join socket.io room
-            socket1.join(room.id);
-            socket2.join(room.id);
+    console.log(`[SocketServer] Match: P1 socketId=${player1.socketId}, P2 socketId=${player2.socketId}`);
+    console.log(`[SocketServer] Match: socket1=${!!socket1?.connected}, socket2=${!!socket2?.connected}`);
 
-            socket1.data.roomId = room.id;
-            socket2.data.roomId = room.id;
+    // CHECK: Are both players actually connected?
+    if (!socket1 || !socket2 || !socket1.connected || !socket2.connected) {
+        console.error(`[SocketServer] ❌ Match found but socket(s) missing/disconnected! P1: ${!!socket1?.connected}, P2: ${!!socket2?.connected}`);
 
-            const deadline = room.paymentDeadline || Date.now() + 90000;
+        // CLEANUP & RECOVERY
+        await RoomManager.deleteRoom(room.id);
 
-            // Notify pending payment
-            socket1.emit('pending_payment', {
-                roomId: room.id,
-                opponent: room.players.find(p => p.id !== player1.id)!,
-                deadline,
-                isFirstPlayer: true,
-            });
-            socket2.emit('pending_payment', {
-                roomId: room.id,
-                opponent: room.players.find(p => p.id !== player2.id)!,
-                deadline,
-                isFirstPlayer: false,
-            });
-
-            // Start payment timeout
-            startPaymentTimeout(room.id);
-
-            console.log(`[SocketServer] ✅ Match made (pending_payment): ${player1.name} vs ${player2.name}`);
-        } else {
-            console.error(`[SocketServer] ❌ Match found but socket(s) missing! P1: ${player1.socketId} (found: ${!!socket1}), P2: ${player2.socketId} (found: ${!!socket2})`);
-
-            // CLEANUP & RECOVERY
-            // 1. Delete the dead room
-            await RoomManager.deleteRoom(room.id);
-
-            // 2. Return valid players to the FRONT of the queue
-            if (socket1) {
-                console.log(`[SocketServer] Returning ${player1.name} to queue front`);
-                // We need to re-add them. Ideally with original join time, but for now just re-add.
-                await RoomManager.joinQueue(player1);
-                socket1.emit('match_status', { status: 'requeuing', message: 'Opponent connection failed. Searching again...' });
-            }
-            if (socket2) {
-                console.log(`[SocketServer] Returning ${player2.name} to queue front`);
-                await RoomManager.joinQueue(player2);
-                socket2.emit('match_status', { status: 'requeuing', message: 'Opponent connection failed. Searching again...' });
-            }
+        // Return valid players to the FRONT of the queue
+        if (socket1 && socket1.connected) {
+            console.log(`[SocketServer] Returning ${player1.name} to queue front`);
+            await RoomManager.joinQueue(player1);
+            socket1.emit('match_status', { status: 'requeuing', message: 'Opponent connection failed. Searching again...' });
         }
+        if (socket2 && socket2.connected) {
+            console.log(`[SocketServer] Returning ${player2.name} to queue front`);
+            await RoomManager.joinQueue(player2);
+            socket2.emit('match_status', { status: 'requeuing', message: 'Opponent connection failed. Searching again...' });
+        }
+        return;
     }
+
+    // SUCCESS: Both players connected -> Join Room
+    socket1.join(room.id);
+    socket2.join(room.id);
+
+    socket1.data.roomId = room.id;
+    socket2.data.roomId = room.id;
+
+    const deadline = room.paymentDeadline || Date.now() + 90000;
+
+    // Notify pending payment
+    socket1.emit('pending_payment', {
+        roomId: room.id,
+        opponent: room.players.find(p => p.id !== player1.id)!,
+        deadline,
+        isFirstPlayer: true,
+    });
+    socket2.emit('pending_payment', {
+        roomId: room.id,
+        opponent: room.players.find(p => p.id !== player2.id)!,
+        deadline,
+        isFirstPlayer: false,
+    });
+
+    // Start payment timeout
+    startPaymentTimeout(room.id);
+
+    console.log(`[SocketServer] ✅ Match made (pending_payment): ${player1.name} vs ${player2.name}`);
 }
 
 async function handleLeaveQueue(socket: GameSocket) {
@@ -331,71 +332,90 @@ async function handleRejoinGame(socket: GameSocket, roomId: string, walletAddres
 
     // Authenticate: If wallet provided, bind this socket to the wallet identity
     if (walletAddress) {
-        socket.data.playerId = walletAddress;
-        socket.data.walletAddress = walletAddress;
+        // Normalize wallet address
+        const normalizedWallet = walletAddress.toLowerCase();
+        socket.data.playerId = normalizedWallet;
+        socket.data.walletAddress = normalizedWallet;
     }
 
-    // Check if this player (by ID) belongs to the room
-    // With persistent wallet IDs, we just check if the ID exists in room.players
-    const playerExists = room.players.find(p => p.id === socket.data.playerId);
+    // Check if this player belongs to the room
+    // Robust check: Match by ID OR by Wallet Address
+    let player = room.players.find(p => p.id === socket.data.playerId);
 
-    if (playerExists) {
-        // Update the room's socket mapping (implicitly handled by socket.join)
-        socket.join(roomId);
-        socket.data.roomId = roomId;
+    if (!player && socket.data.walletAddress) {
+        // Fallback: Check if any player has this wallet address
+        player = room.players.find(p =>
+            p.walletAddress && p.walletAddress.toLowerCase() === socket.data.walletAddress
+        );
 
-        // Retrieve player details
-        const player = room.players.find(p => p.id === socket.data.playerId!)!;
-        const opponent = room.players.find(p => p.id !== player.id)!;
-
-        // Special handling for FINISHED rooms (Rejoining Result Screen)
-        if (room.status === 'finished') {
-            const state = GameStateManager.getGameState(roomId);
-            if (state) {
-                const winner = state.scores.blue > state.scores.red ? 'blue' :
-                    state.scores.red > state.scores.blue ? 'red' : 'draw';
-
-                // RESTRICTION: Only the winner can rejoin a finished game (to claim rewards)
-                // Losers are redirected to room
-                if (player.team !== winner) {
-                    socket.emit('rejoin_failed');
-                    return;
-                }
-
-                socket.emit('game_over', {
-                    winner,
-                    finalScore: state.scores,
-                    stats: {
-                        totalShots: { blue: 0, red: 0 },
-                        powerupsCollected: { blue: 0, red: 0 },
-                        goldenPixelsCaptured: { blue: 0, red: 0 }
-                    }
-                });
-                console.log(`[SocketServer] Player reconnected to FINISHED room ${roomId} for results`);
-                return; // Stop here, do not restart game
-            }
+        // If found by wallet, update socket.data.playerId to match the room record
+        // This handles the case where room record uses Socket ID but we rejoining with Wallet
+        if (player) {
+            console.log(`[SocketServer] Recovered identity via wallet: ${player.id}`);
+            socket.data.playerId = player.id;
         }
-
-        // Standard Rejoin (Active Game)
-        const gameConfig: GameStartData['config'] = {
-            duration: 90,
-            gridCols: 35,
-            gridRows: 54,
-            canvasWidth: 420,
-            canvasHeight: 640,
-        };
-
-        const startData: GameStartData = {
-            roomId: room.id,
-            yourTeam: player.team,
-            opponent,
-            config: gameConfig,
-            startTime: room.gameStartedAt || Date.now(),
-        };
-
-        socket.emit('game_start', startData);
-        console.log(`[SocketServer] Player rejoined room ${roomId}`);
     }
+
+    if (!player) {
+        // Player not found in room
+        console.warn(`[SocketServer] Rejoin failed: Player ${socket.data.playerId} not found in room ${roomId}`);
+        socket.emit('rejoin_failed');
+        return;
+    }
+
+    // Update the room's socket mapping (implicitly handled by socket.join)
+    socket.join(roomId);
+    socket.data.roomId = roomId;
+
+    const opponent = room.players.find(p => p.id !== player!.id)!;
+
+    // Special handling for FINISHED rooms (Rejoining Result Screen)
+    if (room.status === 'finished') {
+        const state = GameStateManager.getGameState(roomId);
+        if (state) {
+            const winner = state.scores.blue > state.scores.red ? 'blue' :
+                state.scores.red > state.scores.blue ? 'red' : 'draw';
+
+            // RESTRICTION: Only the winner can rejoin a finished game (to claim rewards)
+            // Losers are redirected to room
+            if (player.team !== winner) {
+                socket.emit('rejoin_failed');
+                return;
+            }
+
+            socket.emit('game_over', {
+                winner,
+                finalScore: state.scores,
+                stats: {
+                    totalShots: { blue: 0, red: 0 },
+                    powerupsCollected: { blue: 0, red: 0 },
+                    goldenPixelsCaptured: { blue: 0, red: 0 }
+                }
+            });
+            console.log(`[SocketServer] Player reconnected to FINISHED room ${roomId} for results`);
+            return; // Stop here, do not restart game
+        }
+    }
+
+    // Standard Rejoin (Active Game)
+    const gameConfig: GameStartData['config'] = {
+        duration: 90,
+        gridCols: 35,
+        gridRows: 54,
+        canvasWidth: 420,
+        canvasHeight: 640,
+    };
+
+    const startData: GameStartData = {
+        roomId: room.id,
+        yourTeam: player.team,
+        opponent,
+        config: gameConfig,
+        startTime: room.gameStartedAt || Date.now(),
+    };
+
+    socket.emit('game_start', startData);
+    console.log(`[SocketServer] Player rejoined room ${roomId}`);
 }
 
 // ============================================
