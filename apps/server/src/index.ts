@@ -17,7 +17,7 @@ dotenv.config({ path: envPath });
 // Try default load if above failed or for other vars
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+
 
 // Async initialization
 async function main() {
@@ -41,11 +41,11 @@ async function main() {
   }
 
   // Initialize contract service after env vars are loaded
-  const { contractService } = await import('./contractService');
+  const { contractService } = await import('./contractService.js');
   contractService.initialize();
 
 // Verify signer matches contract (detects config issues early)
-contractService.verifySigner().then(result => {
+contractService.verifySigner().then((result: { isMatch: boolean; serverAddress: string; contractSigner: string } | null) => {
   if (result && !result.isMatch) {
     console.error('═══════════════════════════════════════════════════════════════');
     console.error(' CRITICAL: Backend wallet does NOT match contract backendSigner!');

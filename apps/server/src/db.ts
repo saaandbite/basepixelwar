@@ -39,7 +39,7 @@ let nextAccountId = 1000n;
 const TB_CONFIG = {
     cluster_id: 0n,
     replica_addresses: [
-        process.env.TIGERBEETLE_PORT || '3005'
+        process.env.TIGERBEETLE_PORT || '3030'
     ],
 };
 

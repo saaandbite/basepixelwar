@@ -10,13 +10,13 @@ services:
     container_name: pixelwar-ledger
     restart: unless-stopped
     # Command untuk menjalankan server:
-    # --addresses: Listen di port 3000 untuk semua IP (0.0.0.0)
+    # --addresses: Listen di port 3030 untuk semua IP (0.0.0.0)
     # /data/0_0.tigerbeetle: Lokasi file data di dalam container
-    command: start --addresses=0.0.0.0:3000 /data/0_0.tigerbeetle
+    command: start --addresses=0.0.0.0:3030 /data/0_0.tigerbeetle
     security_opt:
       - seccomp:unconfined
     ports:
-      - "3005:3000" # Expose port 3000 container ke 3005 host
+      - "3030:3030" # Expose port 3030 container ke 3030 host
     volumes:
       # Mapping folder lokal 'tb_data' ke dalam container '/data'
       # Agar data tidak hilang saat container dimatikan.
