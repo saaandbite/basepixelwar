@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAudio } from './useAudio'; // Import useAudio
 import { useGameVault, GameMode } from '../../hooks/useGameVault';
+import { useWallet } from '../../contexts/WalletContext'; // Import useWallet
 import type {
     ClientToServerEvents,
     ServerToClientEvents,
@@ -81,6 +82,8 @@ export function usePvPGame() {
 
     // Game Vault (Smart Contract)
     const gameVault = useGameVault();
+    // Wallet for identification
+    const { address } = useWallet();
 
     const [state, setState] = useState<PvPState>({
         isConnected: false,
@@ -130,7 +133,8 @@ export function usePvPGame() {
             const storedRoomId = sessionStorage.getItem('pvp_room_id');
             if (storedRoomId) {
                 console.log('[PvP] Attempting to rejoin room:', storedRoomId);
-                socket.emit('rejoin_game', storedRoomId);
+                // Pass wallet address for authenticated rejoin
+                socket.emit('rejoin_game', storedRoomId, address || undefined);
             }
         });
 

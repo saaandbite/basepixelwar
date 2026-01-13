@@ -322,82 +322,79 @@ async function handleDisconnect(socket: GameSocket) {
     await handleLeaveRoom(socket);
 }
 
-async function handleRejoinGame(socket: GameSocket, roomId: string) {
+async function handleRejoinGame(socket: GameSocket, roomId: string, walletAddress?: string) {
     const room = await RoomManager.getRoom(roomId);
     if (!room) {
         socket.emit('rejoin_failed');
         return;
     }
 
-    // Find disconnected player slot
-    let oldPlayerId: string | null = null;
-
-    for (const p of room.players) {
-        const s = io.sockets.sockets.get(p.id);
-        if (!s) {
-            oldPlayerId = p.id;
-            break;
-        }
+    // Authenticate: If wallet provided, bind this socket to the wallet identity
+    if (walletAddress) {
+        socket.data.playerId = walletAddress;
+        socket.data.walletAddress = walletAddress;
     }
 
-    if (oldPlayerId) {
-        const success = await RoomManager.reconnectPlayer(roomId, oldPlayerId, socket.data.playerId!);
-        if (success) {
-            socket.join(roomId);
-            socket.data.roomId = roomId;
+    // Check if this player (by ID) belongs to the room
+    // With persistent wallet IDs, we just check if the ID exists in room.players
+    const playerExists = room.players.find(p => p.id === socket.data.playerId);
 
-            // Retrieve player details
-            const player = room.players.find(p => p.id === socket.data.playerId!)!;
-            const opponent = room.players.find(p => p.id !== player.id)!;
+    if (playerExists) {
+        // Update the room's socket mapping (implicitly handled by socket.join)
+        socket.join(roomId);
+        socket.data.roomId = roomId;
 
-            // Special handling for FINISHED rooms (Rejoining Result Screen)
-            if (room.status === 'finished') {
-                const state = GameStateManager.getGameState(roomId);
-                if (state) {
-                    const winner = state.scores.blue > state.scores.red ? 'blue' :
-                        state.scores.red > state.scores.blue ? 'red' : 'draw';
+        // Retrieve player details
+        const player = room.players.find(p => p.id === socket.data.playerId!)!;
+        const opponent = room.players.find(p => p.id !== player.id)!;
 
-                    // RESTRICTION: Only the winner can rejoin a finished game (to claim rewards)
-                    // Losers are redirected to room
-                    if (player.team !== winner) {
-                        socket.emit('rejoin_failed');
-                        return;
-                    }
+        // Special handling for FINISHED rooms (Rejoining Result Screen)
+        if (room.status === 'finished') {
+            const state = GameStateManager.getGameState(roomId);
+            if (state) {
+                const winner = state.scores.blue > state.scores.red ? 'blue' :
+                    state.scores.red > state.scores.blue ? 'red' : 'draw';
 
-                    socket.emit('game_over', {
-                        winner,
-                        finalScore: state.scores,
-                        stats: {
-                            totalShots: { blue: 0, red: 0 },
-                            powerupsCollected: { blue: 0, red: 0 },
-                            goldenPixelsCaptured: { blue: 0, red: 0 }
-                        }
-                    });
-                    console.log(`[SocketServer] Player reconnected to FINISHED room ${roomId} for results`);
-                    return; // Stop here, do not restart game
+                // RESTRICTION: Only the winner can rejoin a finished game (to claim rewards)
+                // Losers are redirected to room
+                if (player.team !== winner) {
+                    socket.emit('rejoin_failed');
+                    return;
                 }
+
+                socket.emit('game_over', {
+                    winner,
+                    finalScore: state.scores,
+                    stats: {
+                        totalShots: { blue: 0, red: 0 },
+                        powerupsCollected: { blue: 0, red: 0 },
+                        goldenPixelsCaptured: { blue: 0, red: 0 }
+                    }
+                });
+                console.log(`[SocketServer] Player reconnected to FINISHED room ${roomId} for results`);
+                return; // Stop here, do not restart game
             }
-
-            // Standard Rejoin (Active Game)
-            const gameConfig: GameStartData['config'] = {
-                duration: 90,
-                gridCols: 35,
-                gridRows: 54,
-                canvasWidth: 420,
-                canvasHeight: 640,
-            };
-
-            const startData: GameStartData = {
-                roomId: room.id,
-                yourTeam: player.team,
-                opponent,
-                config: gameConfig,
-                startTime: room.gameStartedAt || Date.now(),
-            };
-
-            socket.emit('game_start', startData);
-            console.log(`[SocketServer] Player rejoined room ${roomId}`);
         }
+
+        // Standard Rejoin (Active Game)
+        const gameConfig: GameStartData['config'] = {
+            duration: 90,
+            gridCols: 35,
+            gridRows: 54,
+            canvasWidth: 420,
+            canvasHeight: 640,
+        };
+
+        const startData: GameStartData = {
+            roomId: room.id,
+            yourTeam: player.team,
+            opponent,
+            config: gameConfig,
+            startTime: room.gameStartedAt || Date.now(),
+        };
+
+        socket.emit('game_start', startData);
+        console.log(`[SocketServer] Player rejoined room ${roomId}`);
     }
 }
 
