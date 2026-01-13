@@ -55,6 +55,7 @@ function handleConnection(socket: GameSocket) {
 
     socket.data.playerId = playerId;
     socket.data.playerName = playerName;
+    socket.data.walletAddress = undefined; // Initialize
 
     console.log(`[SocketServer] Client connected: ${playerId}`);
 
@@ -77,20 +78,32 @@ function handleConnection(socket: GameSocket) {
     socket.on('cancel_payment', () => handleCancelPayment(socket));
 }
 
+// Helper to get the ID used in Redis queue (wallet address preferred for deduplication)
+function getQueueId(socket: GameSocket, walletAddress?: string): string {
+    return walletAddress || socket.id;
+}
+
 // ============================================
 // EVENT HANDLERS
 // ============================================
 
 async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
+    const identityId = getQueueId(socket, walletAddress);
+
+    // Update socket data to use this identity consistently
+    socket.data.playerId = identityId;
+    socket.data.walletAddress = walletAddress;
+
     const player: PvPPlayer = {
-        id: socket.data.playerId!,
+        id: identityId,
         name: socket.data.playerName!,
-        team: 'blue', // Will be assigned when matched
+        team: 'blue',
         ready: false,
         walletAddress,
     };
 
-    const position = await RoomManager.joinQueue(player);
+    await RoomManager.joinQueue(player);
+    const position = await RoomManager.getQueuePosition(identityId);
     const queueSize = await RoomManager.getQueueSize();
 
     socket.emit('queue_status', { position, totalInQueue: queueSize });
@@ -137,7 +150,10 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
 }
 
 async function handleLeaveQueue(socket: GameSocket) {
-    await RoomManager.leaveQueue(socket.data.playerId!);
+    const queueId = getQueueId(socket); // Note: If they had a wallet, they should leave via same ID
+    // Since we don't have walletAddress cached in socket.data here easily, 
+    // we should probably store it in socket.data during join_queue.
+    await RoomManager.leaveQueue(socket.data.walletAddress || socket.id);
     const queueSize = await RoomManager.getQueueSize();
     socket.emit('queue_status', { position: 0, totalInQueue: queueSize });
 }
@@ -227,14 +243,20 @@ async function handleLeaveRoom(socket: GameSocket) {
 }
 
 async function handleDisconnect(socket: GameSocket) {
-    console.log(`[SocketServer] Client disconnected: ${socket.data.playerId}`);
+    const playerId = socket.id;
+    const roomId = socket.data.roomId;
+    const walletAddress = socket.data.walletAddress;
+    const queueId = getQueueId(socket, walletAddress);
 
-    // Leave queue if in queue (always safe)
-    await RoomManager.leaveQueue(socket.data.playerId!);
+    console.log(`[SocketServer] Client disconnected: ${playerId}`);
+
+    // Remove from queue if they were in it
+    await RoomManager.leaveQueue(queueId);
+    socket.data.walletAddress = undefined; // Clear wallet address from socket data
 
     // Check availability for grace period
-    if (socket.data.roomId) {
-        const room = await RoomManager.getRoom(socket.data.roomId);
+    if (roomId) {
+        const room = await RoomManager.getRoom(roomId);
         // If room has 2 players, keep session alive for reconnect
         if (room && room.players.length === 2 && (room.status === 'playing' || room.status === 'countdown' || room.status === 'waiting' || room.status === 'finished')) {
             console.log(`[SocketServer] Player ${socket.data.playerId} disconnected from active/finished room ${room.id}. Keeping session alive.`);
@@ -457,11 +479,12 @@ async function cancelPaymentAndRefund(roomId: string, reason: string) {
 
             // Re-add to queue
             await RoomManager.joinQueue(player);
-            const position = await RoomManager.getQueuePosition(player.id);
-            const queueSize = await RoomManager.getQueueSize();
+            // Send back position
+            const queueId = player.walletAddress || playerSocket.id; // Use player's walletAddress if available, otherwise socket.id
+            const position = await RoomManager.getQueuePosition(queueId);
             playerSocket.emit('queue_status', {
                 position,
-                totalInQueue: queueSize
+                totalInQueue: await RoomManager.getQueueSize()
             });
         }
     }

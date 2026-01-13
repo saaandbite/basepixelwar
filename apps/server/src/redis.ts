@@ -158,17 +158,22 @@ interface QueuePlayer {
  */
 export async function addToQueue(player: QueuePlayer): Promise<number> {
     const r = getRedis();
-    const score = player.joinedAt || Date.now();
+    const identityId = player.walletAddress || player.id;
 
-    await r.zadd(
-        KEYS.MATCHMAKING_QUEUE,
-        score,
-        JSON.stringify(player)
-    );
+    // Ensure player object internally uses the identityId for matching
+    player.id = identityId;
 
-    const position = await r.zrank(KEYS.MATCHMAKING_QUEUE, JSON.stringify(player));
-    console.log(`[Redis] ${player.name} added to queue at position ${(position ?? 0) + 1}`);
-    return (position ?? 0) + 1;
+    const score = player.joinedAt;
+    const member = JSON.stringify(player);
+
+    // Atomic: Remove old record (if any) and add new one
+    await r.multi()
+        .zrem(KEYS.MATCHMAKING_QUEUE, identityId)
+        .hset(`${KEYS.MATCHMAKING_QUEUE}:data`, identityId, member)
+        .zadd(KEYS.MATCHMAKING_QUEUE, score, identityId)
+        .exec();
+
+    return r.zcard(KEYS.MATCHMAKING_QUEUE);
 }
 
 /**
@@ -176,17 +181,20 @@ export async function addToQueue(player: QueuePlayer): Promise<number> {
  */
 export async function removeFromQueue(playerId: string): Promise<boolean> {
     const r = getRedis();
-    const members = await r.zrange(KEYS.MATCHMAKING_QUEUE, 0, -1);
 
-    for (const member of members) {
-        const player = JSON.parse(member) as QueuePlayer;
-        if (player.id === playerId) {
-            await r.zrem(KEYS.MATCHMAKING_QUEUE, member);
-            console.log(`[Redis] Player ${playerId} removed from queue`);
-            return true;
-        }
+    // Note: playerId here might be socket.id or wallet.
+    // Try both or ensure socketServer sends the right one.
+    // For now, we try to remove from both index and data
+    const results = await r.multi()
+        .zrem(KEYS.MATCHMAKING_QUEUE, playerId)
+        .hdel(`${KEYS.MATCHMAKING_QUEUE}:data`, playerId)
+        .exec();
+
+    const removed = results && (results[0][1] as number > 0);
+    if (removed) {
+        console.log(`[Redis] Player ${playerId.substring(0, 8)} removed from queue`);
     }
-    return false;
+    return !!removed;
 }
 
 /**
@@ -202,27 +210,65 @@ export async function getQueueSize(): Promise<number> {
  */
 export async function popTwoPlayers(): Promise<[QueuePlayer, QueuePlayer] | null> {
     const r = getRedis();
-    const count = await r.zcard(KEYS.MATCHMAKING_QUEUE);
 
-    if (count < 2) {
-        return null;
+    while (true) {
+        // Get top 2 distinct player IDs
+        const ids = await r.zrange(KEYS.MATCHMAKING_QUEUE, 0, 1);
+
+        if (ids.length < 2) {
+            return null;
+        }
+
+        // Fetch data for these IDs
+        const [data1, data2] = await Promise.all([
+            r.hget(`${KEYS.MATCHMAKING_QUEUE}:data`, ids[0]),
+            r.hget(`${KEYS.MATCHMAKING_QUEUE}:data`, ids[1])
+        ]);
+
+        // SELF-CLEANING: If data is missing for an ID in ZSET, it's a "ghost" entry.
+        if (!data1 || !data2) {
+            const toRemove = [];
+            if (!data1) toRemove.push(ids[0]);
+            if (!data2) toRemove.push(ids[1]);
+
+            console.log(`[Redis] Cleaning up ${toRemove.length} ghost entries from queue...`);
+            const multi = r.multi();
+            for (const id of toRemove) {
+                multi.zrem(KEYS.MATCHMAKING_QUEUE, id);
+                multi.hdel(`${KEYS.MATCHMAKING_QUEUE}:data`, id);
+            }
+            await multi.exec();
+
+            // Continue loop to try next players
+            continue;
+        }
+
+        const p1 = JSON.parse(data1) as QueuePlayer;
+        const p2 = JSON.parse(data2) as QueuePlayer;
+
+        // Safety check: Ensure they are not the same person
+        if (p1.id === p2.id || (p1.walletAddress && p1.walletAddress === p2.walletAddress)) {
+            console.warn(`[Redis] Matchmaking conflict: Player ${p1.name} matched with self. Cleaning.`);
+            await r.multi()
+                .zrem(KEYS.MATCHMAKING_QUEUE, ids[1])
+                .hdel(`${KEYS.MATCHMAKING_QUEUE}:data`, ids[1])
+                .exec();
+            continue;
+        }
+
+        // Atomic remove and match
+        const result = await r.multi()
+            .zrem(KEYS.MATCHMAKING_QUEUE, ids[0])
+            .zrem(KEYS.MATCHMAKING_QUEUE, ids[1])
+            .hdel(`${KEYS.MATCHMAKING_QUEUE}:data`, ids[0])
+            .hdel(`${KEYS.MATCHMAKING_QUEUE}:data`, ids[1])
+            .exec();
+
+        if (!result) return null;
+
+        console.log(`[Redis] ⚔️ Matched ${p1.name} vs ${p2.name}`);
+        return [p1, p2];
     }
-
-    // Get first two players (oldest in queue)
-    const members = await r.zrange(KEYS.MATCHMAKING_QUEUE, 0, 1);
-
-    if (members.length < 2) {
-        return null;
-    }
-
-    // Remove them from queue
-    await r.zrem(KEYS.MATCHMAKING_QUEUE, members[0], members[1]);
-
-    const player1 = JSON.parse(members[0]) as QueuePlayer;
-    const player2 = JSON.parse(members[1]) as QueuePlayer;
-
-    console.log(`[Redis] Matched ${player1.name} vs ${player2.name}`);
-    return [player1, player2];
 }
 
 /**
@@ -230,15 +276,9 @@ export async function popTwoPlayers(): Promise<[QueuePlayer, QueuePlayer] | null
  */
 export async function getQueuePosition(playerId: string): Promise<number> {
     const r = getRedis();
-    const members = await r.zrange(KEYS.MATCHMAKING_QUEUE, 0, -1);
-
-    for (let i = 0; i < members.length; i++) {
-        const player = JSON.parse(members[i]) as QueuePlayer;
-        if (player.id === playerId) {
-            return i + 1; // 1-indexed
-        }
-    }
-    return 0; // Not in queue
+    // Rank is 0-indexed, so we add 1
+    const rank = await r.zrank(KEYS.MATCHMAKING_QUEUE, playerId);
+    return rank !== null ? rank + 1 : 0; // 0 if not in queue
 }
 
 // ============================================

@@ -121,9 +121,6 @@ async function main() {
     }
 
     console.log(`[Server] Local:     http://localhost:${PORT}`);
-    addresses.forEach(addr => {
-      console.log(`[Server] Network:   http://${addr}:${PORT}`);
-    });
     console.log(`[Server] Health:    http://localhost:${PORT}/health`);
   });
 
