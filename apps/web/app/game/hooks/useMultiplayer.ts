@@ -45,7 +45,14 @@ export interface MultiplayerState {
 
 // Nginx Proxy Setup:
 const getServerUrl = () => {
-    if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
+    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
+
+    // Fallback for local development when env vars aren't loaded in the web app
+    if (typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        return `http://${window.location.hostname}:3000`;
+    }
+
     // Return undefined to let Socket.io connect significantly to the current window.location
     return undefined;
 };
@@ -85,10 +92,13 @@ export function useMultiplayer() {
         if (socketRef.current?.connected) return;
 
         setState(prev => ({ ...prev, connectionStatus: 'connecting', error: null }));
+        console.log('[Multiplayer] Connecting to:', SERVER_URL || 'window.location');
 
         const socket: GameSocket = io(SERVER_URL, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'], // Allow polling as fallback
             autoConnect: true,
+            reconnectionAttempts: 5,
+            timeout: 30000,
         });
 
         socketRef.current = socket;
@@ -99,6 +109,11 @@ export function useMultiplayer() {
 
         socket.on('connect', () => {
             console.log('[Multiplayer] Connected to server');
+        });
+
+        socket.on('connect_error', (err) => {
+            console.error('[Multiplayer] Connection error:', err.message);
+            setState(prev => ({ ...prev, connectionStatus: 'disconnected', error: `Connection failed: ${err.message}` }));
         });
 
         socket.on('connected', (playerId) => {

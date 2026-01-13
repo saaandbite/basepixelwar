@@ -23,7 +23,13 @@ type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 // This works perfectly with the Nginx reverse proxy Setup ( / -> web, /socket.io -> server )
 const getServerUrl = () => {
     // Still respect env var if explicitly set (for dev/testing without nginx)
-    if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
+    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
+
+    // Fallback for local development
+    if (typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+        return `http://${window.location.hostname}:3000`;
+    }
 
     // In production with Nginx, we want a relative connection
     // Socket.io will automatically append /socket.io to the current URL
@@ -101,15 +107,20 @@ export function usePvPGame() {
     const connect = useCallback(() => {
         if (socketRef.current?.connected) return;
 
-        initAudio(); // Initialize audio context on connection start (user action) or assume called from UI
+        console.log('[PvP] Connecting to:', SERVER_URL || 'window.location');
 
         const socket: GameSocket = io(SERVER_URL, {
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 5,
         });
 
         socket.on('connect', () => {
             console.log('[PvP] Connected to server');
             setState(prev => ({ ...prev, isConnected: true }));
+        });
+
+        socket.on('connect_error', (err) => {
+            console.error('[PvP] Connection error:', err.message);
         });
 
         socket.on('connected', (playerId) => {
