@@ -331,12 +331,9 @@ export async function transferPrizeByWallets(
     amount: bigint,
     gameId?: number
 ): Promise<bigint> {
-    const fromAccountId = await getAccountIdByWallet(fromWallet);
-    const toAccountId = await getAccountIdByWallet(toWallet);
-
-    if (!fromAccountId || !toAccountId) {
-        throw new Error(`Account mapping missing for prize transfer: ${fromWallet} -> ${toWallet}`);
-    }
+    // Ensure accounts exist for both wallets
+    const fromAccountId = await getOrCreateAccount(fromWallet);
+    const toAccountId = await getOrCreateAccount(toWallet);
 
     return transferPrize(fromAccountId, toAccountId, amount, gameId);
 }
