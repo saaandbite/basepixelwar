@@ -45,7 +45,7 @@ export interface MultiplayerState {
 
 // Nginx Proxy Setup:
 const getServerUrl = () => {
-    if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
+    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_SERVER_SOCKET_URL;
     // Return undefined to let Socket.io connect significantly to the current window.location
     return undefined;
 };

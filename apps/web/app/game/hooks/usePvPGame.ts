@@ -23,7 +23,7 @@ type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 // This works perfectly with the Nginx reverse proxy Setup ( / -> web, /socket.io -> server )
 const getServerUrl = () => {
     // Still respect env var if explicitly set (for dev/testing without nginx)
-    if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
+    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
 
     // In production with Nginx, we want a relative connection
     // Socket.io will automatically append /socket.io to the current URL
