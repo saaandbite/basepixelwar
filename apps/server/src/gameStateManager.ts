@@ -1,10 +1,9 @@
-// apps/server/src/gameStateManager.ts
-// Manages game state for PvP rooms
-
 import type { Server } from 'socket.io';
 import { contractService } from './contractService';
 import * as RoomManager from './roomManager';
 import { updateRoomStatus } from './roomManager';
+import * as Redis from './redis';
+import { recordAmmoUsage, transferPrizeByWallets } from './db';
 
 // PvP Cannon state
 export interface PvPCannon {
@@ -111,6 +110,9 @@ export interface PvPGameState {
     comboEffects: SyncComboEffect[];
     powerupEffects: SyncPowerupEffect[];
     screenFlash: number;
+    lastSnapshotTime: number; // For periodic Redis saving
+    wallet1?: string; // Cache for TigerBeetle ammo recording
+    wallet2?: string;
 }
 
 // Game constants (Matching Client)
@@ -229,7 +231,16 @@ export function createGameState(roomId: string): PvPGameState {
         comboEffects: [],
         powerupEffects: [],
         screenFlash: 0,
+        lastSnapshotTime: Date.now(),
     };
+
+    // Populate wallets if room is available
+    RoomManager.getRoom(roomId).then(room => {
+        if (room) {
+            state.wallet1 = room.players[0]?.walletAddress;
+            state.wallet2 = room.players[1]?.walletAddress;
+        }
+    });
 
     gameStates.set(roomId, state);
     return state;
@@ -277,6 +288,16 @@ export function startGameLoop(roomId: string) {
         updateGameState(roomId);
         // Optimize: Only send full grid every 30 ticks (approx 1 sec) or initial frames
         const shouldSendGrid = tick % 30 === 0 || tick < 5;
+
+        // Snapshot to Redis every 10 seconds
+        const s = gameStates.get(roomId);
+        if (s && Date.now() - s.lastSnapshotTime > 10000) {
+            Redis.setGridSnapshot(roomId, s.grid).catch(err =>
+                console.error(`[GameStateManager] Failed to save snapshot for ${roomId}:`, err)
+            );
+            s.lastSnapshotTime = Date.now();
+        }
+
         broadcastGameState(roomId, shouldSendGrid);
     }, 33);
 
@@ -764,6 +785,15 @@ function updateGameState(roomId: string) {
             });
         } else if (mode === 'inkBomb') {
             state.projectiles.push(createProjectile(player, team, 'inkBomb'));
+
+            // TigerBeetle Ammo Recording (ledger tracking)
+            const wallet = team === 'blue' ? state.wallet1 : state.wallet2;
+            if (wallet) {
+                // Cost 40 micro-credits for an ink bomb (corresponds to in-game cost of 40)
+                recordAmmoUsage(wallet, 40n, state.roomId).catch(err => {
+                    console.error(`[TigerBeetle] Async ammo recording failed for ${wallet}:`, err);
+                });
+            }
         } else {
             state.projectiles.push(createProjectile(player, team, 'machineGun'));
         }
@@ -969,7 +999,7 @@ function broadcastGameState(roomId: string, includeGrid: boolean = false) {
 }
 
 // End game
-function endGame(roomId: string) {
+async function endGame(roomId: string) {
     const state = gameStates.get(roomId);
     if (!state || !ioInstance) return;
 
@@ -997,7 +1027,7 @@ function endGame(roomId: string) {
     });
 
     // START: On-Chain Settlement (async - will emit settlement_complete when done)
-    const room = RoomManager.getRoom(roomId);
+    const room = await RoomManager.getRoom(roomId);
     const io = ioInstance; // Capture reference for async callback
 
     if (room && room.onChainGameId) {
@@ -1034,6 +1064,17 @@ function endGame(roomId: string) {
                                 winnerAddress: winnerPlayer.walletAddress,
                                 basescanUrl: `https://sepolia.basescan.org/tx/${tx}`
                             });
+
+                            // RECORD IN TIGERBEETLE LEDGER
+                            const fromPlayer = room.players.find(p => p.team !== winnerTeam);
+                            if (fromPlayer && fromPlayer.walletAddress) {
+                                transferPrizeByWallets(
+                                    fromPlayer.walletAddress,
+                                    winnerPlayer.walletAddress as string,
+                                    1000n, // Standard stake
+                                    room.onChainGameId
+                                ).catch(e => console.error(`[TigerBeetle] Prize transfer failed for game ${room.onChainGameId}:`, e));
+                            }
                         } else {
                             console.error(`\n [GameStateManager] SETTLEMENT FAILED (See above for details)`);
                             console.error(`==================================================\n`);
@@ -1074,9 +1115,28 @@ function endGame(roomId: string) {
     // END: On-Chain Settlement
 
     // Update RoomManager status to prevent early cleanup
-    RoomManager.updateRoomStatus(roomId, 'finished');
+    await RoomManager.updateRoomStatus(roomId, 'finished');
 
-    console.log(`[GameStateManager] Game ended for room ${roomId}`);
+    // Update Leaderboard
+    if (room && room.players.length === 2) {
+        // 1. Wins Leaderboard
+        if (winner !== 'draw') {
+            const winnerWallet = room.players.find(p => p.team === winner)?.walletAddress;
+            if (winnerWallet) {
+                await Redis.updateLeaderboard('wins', winnerWallet, 1);
+            }
+        }
+
+        // 2. Territory Leaderboard (for both)
+        for (const p of room.players) {
+            if (p.walletAddress) {
+                const score = p.team === 'blue' ? state.scores.blue : state.scores.red;
+                await Redis.updateLeaderboard('territory', p.walletAddress, score);
+            }
+        }
+    }
+
+    console.log(`[GameStateManager] Game ended for room ${roomId} (Leaderboard Updated)`);
 }
 
 // Cleanup room

@@ -13,6 +13,8 @@ const KEYS = {
     MATCHMAKING_QUEUE: 'queue:matchmaking', // Sorted set for matchmaking
     ROOM: 'room:', // room:ABCDEF -> GameRoom JSON
     PLAYER_ROOM: 'player_room:', // player_room:socketId -> roomId
+    GRID: 'grid:', // grid:roomId -> JSON grid
+    LEADERBOARD: 'leaderboard:', // leaderboard:category -> ZSET
 } as const;
 
 // Configuration
@@ -296,6 +298,58 @@ export async function getPlayerRoom(playerId: string): Promise<string | null> {
 export async function deletePlayerRoom(playerId: string): Promise<void> {
     const r = getRedis();
     await r.del(`${KEYS.PLAYER_ROOM}${playerId}`);
+}
+
+// ============================================
+// GRID SNAPSHOTS (For Reconnection)
+// ============================================
+
+export async function setGridSnapshot(roomId: string, grid: any[][]): Promise<void> {
+    const r = getRedis();
+    await r.set(`${KEYS.GRID}${roomId}`, JSON.stringify(grid), 'EX', 3600); // 1 hour expiry
+}
+
+export async function getGridSnapshot<T>(roomId: string): Promise<T | null> {
+    const r = getRedis();
+    const data = await r.get(`${KEYS.GRID}${roomId}`);
+    if (!data) return null;
+    return JSON.parse(data) as T;
+}
+
+export async function deleteGridSnapshot(roomId: string): Promise<void> {
+    const r = getRedis();
+    await r.del(`${KEYS.GRID}${roomId}`);
+}
+
+// ============================================
+// LEADERBOARD (Sorted Sets)
+// ============================================
+
+export async function updateLeaderboard(
+    category: 'wins' | 'territory',
+    walletAddress: string,
+    score: number
+): Promise<void> {
+    const r = getRedis();
+    // Increment score in sorted set
+    await r.zadd(`${KEYS.LEADERBOARD}${category}`, score.toString(), walletAddress.toLowerCase());
+}
+
+export async function getLeaderboard(
+    category: 'wins' | 'territory',
+    top: number = 10
+): Promise<{ wallet: string; score: number }[]> {
+    const r = getRedis();
+    const data = await r.zrevrange(`${KEYS.LEADERBOARD}${category}`, 0, top - 1, 'WITHSCORES');
+
+    const results: { wallet: string; score: number }[] = [];
+    for (let i = 0; i < data.length; i += 2) {
+        results.push({
+            wallet: data[i],
+            score: parseFloat(data[i + 1])
+        });
+    }
+    return results;
 }
 
 // ============================================

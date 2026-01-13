@@ -44,38 +44,40 @@ async function main() {
   const { contractService } = await import('./contractService.js');
   contractService.initialize();
 
-// Verify signer matches contract (detects config issues early)
-contractService.verifySigner().then((result: { isMatch: boolean; serverAddress: string; contractSigner: string } | null) => {
-  if (result && !result.isMatch) {
-    console.error('═══════════════════════════════════════════════════════════════');
-    console.error(' CRITICAL: Backend wallet does NOT match contract backendSigner!');
-    console.error(' Prize distributions will FAIL until this is fixed.');
-    console.error(`   Server Wallet:     ${result.serverAddress}`);
-    console.error(`   Contract Signer:   ${result.contractSigner}`);
-    console.error('═══════════════════════════════════════════════════════════════');
-  }
-});
+  // Verify signer matches contract (detects config issues early)
+  contractService.verifySigner().then((result: { isMatch: boolean; serverAddress: string; contractSigner: string } | null) => {
+    if (result && !result.isMatch) {
+      console.error('═══════════════════════════════════════════════════════════════');
+      console.error(' CRITICAL: Backend wallet does NOT match contract backendSigner!');
+      console.error(' Prize distributions will FAIL until this is fixed.');
+      console.error(`   Server Wallet:     ${result.serverAddress}`);
+      console.error(`   Contract Signer:   ${result.contractSigner}`);
+      console.error('═══════════════════════════════════════════════════════════════');
+    }
+  });
 
-const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
+  const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 
   // Create HTTP server
-  const httpServer = createServer((req, res) => {
+  const httpServer = createServer(async (req, res) => {
     // Simple health check endpoint
     if (req.url === '/health') {
+      const stats = await getStats();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         status: 'ok',
         timestamp: new Date().toISOString(),
         redis: isRedisConnected(),
-        ...getStats()
+        ...stats
       }));
       return;
     }
 
     // Stats endpoint
     if (req.url === '/stats') {
+      const stats = await getStats();
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(getStats()));
+      res.end(JSON.stringify(stats));
       return;
     }
 

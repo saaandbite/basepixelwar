@@ -1,14 +1,10 @@
 // apps/server/src/roomManager.ts
-// Room management untuk PvP matchmaking
+// Room management untuk PvP matchmaking - REDIS BACKED
 
 import type { GameRoom, PvPPlayer, PaymentStatus } from '@repo/shared/multiplayer';
+import * as Redis from './redis';
 
-// In-memory room storage (akan diganti dengan Redis untuk production)
-const rooms: Map<string, GameRoom> = new Map();
-const playerRoomMap: Map<string, string> = new Map(); // playerId -> roomId
-const matchmakingQueue: PvPPlayer[] = [];
-
-// Payment timeout duration (60 seconds)
+// Payment timeout duration (90 seconds)
 const PAYMENT_TIMEOUT_MS = 90000;
 
 // Utility untuk generate room ID
@@ -20,7 +16,7 @@ function generateRoomId(): string {
 // ROOM MANAGEMENT
 // ============================================
 
-export function createRoom(creator: PvPPlayer): GameRoom {
+export async function createRoom(creator: PvPPlayer): Promise<GameRoom> {
     const roomId = generateRoomId();
     const deadline = Date.now() + PAYMENT_TIMEOUT_MS;
 
@@ -37,15 +33,15 @@ export function createRoom(creator: PvPPlayer): GameRoom {
         },
     };
 
-    rooms.set(roomId, room);
-    playerRoomMap.set(creator.id, roomId);
+    await Redis.setRoom(roomId, room);
+    await Redis.setPlayerRoom(creator.id, roomId);
 
-    console.log(`[RoomManager] Room ${roomId} created by ${creator.name} (pending_payment)`);
+    console.log(`[RoomManager] Room ${roomId} created by ${creator.name} (Stored in Redis)`);
     return room;
 }
 
-export function joinRoom(roomId: string, player: PvPPlayer): GameRoom | null {
-    const room = rooms.get(roomId);
+export async function joinRoom(roomId: string, player: PvPPlayer): Promise<GameRoom | null> {
+    const room = await Redis.getRoom<GameRoom>(roomId);
 
     if (!room) {
         console.log(`[RoomManager] Room ${roomId} not found`);
@@ -64,22 +60,24 @@ export function joinRoom(roomId: string, player: PvPPlayer): GameRoom | null {
 
     // Add player as red team
     room.players.push({ ...player, team: 'red', ready: false });
-    playerRoomMap.set(player.id, roomId);
+
+    await Redis.setRoom(roomId, room);
+    await Redis.setPlayerRoom(player.id, roomId);
 
     console.log(`[RoomManager] ${player.name} joined room ${roomId}`);
     return room;
 }
 
-export function leaveRoom(playerId: string): { room: GameRoom | null; wasHost: boolean } {
-    const roomId = playerRoomMap.get(playerId);
+export async function leaveRoom(playerId: string): Promise<{ room: GameRoom | null; wasHost: boolean }> {
+    const roomId = await Redis.getPlayerRoom(playerId);
 
     if (!roomId) {
         return { room: null, wasHost: false };
     }
 
-    const room = rooms.get(roomId);
+    const room = await Redis.getRoom<GameRoom>(roomId);
     if (!room) {
-        playerRoomMap.delete(playerId);
+        await Redis.deletePlayerRoom(playerId);
         return { room: null, wasHost: false };
     }
 
@@ -90,12 +88,12 @@ export function leaveRoom(playerId: string): { room: GameRoom | null; wasHost: b
         room.players.splice(playerIndex, 1);
     }
 
-    playerRoomMap.delete(playerId);
+    await Redis.deletePlayerRoom(playerId);
 
     // If room is empty, delete it
     if (room.players.length === 0) {
-        rooms.delete(roomId);
-        console.log(`[RoomManager] Room ${roomId} deleted (empty)`);
+        await Redis.deleteRoom(roomId);
+        console.log(`[RoomManager] Room ${roomId} deleted from Redis (empty)`);
         return { room: null, wasHost };
     }
 
@@ -104,36 +102,43 @@ export function leaveRoom(playerId: string): { room: GameRoom | null; wasHost: b
         room.players[0].team = 'blue';
     }
 
+    // Update room in Redis
+    await Redis.setRoom(roomId, room);
+
     console.log(`[RoomManager] Player left room ${roomId}`);
     return { room, wasHost };
 }
 
-export function getRoom(roomId: string): GameRoom | null {
-    return rooms.get(roomId) || null;
+export async function getRoom(roomId: string): Promise<GameRoom | null> {
+    return Redis.getRoom<GameRoom>(roomId);
 }
 
-export function deleteRoom(roomId: string): void {
-    const room = rooms.get(roomId);
+export async function deleteRoom(roomId: string): Promise<void> {
+    const room = await Redis.getRoom<GameRoom>(roomId);
     if (room) {
-        room.players.forEach(p => playerRoomMap.delete(p.id));
-        rooms.delete(roomId);
-        console.log(`[RoomManager] Room ${roomId} deleted`);
+        const deleteOps = room.players.map(p => Redis.deletePlayerRoom(p.id));
+        await Promise.all([
+            ...deleteOps,
+            Redis.deleteRoom(roomId)
+        ]);
+        console.log(`[RoomManager] Room ${roomId} deleted from Redis`);
     }
 }
 
-export function getPlayerRoom(playerId: string): GameRoom | null {
-    const roomId = playerRoomMap.get(playerId);
+export async function getPlayerRoom(playerId: string): Promise<GameRoom | null> {
+    const roomId = await Redis.getPlayerRoom(playerId);
     if (!roomId) return null;
-    return rooms.get(roomId) || null;
+    return Redis.getRoom<GameRoom>(roomId);
 }
 
-export function setPlayerReady(playerId: string, ready: boolean): GameRoom | null {
-    const room = getPlayerRoom(playerId);
+export async function setPlayerReady(playerId: string, ready: boolean): Promise<GameRoom | null> {
+    const room = await getPlayerRoom(playerId);
     if (!room) return null;
 
     const player = room.players.find(p => p.id === playerId);
     if (player) {
         player.ready = ready;
+        await Redis.setRoom(room.id, room);
     }
 
     return room;
@@ -143,8 +148,8 @@ export function areAllPlayersReady(room: GameRoom): boolean {
     return room.players.length === 2 && room.players.every(p => p.ready);
 }
 
-export function updateRoomStatus(roomId: string, status: GameRoom['status']): GameRoom | null {
-    const room = rooms.get(roomId);
+export async function updateRoomStatus(roomId: string, status: GameRoom['status']): Promise<GameRoom | null> {
+    const room = await Redis.getRoom<GameRoom>(roomId);
     if (!room) return null;
 
     room.status = status;
@@ -152,6 +157,7 @@ export function updateRoomStatus(roomId: string, status: GameRoom['status']): Ga
         room.gameStartedAt = Date.now();
     }
 
+    await Redis.setRoom(roomId, room);
     return room;
 }
 
@@ -159,13 +165,13 @@ export function updateRoomStatus(roomId: string, status: GameRoom['status']): Ga
 // PAYMENT MANAGEMENT
 // ============================================
 
-export function confirmPayment(
+export async function confirmPayment(
     roomId: string,
     playerId: string,
     txHash: string,
     onChainGameId: number
-): GameRoom | null {
-    const room = rooms.get(roomId);
+): Promise<GameRoom | null> {
+    const room = await Redis.getRoom<GameRoom>(roomId);
     if (!room || !room.paymentStatus) return null;
 
     const playerIndex = room.players.findIndex(p => p.id === playerId);
@@ -177,13 +183,13 @@ export function confirmPayment(
     } else if (playerIndex === 1) {
         room.paymentStatus.player2Paid = true;
         room.paymentStatus.player2TxHash = txHash;
-        // If second player, use existing onChainGameId or update
         if (!room.onChainGameId) {
             room.onChainGameId = onChainGameId;
         }
     }
 
-    console.log(`[RoomManager] Payment confirmed for player ${playerIndex + 1} in room ${roomId}`);
+    await Redis.setRoom(roomId, room);
+    console.log(`[RoomManager] Payment confirmed in Redis for player ${playerIndex + 1} in room ${roomId}`);
     return room;
 }
 
@@ -199,7 +205,6 @@ export function getPaymentStatus(room: GameRoom): PaymentStatus {
         deadline: room.paymentDeadline || 0,
     };
 
-    // Make sure to include onChainGameId from room
     return {
         ...status,
         onChainGameId: room.onChainGameId,
@@ -212,62 +217,57 @@ export function hasAnyPlayerPaid(room: GameRoom): boolean {
 }
 
 // ============================================
-// MATCHMAKING QUEUE
+// MATCHMAKING QUEUE (Redis Backed)
 // ============================================
 
-export function joinQueue(player: PvPPlayer): number {
-    // Check if player is already in queue
-    const existingIndex = matchmakingQueue.findIndex(p => p.id === player.id);
-    if (existingIndex !== -1) {
-        return existingIndex + 1;
-    }
+export async function joinQueue(player: PvPPlayer): Promise<number> {
+    const redisPlayer = {
+        id: player.id,
+        name: player.name,
+        walletAddress: player.walletAddress,
+        joinedAt: Date.now()
+    };
 
-    matchmakingQueue.push(player);
-    console.log(`[Matchmaking] ${player.name} joined queue. Queue size: ${matchmakingQueue.length}`);
-    return matchmakingQueue.length;
+    return Redis.addToQueue(redisPlayer);
 }
 
-export function leaveQueue(playerId: string): boolean {
-    const index = matchmakingQueue.findIndex(p => p.id === playerId);
-    if (index !== -1) {
-        matchmakingQueue.splice(index, 1);
-        console.log(`[Matchmaking] Player ${playerId} left queue. Queue size: ${matchmakingQueue.length}`);
-        return true;
-    }
-    return false;
+export async function leaveQueue(playerId: string): Promise<boolean> {
+    return Redis.removeFromQueue(playerId);
 }
 
-export function getQueuePosition(playerId: string): number {
-    const index = matchmakingQueue.findIndex(p => p.id === playerId);
-    return index + 1; // 1-indexed position, 0 means not in queue
+export async function getQueuePosition(playerId: string): Promise<number> {
+    return Redis.getQueuePosition(playerId);
 }
 
-export function getQueueSize(): number {
-    return matchmakingQueue.length;
+export async function getQueueSize(): Promise<number> {
+    return Redis.getQueueSize();
 }
 
-export function tryMatchPlayers(): { player1: PvPPlayer; player2: PvPPlayer; room: GameRoom } | null {
-    if (matchmakingQueue.length < 2) {
+export async function tryMatchPlayers(): Promise<{ player1: PvPPlayer; player2: PvPPlayer; room: GameRoom } | null> {
+    const matchedPlayers = await Redis.popTwoPlayers();
+
+    if (!matchedPlayers) {
         return null;
     }
 
-    // Simple FIFO matching - take first two players
-    const player1 = matchmakingQueue.shift()!;
-    const player2 = matchmakingQueue.shift()!;
+    const [p1, p2] = matchedPlayers;
 
-    // Create room with these players
-    const room = createRoom(player1);
-    joinRoom(room.id, player2);
+    const player1: PvPPlayer = { id: p1.id, name: p1.name, walletAddress: p1.walletAddress, team: 'blue', ready: false };
+    const player2: PvPPlayer = { id: p2.id, name: p2.name, walletAddress: p2.walletAddress, team: 'red', ready: false };
 
-    console.log(`[Matchmaking] Matched ${player1.name} vs ${player2.name} in room ${room.id}`);
+    // Create room and join second player
+    const room = await createRoom(player1);
+    await joinRoom(room.id, player2);
+
+    console.log(`[Matchmaking] Matched ${player1.name} vs ${player2.name} in room ${room.id} (Redis Queue)`);
 
     return { player1, player2, room };
 }
 
 // ============================================
 
-export function reconnectPlayer(roomId: string, oldPlayerId: string, newPlayerId: string): boolean {
-    const room = rooms.get(roomId);
+export async function reconnectPlayer(roomId: string, oldPlayerId: string, newPlayerId: string): Promise<boolean> {
+    const room = await Redis.getRoom<GameRoom>(roomId);
     if (!room) return false;
 
     const player = room.players.find(p => p.id === oldPlayerId);
@@ -276,11 +276,12 @@ export function reconnectPlayer(roomId: string, oldPlayerId: string, newPlayerId
     // Update player ID
     player.id = newPlayerId;
 
-    // Update map
-    playerRoomMap.delete(oldPlayerId);
-    playerRoomMap.set(newPlayerId, roomId);
+    // Update Redis mappings
+    await Redis.deletePlayerRoom(oldPlayerId);
+    await Redis.setPlayerRoom(newPlayerId, roomId);
+    await Redis.setRoom(roomId, room);
 
-    console.log(`[RoomManager] Reconnected player ${oldPlayerId} -> ${newPlayerId} in room ${roomId}`);
+    console.log(`[RoomManager] Reconnected player ${oldPlayerId} -> ${newPlayerId} in room ${roomId} (Redis)`);
     return true;
 }
 
@@ -288,12 +289,13 @@ export function reconnectPlayer(roomId: string, oldPlayerId: string, newPlayerId
 // DEBUG / STATS
 // ============================================
 
-export function getStats() {
+export async function getStats() {
+    // Note: This becomes async and might need more work to be useful
+    const queueSize = await Redis.getQueueSize();
+    // We can't easily count all rooms in Redis without SCAN, but for stats we can try
     return {
-        totalRooms: rooms.size,
-        queueSize: matchmakingQueue.length,
-        activeGames: Array.from(rooms.values()).filter(r => r.status === 'playing').length,
-        pendingPayments: Array.from(rooms.values()).filter(r => r.status === 'pending_payment').length,
+        queueSize,
+        msg: "Stats from Redis need SCAN implementation for full detail"
     };
 }
 

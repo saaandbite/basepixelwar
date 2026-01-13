@@ -81,7 +81,7 @@ function handleConnection(socket: GameSocket) {
 // EVENT HANDLERS
 // ============================================
 
-function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
+async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
     const player: PvPPlayer = {
         id: socket.data.playerId!,
         name: socket.data.playerName!,
@@ -90,13 +90,13 @@ function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
         walletAddress,
     };
 
-    const position = RoomManager.joinQueue(player);
-    const queueSize = RoomManager.getQueueSize();
+    const position = await RoomManager.joinQueue(player);
+    const queueSize = await RoomManager.getQueueSize();
 
     socket.emit('queue_status', { position, totalInQueue: queueSize });
 
     // Try to match players
-    const match = RoomManager.tryMatchPlayers();
+    const match = await RoomManager.tryMatchPlayers();
     if (match) {
         const { player1, player2, room } = match;
 
@@ -136,13 +136,14 @@ function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
     }
 }
 
-function handleLeaveQueue(socket: GameSocket) {
-    RoomManager.leaveQueue(socket.data.playerId!);
-    socket.emit('queue_status', { position: 0, totalInQueue: RoomManager.getQueueSize() });
+async function handleLeaveQueue(socket: GameSocket) {
+    await RoomManager.leaveQueue(socket.data.playerId!);
+    const queueSize = await RoomManager.getQueueSize();
+    socket.emit('queue_status', { position: 0, totalInQueue: queueSize });
 }
 
-function handlePlayerReady(socket: GameSocket) {
-    const room = RoomManager.setPlayerReady(socket.data.playerId!, true);
+async function handlePlayerReady(socket: GameSocket) {
+    const room = await RoomManager.setPlayerReady(socket.data.playerId!, true);
 
     if (room && RoomManager.areAllPlayersReady(room)) {
         // Only start countdown if room is waiting (not pending_payment)
@@ -153,11 +154,11 @@ function handlePlayerReady(socket: GameSocket) {
     }
 }
 
-function handlePlayerInput(socket: GameSocket, input: PlayerInput) {
+async function handlePlayerInput(socket: GameSocket, input: PlayerInput) {
     const roomId = socket.data.roomId;
     if (!roomId) return;
 
-    const room = RoomManager.getRoom(roomId);
+    const room = await RoomManager.getRoom(roomId);
     if (!room || room.status !== 'playing') return;
 
     // Find what team this player is
@@ -174,7 +175,7 @@ function handlePlayerInput(socket: GameSocket, input: PlayerInput) {
     });
 }
 
-function handleCreateRoom(socket: GameSocket, name: string) {
+async function handleCreateRoom(socket: GameSocket, name: string) {
     const player: PvPPlayer = {
         id: socket.data.playerId!,
         name: name || socket.data.playerName!,
@@ -182,14 +183,14 @@ function handleCreateRoom(socket: GameSocket, name: string) {
         ready: false,
     };
 
-    const room = RoomManager.createRoom(player);
+    const room = await RoomManager.createRoom(player);
     socket.join(room.id);
     socket.data.roomId = room.id;
 
     socket.emit('room_created', room);
 }
 
-function handleJoinRoom(socket: GameSocket, roomId: string) {
+async function handleJoinRoom(socket: GameSocket, roomId: string) {
     const player: PvPPlayer = {
         id: socket.data.playerId!,
         name: socket.data.playerName!,
@@ -197,7 +198,7 @@ function handleJoinRoom(socket: GameSocket, roomId: string) {
         ready: false,
     };
 
-    const room = RoomManager.joinRoom(roomId, player);
+    const room = await RoomManager.joinRoom(roomId, player);
 
     if (!room) {
         socket.emit('room_error', 'Room not found or full');
@@ -211,8 +212,8 @@ function handleJoinRoom(socket: GameSocket, roomId: string) {
     socket.to(room.id).emit('player_joined', player);
 }
 
-function handleLeaveRoom(socket: GameSocket) {
-    const { room } = RoomManager.leaveRoom(socket.data.playerId!);
+async function handleLeaveRoom(socket: GameSocket) {
+    const { room } = await RoomManager.leaveRoom(socket.data.playerId!);
 
     if (socket.data.roomId) {
         socket.leave(socket.data.roomId);
@@ -225,15 +226,15 @@ function handleLeaveRoom(socket: GameSocket) {
     }
 }
 
-function handleDisconnect(socket: GameSocket) {
+async function handleDisconnect(socket: GameSocket) {
     console.log(`[SocketServer] Client disconnected: ${socket.data.playerId}`);
 
     // Leave queue if in queue (always safe)
-    RoomManager.leaveQueue(socket.data.playerId!);
+    await RoomManager.leaveQueue(socket.data.playerId!);
 
     // Check availability for grace period
     if (socket.data.roomId) {
-        const room = RoomManager.getRoom(socket.data.roomId);
+        const room = await RoomManager.getRoom(socket.data.roomId);
         // If room has 2 players, keep session alive for reconnect
         if (room && room.players.length === 2 && (room.status === 'playing' || room.status === 'countdown' || room.status === 'waiting' || room.status === 'finished')) {
             console.log(`[SocketServer] Player ${socket.data.playerId} disconnected from active/finished room ${room.id}. Keeping session alive.`);
@@ -243,17 +244,17 @@ function handleDisconnect(socket: GameSocket) {
         // If in pending_payment and player disconnects, cancel the match
         if (room && room.status === 'pending_payment') {
             console.log(`[SocketServer] Player ${socket.data.playerId} disconnected during pending_payment. Cancelling match.`);
-            cancelPaymentAndRefund(room.id, 'Opponent disconnected');
+            await cancelPaymentAndRefund(room.id, 'Opponent disconnected');
             return;
         }
     }
 
     // Leave room if in room (normal cleanup)
-    handleLeaveRoom(socket);
+    await handleLeaveRoom(socket);
 }
 
-function handleRejoinGame(socket: GameSocket, roomId: string) {
-    const room = RoomManager.getRoom(roomId);
+async function handleRejoinGame(socket: GameSocket, roomId: string) {
+    const room = await RoomManager.getRoom(roomId);
     if (!room) {
         socket.emit('rejoin_failed');
         return;
@@ -271,7 +272,7 @@ function handleRejoinGame(socket: GameSocket, roomId: string) {
     }
 
     if (oldPlayerId) {
-        const success = RoomManager.reconnectPlayer(roomId, oldPlayerId, socket.data.playerId!);
+        const success = await RoomManager.reconnectPlayer(roomId, oldPlayerId, socket.data.playerId!);
         if (success) {
             socket.join(roomId);
             socket.data.roomId = roomId;
@@ -335,7 +336,7 @@ function handleRejoinGame(socket: GameSocket, roomId: string) {
 // PAYMENT HANDLERS
 // ============================================
 
-function handlePaymentConfirmed(
+async function handlePaymentConfirmed(
     socket: GameSocket,
     data: { txHash: string; onChainGameId: number }
 ) {
@@ -345,7 +346,7 @@ function handlePaymentConfirmed(
         return;
     }
 
-    const room = RoomManager.confirmPayment(
+    const room = await RoomManager.confirmPayment(
         roomId,
         socket.data.playerId!,
         data.txHash,
@@ -367,27 +368,26 @@ function handlePaymentConfirmed(
         clearPaymentTimeout(roomId);
 
         // Update room status to waiting (ready for game)
-        RoomManager.updateRoomStatus(roomId, 'waiting');
+        await RoomManager.updateRoomStatus(roomId, 'waiting');
 
         // Set both players as ready and start countdown
-        room.players.forEach(p => {
-            RoomManager.setPlayerReady(p.id, true);
-        });
+        const readyOps = room.players.map(p => RoomManager.setPlayerReady(p.id, true));
+        await Promise.all(readyOps);
 
         // Start game countdown immediately
         startGameCountdown(roomId);
     }
 }
 
-function handleCancelPayment(socket: GameSocket) {
+async function handleCancelPayment(socket: GameSocket) {
     const roomId = socket.data.roomId;
     if (!roomId) return;
 
-    const room = RoomManager.getRoom(roomId);
+    const room = await RoomManager.getRoom(roomId);
     if (!room || room.status !== 'pending_payment') return;
 
     // Cancel and refund
-    cancelPaymentAndRefund(roomId, 'Player cancelled');
+    await cancelPaymentAndRefund(roomId, 'Player cancelled');
 }
 
 // ============================================
@@ -398,11 +398,11 @@ function startPaymentTimeout(roomId: string) {
     // Clear any existing timeout
     clearPaymentTimeout(roomId);
 
-    const timeout = setTimeout(() => {
-        const room = RoomManager.getRoom(roomId);
+    const timeout = setTimeout(async () => {
+        const room = await RoomManager.getRoom(roomId);
         if (room && room.status === 'pending_payment') {
             console.log(`[Payment] Timeout for room ${roomId}`);
-            cancelPaymentAndRefund(roomId, 'Payment timeout');
+            await cancelPaymentAndRefund(roomId, 'Payment timeout');
         }
     }, 90000); // 90 seconds
 
@@ -419,10 +419,10 @@ function clearPaymentTimeout(roomId: string) {
     }
 }
 
-function cancelPaymentAndRefund(roomId: string, reason: string) {
+async function cancelPaymentAndRefund(roomId: string, reason: string) {
     clearPaymentTimeout(roomId);
 
-    const room = RoomManager.getRoom(roomId);
+    const room = await RoomManager.getRoom(roomId);
     if (!room) return;
 
     console.log(`[Payment] Cancelling room ${roomId}: ${reason}`);
@@ -448,35 +448,37 @@ function cancelPaymentAndRefund(roomId: string, reason: string) {
     // Notify players
     io.to(roomId).emit('payment_cancelled', reason);
 
-    // Return players to queue
-    room.players.forEach(player => {
+    // Return players to queue - this needs to be done carefully with async
+    for (const player of room.players) {
         const playerSocket = io.sockets.sockets.get(player.id);
         if (playerSocket) {
             playerSocket.leave(roomId);
             playerSocket.data.roomId = undefined;
 
             // Re-add to queue
-            RoomManager.joinQueue(player);
+            await RoomManager.joinQueue(player);
+            const position = await RoomManager.getQueuePosition(player.id);
+            const queueSize = await RoomManager.getQueueSize();
             playerSocket.emit('queue_status', {
-                position: RoomManager.getQueuePosition(player.id),
-                totalInQueue: RoomManager.getQueueSize()
+                position,
+                totalInQueue: queueSize
             });
         }
-    });
+    }
 
     // Delete room
-    RoomManager.deleteRoom(roomId);
+    await RoomManager.deleteRoom(roomId);
 }
 
 // ============================================
 // GAME FLOW
 // ============================================
 
-function startGameCountdown(roomId: string) {
-    const room = RoomManager.getRoom(roomId);
+async function startGameCountdown(roomId: string) {
+    const room = await RoomManager.getRoom(roomId);
     if (!room) return;
 
-    RoomManager.updateRoomStatus(roomId, 'countdown');
+    await RoomManager.updateRoomStatus(roomId, 'countdown');
 
     let countdown = 3;
 
@@ -485,18 +487,18 @@ function startGameCountdown(roomId: string) {
 
         if (countdown <= 0) {
             clearInterval(countdownInterval);
-            startGame(roomId);
+            startGame(roomId); // startGame doesn't need to be awaited here as it initiates a loop
         }
 
         countdown--;
     }, 1000);
 }
 
-function startGame(roomId: string) {
-    const room = RoomManager.getRoom(roomId);
+async function startGame(roomId: string) {
+    const room = await RoomManager.getRoom(roomId);
     if (!room || room.players.length !== 2) return;
 
-    RoomManager.updateRoomStatus(roomId, 'playing');
+    await RoomManager.updateRoomStatus(roomId, 'playing');
 
     // START ON-CHAIN GAME
     if (room.onChainGameId) {
