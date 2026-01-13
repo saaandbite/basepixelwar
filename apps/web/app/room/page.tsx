@@ -375,14 +375,14 @@ export default function RoomPage() {
                         {/* Compact Match Info */}
                         <div className="flex items-center gap-4 my-2 w-full justify-center">
                             <div className="flex flex-col items-center">
-                                <span className="font-bold text-gray-700">You</span>
+                                <span className="font-bold text-gray-700">{isFirstPlayer ? 'You' : 'Opponent'}</span>
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mt-1 ${paymentStatus.player1Paid ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
                                     {paymentStatus.player1Paid ? <Check size={16} /> : '1'}
                                 </div>
                             </div>
                             <span className="font-bold text-gray-400">VS</span>
                             <div className="flex flex-col items-center">
-                                <span className="font-bold text-gray-700">Opponent</span>
+                                <span className="font-bold text-gray-700">{!isFirstPlayer ? 'You' : 'Opponent'}</span>
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mt-1 ${paymentStatus.player2Paid ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
                                     {paymentStatus.player2Paid ? '✓' : '2'}
                                 </div>
@@ -419,9 +419,12 @@ export default function RoomPage() {
                                 {gameVault.isLoading ? (
                                     <><Loader2 className="animate-spin" size={16} /> Confirming...</>
                                 ) : (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) ? (
-                                    'Waiting...'
+                                    'Paid & Waiting'
                                 ) : (!isFirstPlayer && !paymentStatus.onChainGameId) ? (
-                                    <><Loader2 className="animate-spin" size={16} /> Waiting for opponent...</>
+                                    <span className="flex items-center gap-1 text-[10px] sm:text-xs">
+                                        <Loader2 className="animate-spin shrink-0" size={14} />
+                                        Wait for Opponent to Create Game
+                                    </span>
                                 ) : (
                                     'Pay & Play'
                                 )}

@@ -147,10 +147,20 @@ export async function getWalletByAccountId(
 // ============================================
 
 interface QueuePlayer {
-    id: string;
+    id: string;          // Identity ID (wallet or socket.id) for deduplication
+    socketId: string;    // Original socket.id for direct socket lookup
     name: string;
     walletAddress?: string;
     joinedAt: number;
+}
+
+/**
+ * Clear the matchmaking queue (useful on server restart)
+ */
+export async function clearMatchmakingQueue(): Promise<void> {
+    const r = getRedis();
+    await r.del(KEYS.MATCHMAKING_QUEUE);
+    await r.del(`${KEYS.MATCHMAKING_QUEUE}:data`);
 }
 
 /**

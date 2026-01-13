@@ -223,6 +223,7 @@ export function hasAnyPlayerPaid(room: GameRoom): boolean {
 export async function joinQueue(player: PvPPlayer): Promise<number> {
     const redisPlayer = {
         id: player.id,
+        socketId: player.socketId || player.id, // Store the original socket.id
         name: player.name,
         walletAddress: player.walletAddress,
         joinedAt: Date.now()
@@ -252,12 +253,31 @@ export async function tryMatchPlayers(): Promise<{ player1: PvPPlayer; player2: 
 
     const [p1, p2] = matchedPlayers;
 
-    const player1: PvPPlayer = { id: p1.id, name: p1.name, walletAddress: p1.walletAddress, team: 'blue', ready: false };
-    const player2: PvPPlayer = { id: p2.id, name: p2.name, walletAddress: p2.walletAddress, team: 'red', ready: false };
+    // Include socketId for direct socket lookup in socketServer
+    const player1: PvPPlayer = {
+        id: p1.id,
+        socketId: p1.socketId,
+        name: p1.name,
+        walletAddress: p1.walletAddress,
+        team: 'blue',
+        ready: false
+    };
+    const player2: PvPPlayer = {
+        id: p2.id,
+        socketId: p2.socketId,
+        name: p2.name,
+        walletAddress: p2.walletAddress,
+        team: 'red',
+        ready: false
+    };
 
     // Create room and join second player
     const room = await createRoom(player1);
     await joinRoom(room.id, player2);
+
+    // CRITICAL FIX: Update the local room object to include player2
+    // joinRoom updates Redis but does not mutate the local 'room' variable
+    room.players.push(player2);
 
     console.log(`[Matchmaking] Matched ${player1.name} vs ${player2.name} in room ${room.id} (Redis Queue)`);
 

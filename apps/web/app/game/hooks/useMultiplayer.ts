@@ -169,6 +169,19 @@ export function useMultiplayer() {
             }));
         });
 
+        socket.on('match_status', (data) => {
+            if (data.status === 'requeuing') {
+                console.log('[Multiplayer] Re-queuing:', data.message);
+                setState(prev => ({
+                    ...prev,
+                    matchmakingStatus: 'queue',
+                    room: null,
+                    opponent: null,
+                    error: data.message // Display this as info/error
+                }));
+            }
+        });
+
         // NEW: Handle pending_payment (match found, waiting for blockchain payment)
         socket.on('pending_payment', ({ roomId, opponent, deadline, isFirstPlayer }) => {
             console.log('[Multiplayer] Match found (pending_payment)!', roomId, opponent);

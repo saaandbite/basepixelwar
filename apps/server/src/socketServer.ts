@@ -83,6 +83,26 @@ function getQueueId(socket: GameSocket, walletAddress?: string): string {
     return walletAddress || socket.id;
 }
 
+// Helper to find the most recent active socket by our custom playerId (identity)
+function getSocketByPlayerId(playerId: string): GameSocket | undefined {
+    let bestSocket: GameSocket | undefined = undefined;
+
+    for (const [_, socket] of io.sockets.sockets) {
+        if (socket.data.playerId === playerId && socket.connected) {
+            // If we find a connected socket, prefer it.
+            // If we have multiple, the one with the "largest" id (or most recent) is usually the right one,
+            // but simply being 'connected' is the most important check.
+            if (!bestSocket) {
+                bestSocket = socket;
+            } else {
+                // If we already found one, maybe check which one is newer?
+                // For now, just having any connected one is better than a dead one.
+            }
+        }
+    }
+    return bestSocket;
+}
+
 // ============================================
 // EVENT HANDLERS
 // ============================================
@@ -96,6 +116,7 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
 
     const player: PvPPlayer = {
         id: identityId,
+        socketId: socket.id,  // Store actual socket.id for direct lookup
         name: socket.data.playerName!,
         team: 'blue',
         ready: false,
@@ -113,9 +134,16 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
     if (match) {
         const { player1, player2, room } = match;
 
-        // Notify both players
-        const socket1 = io.sockets.sockets.get(player1.id);
-        const socket2 = io.sockets.sockets.get(player2.id);
+        // Use socketId directly for reliable socket lookup
+        let socket1 = player1.socketId ? io.sockets.sockets.get(player1.socketId) : undefined;
+        let socket2 = player2.socketId ? io.sockets.sockets.get(player2.socketId) : undefined;
+
+        // Fallback: If direct lookup failed (stale redis data?), try identity lookup
+        if (!socket1) socket1 = getSocketByPlayerId(player1.id);
+        if (!socket2) socket2 = getSocketByPlayerId(player2.id);
+
+        console.log(`[SocketServer] Match: P1 socketId=${player1.socketId}, P2 socketId=${player2.socketId}`);
+        console.log(`[SocketServer] Match: socket1=${!!socket1?.connected}, socket2=${!!socket2?.connected}`);
 
         if (socket1 && socket2) {
             // Join socket.io room
@@ -127,7 +155,7 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
 
             const deadline = room.paymentDeadline || Date.now() + 90000;
 
-            // Notify pending payment (not match_found yet)
+            // Notify pending payment
             socket1.emit('pending_payment', {
                 roomId: room.id,
                 opponent: room.players.find(p => p.id !== player1.id)!,
@@ -144,7 +172,26 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
             // Start payment timeout
             startPaymentTimeout(room.id);
 
-            console.log(`[SocketServer] Match made (pending_payment): ${player1.name} vs ${player2.name}`);
+            console.log(`[SocketServer] ✅ Match made (pending_payment): ${player1.name} vs ${player2.name}`);
+        } else {
+            console.error(`[SocketServer] ❌ Match found but socket(s) missing! P1: ${player1.socketId} (found: ${!!socket1}), P2: ${player2.socketId} (found: ${!!socket2})`);
+
+            // CLEANUP & RECOVERY
+            // 1. Delete the dead room
+            await RoomManager.deleteRoom(room.id);
+
+            // 2. Return valid players to the FRONT of the queue
+            if (socket1) {
+                console.log(`[SocketServer] Returning ${player1.name} to queue front`);
+                // We need to re-add them. Ideally with original join time, but for now just re-add.
+                await RoomManager.joinQueue(player1);
+                socket1.emit('match_status', { status: 'requeuing', message: 'Opponent connection failed. Searching again...' });
+            }
+            if (socket2) {
+                console.log(`[SocketServer] Returning ${player2.name} to queue front`);
+                await RoomManager.joinQueue(player2);
+                socket2.emit('match_status', { status: 'requeuing', message: 'Opponent connection failed. Searching again...' });
+            }
         }
     }
 }
@@ -472,7 +519,7 @@ async function cancelPaymentAndRefund(roomId: string, reason: string) {
 
     // Return players to queue - this needs to be done carefully with async
     for (const player of room.players) {
-        const playerSocket = io.sockets.sockets.get(player.id);
+        const playerSocket = getSocketByPlayerId(player.id);
         if (playerSocket) {
             playerSocket.leave(roomId);
             playerSocket.data.roomId = undefined;
@@ -549,7 +596,7 @@ async function startGame(roomId: string) {
 
     // Send game start to each player with their team info
     room.players.forEach(player => {
-        const playerSocket = io.sockets.sockets.get(player.id);
+        const playerSocket = getSocketByPlayerId(player.id);
         if (playerSocket) {
             const opponent = room.players.find(p => p.id !== player.id)!;
 

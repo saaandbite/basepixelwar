@@ -42,6 +42,9 @@ async function main() {
   try {
     // Initialize Redis (required for wallet mapping)
     await initRedis();
+    // Flush stale matchmaking queue on startup to prevent zombie players
+    const { clearMatchmakingQueue } = await import('./redis.js');
+    await clearMatchmakingQueue();
   } catch (err) {
     console.warn('[Server] ⚠️ Redis connection failed, continuing without Redis');
     console.warn('[Server] Run `pnpm db:start` to start Docker services');

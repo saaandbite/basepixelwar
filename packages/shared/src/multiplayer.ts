@@ -7,6 +7,7 @@
 
 export interface PvPPlayer {
     id: string;
+    socketId?: string;   // Original socket.id for direct server-side lookup
     name: string;
     team: 'blue' | 'red';
     ready: boolean;
@@ -79,6 +80,7 @@ export type ServerToClientEvents = {
     // Matchmaking
     'queue_status': (data: { position: number; totalInQueue: number }) => void;
     'match_found': (data: { roomId: string; opponent: PvPPlayer }) => void;
+    'match_status': (data: { status: 'requeuing'; message: string }) => void;
 
     // Payment Flow
     'pending_payment': (data: { roomId: string; opponent: PvPPlayer; deadline: number; isFirstPlayer: boolean }) => void;
