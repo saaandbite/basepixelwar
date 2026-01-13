@@ -6,8 +6,23 @@ import { initializeSocketServer } from './socketServer';
 import { getStats } from './roomManager';
 import * as dotenv from 'dotenv';
 import path from 'path';
+import os from 'os';
 import { initRedis, closeRedis, isRedisConnected } from './redis';
 import { initTigerBeetle, closeTigerBeetle } from './db';
+
+// Setup timestamped logging
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+const getTimestamp = () => {
+  const now = new Date();
+  return `[${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}]`;
+};
+
+console.log = (...args) => originalLog(getTimestamp(), ...args);
+console.error = (...args) => originalError(getTimestamp(), ...args);
+console.warn = (...args) => originalWarn(getTimestamp(), ...args);
 
 // Load environment variables from specific path (root .env)
 const envPath = path.resolve(__dirname, '../../../.env');
@@ -90,10 +105,26 @@ async function main() {
 
   // Start listening
   httpServer.listen(PORT, () => {
-    console.log('[Server] Server-Run');
-    console.log(`[Server] WebSocket: ws://localhost:${PORT}`);
+    console.log('[Server] 🚀 Server-Run');
+
+    // Find local IP addresses
+    const nets = os.networkInterfaces();
+    const addresses: string[] = [];
+
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]!) {
+        // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+        if (net.family === 'IPv4' && !net.internal) {
+          addresses.push(net.address);
+        }
+      }
+    }
+
+    console.log(`[Server] Local:     http://localhost:${PORT}`);
+    addresses.forEach(addr => {
+      console.log(`[Server] Network:   http://${addr}:${PORT}`);
+    });
     console.log(`[Server] Health:    http://localhost:${PORT}/health`);
-    console.log(`[Server] Stats:     http://localhost:${PORT}/stats`);
   });
 
   // Graceful shutdown

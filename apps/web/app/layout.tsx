@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Nunito } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
@@ -14,17 +13,8 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
 });
 
-const fredoka = Fredoka({
-  subsets: ["latin"],
-  variable: "--font-fredoka",
-  display: "block",
-});
-
-const nunito = Nunito({
-  subsets: ["latin"],
-  variable: "--font-nunito",
-  display: "swap",
-});
+const fredoka = { variable: "font-fredoka" };
+const nunito = { variable: "font-nunito" };
 
 export const metadata: Metadata = {
   title: "PixelWar - Territory Conquest Game",

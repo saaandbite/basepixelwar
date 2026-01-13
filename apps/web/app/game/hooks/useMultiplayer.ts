@@ -47,13 +47,18 @@ export interface MultiplayerState {
 const getServerUrl = () => {
     if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
 
-    // Fallback for local development when env vars aren't loaded in the web app
-    if (typeof window !== 'undefined' &&
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        return `http://${window.location.hostname}:3000`;
+    // In browser
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+
+        // If we are on localhost, connect to port 3000
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+            return `${protocol}//${hostname}:3000`;
+        }
     }
 
-    // Return undefined to let Socket.io connect significantly to the current window.location
+    // Fallback let socket.io figure it out (connects to current host/port)
     return undefined;
 };
 

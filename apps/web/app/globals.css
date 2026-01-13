@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Nunito:wght@200..1000&display=swap');
 
 /* Custom Tailwind config via CSS */
 @theme {
@@ -43,6 +44,10 @@
   --saweria-pink-light: #FDB1BD;
   --saweria-cream: #FFF8F4;
   --saweria-coral: #FFE5E5;
+
+  /* Fallback variables for next/font/google bypass */
+  --font-fredoka: 'Fredoka', cursive;
+  --font-nunito: 'Nunito', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {

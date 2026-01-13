@@ -28,7 +28,7 @@ const paymentTimeouts = new Map<string, NodeJS.Timeout>();
 export function initializeSocketServer(httpServer: HTTPServer): Server {
     io = new Server(httpServer, {
         cors: {
-            origin: process.env.CLIENT_URL ? [process.env.CLIENT_URL] : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8080'],
+            origin: process.env.CLIENT_URL || true, // 'true' means reflect origin (very flexible for dev)
             methods: ['GET', 'POST'],
             credentials: true
         },
