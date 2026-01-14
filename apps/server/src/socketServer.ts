@@ -115,6 +115,19 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
     socket.data.playerId = identityId;
     socket.data.walletAddress = walletAddress;
 
+    // Get or generate username if wallet connected
+    if (walletAddress) {
+        const { getUsername, setUsername, generateUsername } = await import('./redis.js');
+        let username = await getUsername(walletAddress);
+
+        if (!username) {
+            username = generateUsername();
+            await setUsername(walletAddress, username);
+        }
+
+        socket.data.playerName = username;
+    }
+
     const player: PvPPlayer = {
         id: identityId,
         socketId: socket.id,  // Store actual socket.id for direct lookup

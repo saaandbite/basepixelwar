@@ -116,6 +116,51 @@ export async function setWalletMapping(
 }
 
 /**
+ * Set username for wallet address
+ */
+export async function setUsername(
+    walletAddress: string,
+    username: string
+): Promise<void> {
+    const r = getRedis();
+    const normalizedAddress = walletAddress.toLowerCase();
+    await r.set(`${KEYS.WALLET_TO_ACCOUNT}username:${normalizedAddress}`, username);
+    console.log(`[Redis] Set username for ${normalizedAddress}: ${username}`);
+}
+
+/**
+ * Get username by wallet address
+ */
+export async function getUsername(
+    walletAddress: string
+): Promise<string | null> {
+    const r = getRedis();
+    const normalizedAddress = walletAddress.toLowerCase();
+    return r.get(`${KEYS.WALLET_TO_ACCOUNT}username:${normalizedAddress}`);
+}
+
+/**
+ * Generate random username
+ */
+export function generateUsername(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let random = '';
+    for (let i = 0; i < 6; i++) {
+        random += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `Player_${random}`;
+}
+
+/**
+ * Format wallet address with middle censoring
+ * Example: 0x10f9aEFFbc4240d255a7ba0337011fA6003910E8 -> 0x10f9...10E8
+ */
+export function formatWalletAddress(address: string): string {
+    if (!address || address.length < 10) return address;
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+}
+
+/**
  * Get TigerBeetle account ID by wallet address
  */
 export async function getAccountIdByWallet(
