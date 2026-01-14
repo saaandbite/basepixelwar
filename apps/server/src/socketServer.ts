@@ -149,7 +149,7 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
 
     // CHECK: Are both players actually connected?
     if (!socket1 || !socket2 || !socket1.connected || !socket2.connected) {
-        console.error(`[SocketServer] ❌ Match found but socket(s) missing/disconnected! P1: ${!!socket1?.connected}, P2: ${!!socket2?.connected}`);
+        console.error(`[SocketServer] Match found but socket(s) missing/disconnected! P1: ${!!socket1?.connected}, P2: ${!!socket2?.connected}`);
 
         // CLEANUP & RECOVERY
         await RoomManager.deleteRoom(room.id);
@@ -194,7 +194,7 @@ async function handleJoinQueue(socket: GameSocket, walletAddress?: string) {
     // Start payment timeout
     startPaymentTimeout(room.id);
 
-    console.log(`[SocketServer] ✅ Match made (pending_payment): ${player1.name} vs ${player2.name}`);
+    console.log(`[SocketServer] Match made (pending_payment): ${player1.name} vs ${player2.name}`);
 }
 
 async function handleLeaveQueue(socket: GameSocket) {

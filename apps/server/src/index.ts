@@ -157,7 +157,7 @@ async function main() {
             txHash
           );
 
-          console.log(`[Server] ✅ Deposit recorded successfully. Transfer ID: ${transferId}`);
+          console.log(`[Server] Deposit recorded successfully. Transfer ID: ${transferId}`);
 
           res.writeHead(200, {
             'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ async function main() {
             message: 'Deposit recorded successfully'
           }));
         } catch (error: any) {
-          console.error('[Server] ❌ Deposit recording error:', error);
+          console.error('[Server] Deposit recording error:', error);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             success: false,
@@ -200,7 +200,7 @@ async function main() {
 
   // Start listening
   httpServer.listen(PORT, () => {
-    console.log('[Server] 🚀 Server-Run');
+    console.log('[Server] Server running');
 
     // Find local IP addresses
     const nets = os.networkInterfaces();

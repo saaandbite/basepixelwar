@@ -47,12 +47,12 @@ export async function initRedis(): Promise<void> {
         redis = new Redis(REDIS_CONFIG);
 
         redis.on('connect', () => {
-            console.log('[Redis] ✅ Connected to Redis');
+            console.log('[Redis] Connected to Redis');
             resolve();
         });
 
         redis.on('error', (err) => {
-            console.error('[Redis] ❌ Connection error:', err.message);
+            console.error('[Redis] Connection error:', err.message);
             // Don't reject on error events after connection
             if (!redis?.status || redis.status === 'connecting') {
                 reject(err);
@@ -276,7 +276,7 @@ export async function popTwoPlayers(): Promise<[QueuePlayer, QueuePlayer] | null
 
         if (!result) return null;
 
-        console.log(`[Redis] ⚔️ Matched ${p1.name} vs ${p2.name}`);
+        console.log(`[Redis] Matched ${p1.name} vs ${p2.name}`);
         return [p1, p2];
     }
 }

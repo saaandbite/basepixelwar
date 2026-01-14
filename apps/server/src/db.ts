@@ -55,12 +55,12 @@ export async function initTigerBeetle(): Promise<void> {
 
     try {
         tbClient = createClient(TB_CONFIG);
-        console.log('[TigerBeetle] ✅ Connected to TigerBeetle at', TB_CONFIG.replica_addresses[0]);
+        console.log('[TigerBeetle] Connected to TigerBeetle at', TB_CONFIG.replica_addresses[0]);
 
         // Ensure treasury account exists
         await ensureTreasuryAccount();
     } catch (err) {
-        console.error('[TigerBeetle] ❌ Connection error:', err);
+        console.error('[TigerBeetle] Connection error:', err);
         throw err;
     }
 }
@@ -447,11 +447,13 @@ export async function transferPrizeFromVault(
 
     console.log(`[TigerBeetle] Prize ${amount} transferred successfully to ${toWallet}`);
 
-    // Log new balances
-    const newTreasuryBalance = await getTreasuryBalance();
+    // Log statistics with clearer terminology
+    const treasuryBalance = await getTreasuryBalance();
+    const totalDistributed = treasuryBalance < 0n ? -treasuryBalance : 0n; // Convert negative to positive
     const winnerBalance = await getAccountBalance(toAccountId);
-    console.log(`[TigerBeetle] New Treasury Balance: ${newTreasuryBalance}`);
-    console.log(`[TigerBeetle] Winner Balance: ${winnerBalance}`);
+
+    console.log(`[TigerBeetle] Total Prizes Distributed: ${totalDistributed} wei`);
+    console.log(`[TigerBeetle] Winner Total Winnings: ${winnerBalance} wei`);
 
     // Update leaderboard for winner
     await updateLeaderboard('eth', toWallet, Number(winnerBalance));

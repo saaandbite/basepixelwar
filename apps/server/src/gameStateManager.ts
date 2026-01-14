@@ -1073,10 +1073,10 @@ async function endGame(roomId: string) {
                                 1980000000000000n, // 0.00198 ETH (0.002 - 1% fee)
                                 room.onChainGameId
                             ).then(() => {
-                                console.log(`[TigerBeetle] ✅ Prize transferred successfully to ${winnerPlayer.walletAddress}`);
+                                console.log(`[TigerBeetle] Prize transferred successfully to ${winnerPlayer.walletAddress}`);
                             }).catch((e: unknown) => {
                                 const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-                                console.error(`[TigerBeetle] ❌ Prize transfer failed for game ${room.onChainGameId}:`, errorMessage);
+                                console.error(`[TigerBeetle] Prize transfer failed for game ${room.onChainGameId}:`, errorMessage);
 
                                 // Emit error to client for manual resolution
                                 io.to(roomId).emit('prize_transfer_failed', {
