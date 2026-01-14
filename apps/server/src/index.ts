@@ -107,12 +107,24 @@ async function main() {
 
       if (type === 'wins' || type === 'eth') {
         try {
+          const { getUsername, formatWalletAddress } = await import('./redis.js');
           const data = await getLeaderboard(type as 'wins' | 'eth');
+
+          // Enrich data with usernames and formatted wallets
+          const enrichedData = await Promise.all(
+            data.map(async (entry) => ({
+              wallet: entry.wallet,
+              walletFormatted: formatWalletAddress(entry.wallet),
+              username: await getUsername(entry.wallet) || 'Anonymous',
+              score: entry.score
+            }))
+          );
+
           res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
           });
-          res.end(JSON.stringify(data));
+          res.end(JSON.stringify(enrichedData));
         } catch (error) {
           console.error('[Server] Leaderboard error:', error);
           res.writeHead(500);

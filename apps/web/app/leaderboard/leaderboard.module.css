@@ -1,0 +1,279 @@
+.container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.backgroundGrid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    100% {
+        transform: translate(50px, 50px);
+    }
+}
+
+.glowOrb1,
+.glowOrb2 {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    opacity: 0.3;
+    animation: float 8s ease-in-out infinite;
+}
+
+.glowOrb1 {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, #3b82f6, transparent);
+    top: -200px;
+    right: -200px;
+}
+
+.glowOrb2 {
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, #8b5cf6, transparent);
+    bottom: -150px;
+    left: -150px;
+    animation-delay: 2s;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+.main {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.header {
+    margin-bottom: 3rem;
+}
+
+.backButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+}
+
+.backButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(-4px);
+}
+
+.title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 3rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+}
+
+.titleIcon {
+    width: 3rem;
+    height: 3rem;
+    color: #fbbf24;
+}
+
+.tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.tabActive {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: #fff;
+}
+
+.content {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    min-height: 400px;
+}
+
+.loading,
+.error,
+.empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1.125rem;
+}
+
+.error {
+    color: #ef4444;
+}
+
+.table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tableHeader {
+    display: grid;
+    grid-template-columns: 80px 1fr 150px 180px;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tableRow {
+    display: grid;
+    grid-template-columns: 80px 1fr 150px 180px;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    align-items: center;
+}
+
+.tableRow:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateX(4px);
+}
+
+.rankCol,
+.playerCol,
+.walletCol,
+.scoreCol {
+    display: flex;
+    align-items: center;
+}
+
+.rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.rank1 {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.rank2 {
+    background: linear-gradient(135deg, #94a3b8, #64748b);
+}
+
+.rank3 {
+    background: linear-gradient(135deg, #cd7f32, #a0522d);
+}
+
+.username {
+    font-weight: 600;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.wallet {
+    font-family: 'Courier New', monospace;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+}
+
+.score {
+    font-weight: 700;
+    color: #3b82f6;
+    font-size: 1.125rem;
+}
+
+@media (max-width: 768px) {
+
+    .tableHeader,
+    .tableRow {
+        grid-template-columns: 60px 1fr 120px;
+    }
+
+    .walletCol {
+        display: none;
+    }
+
+    .title {
+        font-size: 2rem;
+    }
+
+    .titleIcon {
+        width: 2rem;
+        height: 2rem;
+    }
+}
