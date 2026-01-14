@@ -102,7 +102,7 @@ async function ensureTreasuryAccount(): Promise<void> {
             user_data_64: 0n,
             user_data_32: 0,
             reserved: 0,
-            ledger: Number(LEDGER.TREASURY),
+            ledger: Number(LEDGER.PLAYER), // Use PLAYER ledger for consistency
             code: 1, // Treasury code
             flags: 0,
             timestamp: 0n,
@@ -277,6 +277,48 @@ export async function recordDeposit(
 }
 
 /**
+ * Record a stake (player stakes -> credits Treasury)
+ * Opposite of recordDeposit - this CREDITS Treasury
+ */
+export async function recordStake(
+    walletAddress: string,
+    amount: bigint,
+    txHash?: string
+): Promise<bigint> {
+    const client = getTigerBeetle();
+    const accountId = await getOrCreateAccount(walletAddress);
+    const transferId = generateTransferId();
+
+    // Stake: Player -> Treasury (credits Treasury)
+    const transfer: Transfer = {
+        id: transferId,
+        debit_account_id: accountId, // Player pays
+        credit_account_id: TREASURY_ACCOUNT_ID, // Treasury receives
+        amount: amount,
+        pending_id: 0n,
+        user_data_128: 0n,
+        user_data_64: 0n,
+        user_data_32: 0,
+        timeout: 0,
+        ledger: Number(LEDGER.PLAYER),
+        code: 5, // Stake code
+        flags: 0,
+        timestamp: 0n,
+    };
+
+    const errors = await client.createTransfers([transfer]);
+
+    if (errors.length > 0) {
+        console.error('[TigerBeetle] Stake recording failed:', errors);
+        throw new Error(`Stake recording failed: ${CreateTransferError[errors[0].result]}`);
+    }
+
+    console.log(`[TigerBeetle] Stake ${amount} recorded from ${walletAddress} to Treasury (Account: ${accountId})`);
+
+    return transferId;
+}
+
+/**
  * Record a withdrawal (off-chain -> on-chain)
  * Debits the player's TigerBeetle account
  */
@@ -371,16 +413,6 @@ export async function transferPrizeFromVault(
     gameId?: number
 ): Promise<bigint> {
     const client = getTigerBeetle();
-
-    // Check treasury balance first
-    const treasuryBalance = await getTreasuryBalance();
-    console.log(`[TigerBeetle] Treasury Balance: ${treasuryBalance}`);
-
-    if (treasuryBalance < amount) {
-        const error = `Insufficient treasury balance. Required: ${amount}, Available: ${treasuryBalance}`;
-        console.error(`[TigerBeetle] ${error}`);
-        throw new Error(error);
-    }
 
     // Ensure winner account exists
     const toAccountId = await getOrCreateAccount(toWallet);

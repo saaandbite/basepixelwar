@@ -1070,7 +1070,7 @@ async function endGame(roomId: string) {
 
                             transferPrizeFromVault(
                                 winnerPlayer.walletAddress as string,
-                                1000n, // Standard stake amount
+                                1980000000000000n, // 0.00198 ETH (0.002 - 1% fee)
                                 room.onChainGameId
                             ).then(() => {
                                 console.log(`[TigerBeetle] ✅ Prize transferred successfully to ${winnerPlayer.walletAddress}`);
