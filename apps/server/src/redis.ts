@@ -403,6 +403,74 @@ export async function getLeaderboard(
 }
 
 // ============================================
+// GAME STATE SNAPSHOTS (For Crash Recovery)
+// ============================================
+
+/**
+ * Minimal game state for recovery (no visual effects)
+ */
+interface GameSnapshot {
+    grid: any[][];
+    player1: any;
+    player2: any;
+    timeLeft: number;
+    scores: { blue: number; red: number };
+    timestamp: number;
+}
+
+/**
+ * Save game state snapshot to Redis
+ * Called periodically during gameplay for crash recovery
+ */
+export async function setGameSnapshot(roomId: string, state: {
+    grid: any[][];
+    player1: any;
+    player2: any;
+    timeLeft: number;
+    scores: { blue: number; red: number };
+}): Promise<void> {
+    const r = getRedis();
+    const snapshot: GameSnapshot = {
+        grid: state.grid,
+        player1: {
+            x: state.player1.x,
+            y: state.player1.y,
+            angle: state.player1.angle,
+            ink: state.player1.ink,
+            weaponMode: state.player1.weaponMode,
+        },
+        player2: {
+            x: state.player2.x,
+            y: state.player2.y,
+            angle: state.player2.angle,
+            ink: state.player2.ink,
+            weaponMode: state.player2.weaponMode,
+        },
+        timeLeft: state.timeLeft,
+        scores: state.scores,
+        timestamp: Date.now()
+    };
+    await r.set(`snapshot:${roomId}`, JSON.stringify(snapshot), 'EX', 300); // 5 min expiry
+}
+
+/**
+ * Get game state snapshot from Redis
+ */
+export async function getGameSnapshot(roomId: string): Promise<GameSnapshot | null> {
+    const r = getRedis();
+    const data = await r.get(`snapshot:${roomId}`);
+    return data ? JSON.parse(data) as GameSnapshot : null;
+}
+
+/**
+ * Delete game state snapshot
+ */
+export async function deleteGameSnapshot(roomId: string): Promise<void> {
+    const r = getRedis();
+    await r.del(`snapshot:${roomId}`);
+}
+
+// ============================================
 // UTILITY
 // ============================================
 

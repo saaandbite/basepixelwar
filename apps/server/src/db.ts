@@ -417,48 +417,10 @@ export async function collectTreasuryFee(
     return transferId;
 }
 
-// Record ammo usage (player -> treasury)
-// Used when specific high-cost weapons are used
-export async function recordAmmoUsage(
-    walletAddress: string,
-    amount: bigint,
-    gameId?: string
-): Promise<bigint> {
-    const client = getTigerBeetle();
-    const fromAccountId = await getAccountIdByWallet(walletAddress);
+// NOTE: recordAmmoUsage was removed - ammo tracking is done in-memory during gameplay
+// TigerBeetle is now used ONLY for financial settlements (deposits, withdrawals, prize transfers)
 
-    if (!fromAccountId) {
-        throw new Error(`Account not found for wallet: ${walletAddress}`);
-    }
 
-    const transferId = generateTransferId();
-
-    const transfer: Transfer = {
-        id: transferId,
-        debit_account_id: fromAccountId,
-        credit_account_id: TREASURY_ACCOUNT_ID,
-        amount: amount,
-        pending_id: 0n,
-        user_data_128: 0n,
-        user_data_64: gameId ? BigInt('0x' + Buffer.from(gameId).toString('hex').slice(0, 16)) : 0n,
-        user_data_32: 3, // Code for Ammo Usage
-        timeout: 0,
-        ledger: Number(LEDGER.PLAYER),
-        code: 3, // Ammo usage code
-        flags: 0,
-        timestamp: 0n,
-    };
-
-    const errors = await client.createTransfers([transfer]);
-
-    if (errors.length > 0) {
-        console.error('[TigerBeetle] Failed to record ammo usage:', errors);
-        throw new Error(`Failed to record ammo usage: ${CreateTransferError[errors[0].result]}`);
-    }
-
-    console.log(`[TigerBeetle] Recorded ammo usage: ${amount} from ${walletAddress}`);
-    return transferId;
-}
 
 // ============================================
 // UTILITY
