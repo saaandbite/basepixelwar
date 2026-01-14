@@ -17,8 +17,20 @@ export type Pixel = {
   t: number;       // Timestamp update terakhir
 };
 
+// ============================================
+// LEADERBOARD
+// ============================================
+
+export type LeaderboardType = 'wins' | 'eth';
+
+export interface LeaderboardEntry {
+  wallet: string;
+  score: number;
+  rank?: number;
+}
+
 // 3. Pesan WebSocket (Server -> Client)
-export type ServerMessage = 
+export type ServerMessage =
   | { type: 'INIT'; grid: Pixel[] }        // Saat user baru masuk
   | { type: 'UPDATE'; pixel: Pixel }       // Saat ada pixel berubah
   | { type: 'STATS'; bulls: number; bears: number }; // Live score

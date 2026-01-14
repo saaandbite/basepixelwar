@@ -2,7 +2,7 @@
 // TigerBeetle client & financial ledger service
 
 import { createClient, Account, Transfer, CreateAccountError, CreateTransferError } from 'tigerbeetle-node';
-import { getAccountIdByWallet, setWalletMapping } from './redis';
+import { getAccountIdByWallet, setWalletMapping, updateLeaderboard } from './redis';
 
 // TigerBeetle client instance
 let tbClient: ReturnType<typeof createClient> | null = null;
@@ -268,6 +268,11 @@ export async function recordDeposit(
     }
 
     console.log(`[TigerBeetle] Deposit ${amount} to ${walletAddress} (Account: ${accountId})`);
+
+    // Sync to Leaderboard
+    const newBalance = await getAccountBalance(accountId);
+    await updateLeaderboard('eth', walletAddress, Number(newBalance));
+
     return transferId;
 }
 
@@ -319,6 +324,11 @@ export async function recordWithdraw(
     }
 
     console.log(`[TigerBeetle] Withdraw ${amount} from ${walletAddress}`);
+
+    // Sync to Leaderboard
+    const newBalance = await getAccountBalance(accountId);
+    await updateLeaderboard('eth', walletAddress, Number(newBalance));
+
     return transferId;
 }
 
@@ -335,7 +345,86 @@ export async function transferPrizeByWallets(
     const fromAccountId = await getOrCreateAccount(fromWallet);
     const toAccountId = await getOrCreateAccount(toWallet);
 
-    return transferPrize(fromAccountId, toAccountId, amount, gameId);
+    const result = await transferPrize(fromAccountId, toAccountId, amount, gameId);
+
+    // Sync both players to Leaderboard
+    const fromBalance = await getAccountBalance(fromAccountId);
+    const toBalance = await getAccountBalance(toAccountId);
+
+    // Fire and forget (don't await to avoid slowing down game loop too much, or await if safety preferred)
+    // We await to ensure consistency
+    await Promise.all([
+        updateLeaderboard('eth', fromWallet, Number(fromBalance)),
+        updateLeaderboard('eth', toWallet, Number(toBalance))
+    ]);
+
+    return result;
+}
+
+/**
+ * Transfer prize from Game Vault (Treasury) to winner
+ * Used for game prize distribution
+ */
+export async function transferPrizeFromVault(
+    toWallet: string,
+    amount: bigint,
+    gameId?: number
+): Promise<bigint> {
+    const client = getTigerBeetle();
+
+    // Check treasury balance first
+    const treasuryBalance = await getTreasuryBalance();
+    console.log(`[TigerBeetle] Treasury Balance: ${treasuryBalance}`);
+
+    if (treasuryBalance < amount) {
+        const error = `Insufficient treasury balance. Required: ${amount}, Available: ${treasuryBalance}`;
+        console.error(`[TigerBeetle] ${error}`);
+        throw new Error(error);
+    }
+
+    // Ensure winner account exists
+    const toAccountId = await getOrCreateAccount(toWallet);
+
+    console.log(`[TigerBeetle] Transferring prize: ${amount} from Treasury to ${toWallet} (Account: ${toAccountId})`);
+
+    const transferId = generateTransferId();
+
+    // Transfer: Treasury -> Winner
+    const transfer: Transfer = {
+        id: transferId,
+        debit_account_id: TREASURY_ACCOUNT_ID,
+        credit_account_id: toAccountId,
+        amount: amount,
+        pending_id: 0n,
+        user_data_128: gameId ? BigInt(gameId) : 0n,
+        user_data_64: 0n,
+        user_data_32: 0,
+        timeout: 0,
+        ledger: Number(LEDGER.PLAYER),
+        code: 3, // Prize transfer code
+        flags: 0,
+        timestamp: 0n,
+    };
+
+    const errors = await client.createTransfers([transfer]);
+
+    if (errors.length > 0) {
+        console.error('[TigerBeetle] Prize transfer failed:', errors);
+        throw new Error(`Prize transfer failed: ${CreateTransferError[errors[0].result]}`);
+    }
+
+    console.log(`[TigerBeetle] Prize ${amount} transferred successfully to ${toWallet}`);
+
+    // Log new balances
+    const newTreasuryBalance = await getTreasuryBalance();
+    const winnerBalance = await getAccountBalance(toAccountId);
+    console.log(`[TigerBeetle] New Treasury Balance: ${newTreasuryBalance}`);
+    console.log(`[TigerBeetle] Winner Balance: ${winnerBalance}`);
+
+    // Update leaderboard for winner
+    await updateLeaderboard('eth', toWallet, Number(winnerBalance));
+
+    return transferId;
 }
 
 /**

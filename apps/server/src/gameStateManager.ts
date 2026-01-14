@@ -3,7 +3,7 @@ import { contractService } from './contractService';
 import * as RoomManager from './roomManager';
 import { updateRoomStatus } from './roomManager';
 import * as Redis from './redis';
-import { transferPrizeByWallets } from './db';
+import { transferPrizeFromVault } from './db';
 
 // PvP Cannon state
 export interface PvPCannon {
@@ -1065,15 +1065,26 @@ async function endGame(roomId: string) {
                             });
 
                             // RECORD IN TIGERBEETLE LEDGER
-                            const fromPlayer = room.players.find(p => p.team !== winnerTeam);
-                            if (fromPlayer && fromPlayer.walletAddress) {
-                                transferPrizeByWallets(
-                                    fromPlayer.walletAddress,
-                                    winnerPlayer.walletAddress as string,
-                                    1000n, // Standard stake
-                                    room.onChainGameId
-                                ).catch(e => console.error(`[TigerBeetle] Prize transfer failed for game ${room.onChainGameId}:`, e));
-                            }
+                            // Transfer prize from Game Vault (Treasury) to winner
+                            console.log(`[TigerBeetle] Initiating prize transfer from vault...`);
+
+                            transferPrizeFromVault(
+                                winnerPlayer.walletAddress as string,
+                                1000n, // Standard stake amount
+                                room.onChainGameId
+                            ).then(() => {
+                                console.log(`[TigerBeetle] ✅ Prize transferred successfully to ${winnerPlayer.walletAddress}`);
+                            }).catch((e: unknown) => {
+                                const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+                                console.error(`[TigerBeetle] ❌ Prize transfer failed for game ${room.onChainGameId}:`, errorMessage);
+
+                                // Emit error to client for manual resolution
+                                io.to(roomId).emit('prize_transfer_failed', {
+                                    gameId: room.onChainGameId,
+                                    winner: winnerPlayer.walletAddress,
+                                    error: errorMessage
+                                });
+                            });
                         } else {
                             console.error(`\n [GameStateManager] SETTLEMENT FAILED (See above for details)`);
                             console.error(`==================================================\n`);
@@ -1126,13 +1137,13 @@ async function endGame(roomId: string) {
             }
         }
 
-        // 2. Territory Leaderboard (for both)
-        for (const p of room.players) {
-            if (p.walletAddress) {
-                const score = p.team === 'blue' ? state.scores.blue : state.scores.red;
-                await Redis.updateLeaderboard('territory', p.walletAddress, score);
-            }
-        }
+        // 2. Territory Leaderboard (Removed in favor of ETH/Wins only)
+        // for (const p of room.players) {
+        //     if (p.walletAddress) {
+        //         const score = p.team === 'blue' ? state.scores.blue : state.scores.red;
+        //         await Redis.updateLeaderboard('territory', p.walletAddress, score);
+        //     }
+        // }
     }
 
     console.log(`[GameStateManager] Game ended for room ${roomId} (Leaderboard Updated)`);

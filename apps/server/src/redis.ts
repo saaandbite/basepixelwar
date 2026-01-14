@@ -376,17 +376,22 @@ export async function deleteGridSnapshot(roomId: string): Promise<void> {
 // ============================================
 
 export async function updateLeaderboard(
-    category: 'wins' | 'territory',
+    category: 'wins' | 'eth',
     walletAddress: string,
     score: number
 ): Promise<void> {
     const r = getRedis();
-    // Increment score in sorted set
-    await r.zadd(`${KEYS.LEADERBOARD}${category}`, score.toString(), walletAddress.toLowerCase());
+    if (category === 'wins') {
+        // Incremental update for wins
+        await r.zincrby(`${KEYS.LEADERBOARD}${category}`, score, walletAddress.toLowerCase());
+    } else {
+        // Absolute update for ETH balance
+        await r.zadd(`${KEYS.LEADERBOARD}${category}`, score.toString(), walletAddress.toLowerCase());
+    }
 }
 
 export async function getLeaderboard(
-    category: 'wins' | 'territory',
+    category: 'wins' | 'eth',
     top: number = 10
 ): Promise<{ wallet: string; score: number }[]> {
     const r = getRedis();
