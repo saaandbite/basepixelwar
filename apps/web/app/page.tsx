@@ -80,6 +80,11 @@ export default function Home() {
             Start Game
           </Link>
 
+          <Link href="/leaderboard" className={styles.startButton}>
+            <Trophy className="w-6 h-6" />
+            Leaderboard
+          </Link>
+
           {/* Wallet Button - Wrapped for consistent width */}
           <div className={styles.walletWrapper}>
             {!isConnected ? (
