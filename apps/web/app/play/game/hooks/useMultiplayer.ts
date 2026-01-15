@@ -56,6 +56,14 @@ const getServerUrl = () => {
         if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
             return `${protocol}//${hostname}:3000`;
         }
+        const parts = hostname.split('.');
+        const secondOctetStr = parts[1];
+        if (hostname.startsWith('172.') && secondOctetStr) {
+            const secondOctet = parseInt(secondOctetStr, 10);
+            if (secondOctet >= 16 && secondOctet <= 31) {
+                return `${protocol}//${hostname}:3000`;
+            }
+        }
     }
 
     // Fallback let socket.io figure it out (connects to current host/port)

@@ -6,8 +6,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAudio } from './useAudio'; // Import useAudio
-import { useGameVault, GameMode } from '../../hooks/useGameVault';
-import { useWallet } from '../../contexts/WalletContext'; // Import useWallet
+import { useGameVault, GameMode } from '../../../hooks/useGameVault';
+import { useWallet } from '../../../contexts/WalletContext'; // Import useWallet
 import type {
     ClientToServerEvents,
     ServerToClientEvents,

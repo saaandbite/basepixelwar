@@ -4,13 +4,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMultiplayer } from '../game/hooks/useMultiplayer';
+import { useMultiplayer } from '../play/game/hooks/useMultiplayer';
 import { useWallet, formatAddress, isCorrectChain } from '../contexts/WalletContext';
 import { useGameVault, GameMode } from '../hooks/useGameVault';
 import { useENSName } from '../hooks/useENSName';
 import { PaintBucket, Zap, Crown, Swords, Loader2, Wallet, AlertTriangle, Edit2, Check, Bot, Search, Trophy, Sparkles } from 'lucide-react';
 import styles from './room.module.css';
-import '../game/game.css';
+import '../play/game/game.css';
 
 export default function RoomPage() {
     const router = useRouter();
@@ -98,7 +98,7 @@ export default function RoomPage() {
             if (walletAddress) {
                 sessionStorage.setItem('wallet_address', walletAddress);
             }
-            router.push('/game');
+            router.push('/play/game');
         }
     }, [isPlaying, myTeam, router, room, walletAddress, displayName]);
 
@@ -339,7 +339,7 @@ export default function RoomPage() {
                                 sessionStorage.removeItem('pvp_room_id');
                                 sessionStorage.removeItem('pvp_team');
                                 sessionStorage.setItem('ai_mode', 'true');
-                                router.push('/game');
+                                router.push('/play/game');
                             }}
                             className={styles.playAiButton}
                         >
