@@ -175,7 +175,4 @@ contract TournamentMCL is ReentrancyGuard, Ownable {
 
         return (top.w1, top.w2, top.w3);
     }
-    function getRoomPlayers(uint256 week, uint256 roomId) external view returns (address[] memory) {
-    return rooms[week][roomId].players;
-}
 }

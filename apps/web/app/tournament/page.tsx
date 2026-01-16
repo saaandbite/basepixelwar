@@ -28,20 +28,42 @@ export default function TournamentPage() {
 
     const weekNum = currentWeek ? Number(currentWeek) : 0;
 
-    const { data: playerStats, refetch: refetchPlayer } = useReadContract({
-        address: TOURNAMENT_ADDRESS,
-        abi: TOURNAMENT_ABI,
-        functionName: 'playerInfo',
-        args: [BigInt(weekNum), address as `0x${string}`],
-        query: { enabled: !!address && weekNum > 0 }
-    });
+    // HYBRID SYSTEM: State for Room Data (Fetched from Backend)
+    const [joinedRoomId, setJoinedRoomId] = useState<number>(0);
+    const [roomPlayers, setRoomPlayers] = useState<any[]>([]);
+    const [isLoadingRoom, setIsLoadingRoom] = useState(false);
 
-    // Derived State
-    const joinedRoomId = playerStats ? Number(playerStats[1]) : 0;
     const isJoined = joinedRoomId > 0;
 
-    // Manual fetch for room players (since wagmi hooks for dynamic args can be tricky, we conditionally render)
-    // But we can use useReadContract with joinedRoomId if isJoined
+    // Fetch Room Data from Backend API
+    const fetchRoomData = async () => {
+        if (!address || weekNum === 0) return;
+
+        try {
+            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
+            const res = await fetch(`${SERVER_URL}/api/tournament/room?wallet=${address}`);
+            const data = await res.json();
+
+            if (data.location) {
+                setJoinedRoomId(data.location.roomId);
+                setRoomPlayers(data.players || []);
+            } else {
+                setJoinedRoomId(0);
+                setRoomPlayers([]);
+            }
+        } catch (err) {
+            console.error("Failed to fetch room data:", err);
+        }
+    };
+
+    // Initial Fetch
+    useEffect(() => {
+        if (address && weekNum > 0) {
+            fetchRoomData();
+        }
+    }, [address, weekNum]);
+
+    // Manual fetch for room prize pool (still from contract)
     const { data: roomData, refetch: refetchRoom } = useReadContract({
         address: TOURNAMENT_ADDRESS,
         abi: TOURNAMENT_ABI,
@@ -50,34 +72,37 @@ export default function TournamentPage() {
         query: { enabled: isJoined && weekNum > 0 }
     });
 
-    // LIST PLAYER DI-SKIP DULU (Versi tanpa Deploy Ulang)
-    const roomPlayers: readonly `0x${string}`[] = [];
-
-    // UNCOMMENT AFTER DEPLOYMENT (Pastikan ABI juga di-uncomment)
-    /*
-    const { data: playerList } = useReadContract({
-        address: TOURNAMENT_ADDRESS,
-        abi: TOURNAMENT_ABI,
-        functionName: 'getRoomPlayers',
-        args: [BigInt(weekNum), BigInt(joinedRoomId)],
-        query: { enabled: isJoined && weekNum > 0, refetchInterval: 5000 }
-    });
-    
-    // Override roomPlayers jika fitur aktif
-    // const roomPlayers = playerList ? (playerList as unknown as readonly `0x${string}`[]) : ([] as const);
-    */
     const prizePool = roomData ? (roomData as unknown as bigint) : 0n;
 
     // Actions
     const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
     const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
+    // Handle Join Success -> Notify Backend
     useEffect(() => {
-        if (isConfirmed) {
-            refetchPlayer();
-            refetchRoom();
+        if (isConfirmed && hash) {
+            const notifyBackend = async () => {
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
+                try {
+                    await fetch(`${SERVER_URL}/api/tournament/join`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            walletAddress: address,
+                            week: weekNum,
+                            txHash: hash
+                        })
+                    });
+                    // Refresh data
+                    fetchRoomData();
+                    refetchRoom();
+                } catch (e) {
+                    console.error("Backend join notification failed:", e);
+                }
+            };
+            notifyBackend();
         }
-    }, [isConfirmed, refetchPlayer, refetchRoom]);
+    }, [isConfirmed, hash, address, weekNum, refetchRoom]);
 
     const handleJoin = () => {
         if (!TOURNAMENT_ADDRESS) return alert('Tournament Contract Address missing!');
@@ -236,17 +261,15 @@ export default function TournamentPage() {
                                         </div>
                                     ) : (
                                         roomPlayers.map((p, i) => (
-                                            <div key={p} className={`flex items-center justify-between p-3 rounded-lg border ${p === address ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-800/50 border-white/5'}`}>
+                                            <div key={p.walletAddress} className={`flex items-center justify-between p-3 rounded-lg border ${p.walletAddress?.toLowerCase() === address?.toLowerCase() ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-800/50 border-white/5'}`}>
                                                 <div className="flex items-center gap-3">
                                                     <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i < 3 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-700 text-slate-400'}`}>
                                                         {i + 1}
                                                     </span>
-                                                    <span className={`font-mono text-sm ${p === address ? 'text-blue-200 font-bold' : 'text-slate-300'}`}>
-                                                        {p} {p === address && '(You)'}
+                                                    <span className={`font-mono text-sm ${p.walletAddress?.toLowerCase() === address?.toLowerCase() ? 'text-blue-200 font-bold' : 'text-slate-300'}`}>
+                                                        {p.walletAddress} {p.walletAddress?.toLowerCase() === address?.toLowerCase() && '(You)'}
                                                     </span>
                                                 </div>
-                                                {/* Score would ideally be fetched here too, but for MVP we list players */}
-                                                {/* <span className="font-mono font-bold text-white">0 pts</span> */}
                                             </div>
                                         ))
                                     )}

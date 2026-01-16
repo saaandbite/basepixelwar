@@ -137,66 +137,91 @@ async function main() {
       return;
     }
 
-    // Deposit recording endpoint
-    if (req.method === 'POST' && req.url === '/api/deposit') {
+    // Tournament endpoints
+    if (req.method === 'POST' && req.url === '/api/tournament/join') {
       let body = '';
       req.on('data', chunk => { body += chunk.toString(); });
       req.on('end', async () => {
         try {
-          const { walletAddress, amount, txHash } = JSON.parse(body);
+          const { walletAddress, week, txHash } = JSON.parse(body);
 
-          // Validate inputs
-          if (!walletAddress || !amount) {
+          if (!walletAddress || !week || !txHash) {
+            console.warn('[Server] Tournament join missing fields');
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Missing required fields: walletAddress and amount' }));
+            res.end(JSON.stringify({ error: 'Missing required fields' }));
             return;
           }
 
-          // Validate wallet address format
-          if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Invalid wallet address format' }));
-            return;
-          }
+          console.log(`[Server] Tournament Join Request: ${walletAddress} (Week ${week})`);
 
-          console.log(`[Server] Recording deposit: ${amount} wei from ${walletAddress}`);
+          const { joinTournament } = await import('./tournamentManager.js');
+          const result = await joinTournament(walletAddress, Number(week), txHash);
 
-          // Record deposit to TigerBeetle
-          const { recordDeposit } = await import('./db.js');
-          const transferId = await recordDeposit(
-            walletAddress,
-            BigInt(amount),
-            txHash
-          );
-
-          console.log(`[Server] Deposit recorded successfully. Transfer ID: ${transferId}`);
+          console.log(`[Server] Tournament Join Processed: ${walletAddress} -> Room ${result.roomId} (New: ${result.isNew})`);
 
           res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
           });
-          res.end(JSON.stringify({
-            success: true,
-            transferId: transferId.toString(),
-            message: 'Deposit recorded successfully'
-          }));
+          res.end(JSON.stringify(result));
         } catch (error: any) {
-          console.error('[Server] Deposit recording error:', error);
+          console.error('[Server] Tournament join error:', error);
           res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({
-            success: false,
-            error: error.message || 'Internal Server Error'
-          }));
+          res.end(JSON.stringify({ error: error.message || 'Server error' }));
         }
       });
       return;
     }
 
-    // Handle CORS preflight for deposit endpoint
-    if (req.method === 'OPTIONS' && req.url === '/api/deposit') {
+    if (req.method === 'GET' && req.url && req.url.startsWith('/api/tournament/room')) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const week = url.searchParams.get('week');
+      const roomId = url.searchParams.get('roomId');
+      const wallet = url.searchParams.get('wallet');
+
+      try {
+        const { getRoomPlayers, getPlayerRoom } = await import('./tournamentManager.js');
+
+        let resultData: any = {};
+
+        // Scenario 1: Get specific room
+        if (week && roomId) {
+          resultData.players = await getRoomPlayers(Number(week), Number(roomId));
+        }
+        // Scenario 2: Get room by wallet
+        else if (wallet) {
+          const location = await getPlayerRoom(wallet);
+          if (location) {
+            resultData.location = location;
+            resultData.players = await getRoomPlayers(location.week, location.roomId);
+          } else {
+            resultData.location = null;
+          }
+        } else {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing week+roomId OR wallet params' }));
+          return;
+        }
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify(resultData));
+
+      } catch (error: any) {
+        console.error('[Server] Tournament room error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
+    // Handle CORS preflight for tournament endpoints
+    if (req.method === 'OPTIONS' && req.url?.startsWith('/api/tournament')) {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type'
       });
       res.end();

@@ -13,6 +13,9 @@ import type {
 
 import * as RoomManager from './roomManager';
 import * as GameStateManager from './gameStateManager';
+import { verifyTransaction } from './utils/transaction.js';
+
+const GAME_VAULT_ADDRESS = process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS;
 
 type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
@@ -442,6 +445,19 @@ async function handlePaymentConfirmed(
     const roomId = socket.data.roomId;
     if (!roomId) {
         console.log('[Payment] No roomId for payment confirmation');
+        return;
+    }
+
+    // SECURITY: Verify Transaction On-Chain
+    const isValid = await verifyTransaction({
+        txHash: data.txHash,
+        sender: socket.data.walletAddress || '', // Ensure wallet is known
+        amount: '0.0001', // Standard game fee (Must match contract)
+        toAddress: GAME_VAULT_ADDRESS
+    });
+
+    if (!isValid) {
+        console.error(`[Payment] Security Check Failed for ${socket.data.playerId} (Tx: ${data.txHash})`);
         return;
     }
 
