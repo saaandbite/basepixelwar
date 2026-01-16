@@ -251,6 +251,34 @@ export class ContractService {
             return null;
         }
     }
+
+    async addTournamentScore(playerAddress: string): Promise<string | null> {
+        if (!process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS) {
+            console.log('[ContractService] Tournament Address not set. Skipping score update.');
+            return null;
+        }
+
+        try {
+            const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+            console.log(`[ContractService] Adding score for ${playerAddress} to Tournament ${tournamentAddress}...`);
+
+            // Imported ABI
+            const { TOURNAMENT_ABI } = await import('./tournamentAbi.js');
+
+            const tournamentContract = getContract({
+                address: tournamentAddress,
+                abi: TOURNAMENT_ABI,
+                client: this.client
+            }) as any;
+
+            const hash = await tournamentContract.write.addScore([playerAddress as `0x${string}`]);
+            console.log(`[ContractService] Score added tx: ${hash}`);
+            return hash;
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to add score:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
 }
 
 export const contractService = new ContractService();

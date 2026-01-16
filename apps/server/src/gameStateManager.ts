@@ -1029,6 +1029,29 @@ async function endGame(roomId: string) {
     const room = await RoomManager.getRoom(roomId);
     const io = ioInstance; // Capture reference for async callback
 
+    // === TOURNAMENT LOGIC ===
+    if (roomId.startsWith('TOURNAMENT-')) {
+        console.log(`[GameStateManager] Tournament Room ${roomId} ended. Winner: ${winner}`);
+        if (winner !== 'draw') {
+            const winnerTeam = winner;
+            const winnerPlayer = room?.players.find(p => p.team === winnerTeam);
+            if (winnerPlayer?.walletAddress) {
+                // Add Score to Tournament Contract
+                // We don't wait for this to finish to avoid blocking cleanup, but it's important.
+                contractService.addTournamentScore(winnerPlayer.walletAddress)
+                    .then(tx => {
+                        if (tx) console.log(`[GameStateManager] Tournament Score Updated: ${tx}`);
+                        else console.error(`[GameStateManager] Failed to update tournament score`);
+                    });
+            }
+        }
+        // Skip standard GameVault settlement
+        await RoomManager.updateRoomStatus(roomId, 'finished');
+        cleanupRoom(roomId);
+        return;
+    }
+    // ========================
+
     if (room && room.onChainGameId) {
         console.log(`\n==================================================`);
         console.log(`[GameStateManager]  STARTING SETTLEMENT FOR GAME ${room.onChainGameId}`);
