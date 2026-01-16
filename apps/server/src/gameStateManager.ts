@@ -142,7 +142,7 @@ const WEAPON_MODES = {
     shotgun: {
         cost: 5,
         speed: 5.5,
-        paintRadius: 1,
+        paintRadius: 2,
         fireRate: 8,
         spreadAngles: [-0.2, 0, 0.2],
         maxDuration: 3000,

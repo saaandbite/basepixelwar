@@ -295,7 +295,7 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, projectiles: Proj
         if (isInkBomb) bulletColor = COLORS.inkBomb;
 
         // Size
-        const size = isInkBomb ? 12 : isShotgun ? 4 : 6;
+        const size = isInkBomb ? 12 : isShotgun ? 6 : 6;
 
         // Glow
         const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size + 4);
