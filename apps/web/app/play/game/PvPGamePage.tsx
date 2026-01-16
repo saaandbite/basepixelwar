@@ -11,11 +11,13 @@ import { PvPGameControls } from './components/PvPGameControls';
 import { PvPGameOverModal } from './components/PvPGameOverModal';
 import { GoldenPixelIndicator } from './components/GoldenPixelIndicator';
 import { ComboEffect } from './components/ComboEffect';
+import { WEAPON_MODES } from './lib/constants';
 import './game.css';
 
 export function PvPGamePage() {
     const pvp = usePvPGame();
     const [weaponMode, setWeaponMode] = useState<'machineGun' | 'shotgun' | 'inkBomb'>('machineGun');
+    const [justUsedInkBomb, setJustUsedInkBomb] = useState(false);
 
     // Connect and join queue on mount
     useEffect(() => {
@@ -39,6 +41,11 @@ export function PvPGamePage() {
 
     // Handle player input
     const handlePlayerInput = useCallback((angle: number, firing: boolean, targetPos?: { x: number; y: number }) => {
+        // Jika sedang menembak dengan ink bomb, set flag untuk auto-switch
+        if (weaponMode === 'inkBomb' && firing) {
+            setJustUsedInkBomb(true);
+        }
+
         pvp.sendInput({
             angle,
             firing,
@@ -84,6 +91,31 @@ export function PvPGamePage() {
             setWeaponMode(alternateWeapon);
         }
     }, [weaponMode, myWeaponStates, myInk, myIsFrenzy]);
+
+    // AUTO-SWITCH PASCA PENGGUNAAN INK BOMB
+    useEffect(() => {
+        if (!myWeaponStates || !justUsedInkBomb) return;
+
+        // Cari senjata alternatif yang tersedia (tidak overheat dan cukup ink)
+        const availableWeapons = [
+            { mode: 'machineGun', state: myWeaponStates.machineGun, config: WEAPON_MODES.machineGun },
+            { mode: 'shotgun', state: myWeaponStates.shotgun, config: WEAPON_MODES.shotgun }
+        ].filter(item =>
+            !item.state.isOverheated &&
+            (myIsFrenzy || myInk >= item.config.cost)
+        );
+
+        if (availableWeapons.length > 0) {
+            // Pilih senjata pertama yang tersedia (bisa dimodifikasi untuk prioritas tertentu)
+            const bestWeapon = availableWeapons[0];
+            if (bestWeapon) {
+                setWeaponMode(bestWeapon.mode as 'machineGun' | 'shotgun');
+            }
+        }
+
+        // Reset flag setelah switch
+        setJustUsedInkBomb(false);
+    }, [justUsedInkBomb, myWeaponStates, myInk, myIsFrenzy]);
 
     // Track Stats
     const [stats, setStats] = useState({ currentTiles: 0, totalCaptured: 0 });
