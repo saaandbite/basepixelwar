@@ -5,6 +5,7 @@
 import React, { memo } from 'react';
 import { WEAPON_MODES, type WeaponModeType } from '../lib/constants';
 import type { WeaponMode } from '../types';
+import Image from 'next/image';
 
 interface WeaponSelectorProps {
     currentMode: WeaponMode;
@@ -19,88 +20,40 @@ interface WeaponSelectorProps {
     }>;
 }
 
-// Custom SVG icons for each weapon (ink/blob theme)
+// Custom Pixel Art icons for each weapon
 const WeaponIcons: Record<WeaponModeType, (isActive: boolean) => React.ReactNode> = {
     machineGun: (isActive) => (
-        // Single droplet stream
-        <svg width="28" height="28" viewBox="0 0 24 24" className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
-            <defs>
-                <linearGradient id="dropGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#60C5F7" />
-                    <stop offset="100%" stopColor="#4CC9F0" />
-                </linearGradient>
-            </defs>
-            <path
-                d="M12 2C12 2 6 9 6 13.5C6 17.09 8.69 20 12 20C15.31 20 18 17.09 18 13.5C18 9 12 2 12 2Z"
-                fill="url(#dropGrad)"
-                className={isActive ? 'animate-pulse' : ''}
+        <div className={`relative w-8 h-8 transition-transform duration-200 ${isActive ? 'scale-125' : ''}`}>
+            <Image
+                src="/assets/game/icons/machine_gun.png"
+                alt="Machine Gun"
+                fill
+                className={`object-contain ${isActive ? 'brightness-110 drop-shadow-md' : 'grayscale-[0.3]'}`}
+                style={{ imageRendering: 'pixelated' }}
             />
-            <ellipse cx="9" cy="12" rx="2" ry="1.5" fill="rgba(255,255,255,0.4)" />
-            {/* Small trailing drops */}
-            <circle cx="12" cy="22" r="1.5" fill="#4CC9F0" opacity="0.6" />
-        </svg>
+        </div>
     ),
     shotgun: (isActive) => (
-        // Triple droplet spread
-        <svg width="32" height="28" viewBox="0 0 28 24" className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
-            <defs>
-                <linearGradient id="spreadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#FF9B71" />
-                    <stop offset="100%" stopColor="#FF6B35" />
-                </linearGradient>
-            </defs>
-            {/* Left drop */}
-            <path
-                d="M7 6C7 6 4 10 4 12.5C4 14.43 5.57 16 7.5 16C9.43 16 11 14.43 11 12.5C11 10 7 6 7 6Z"
-                fill="url(#spreadGrad)"
-                className={isActive ? 'animate-bounce' : ''}
-                style={{ animationDuration: '0.6s' }}
+        <div className={`relative w-9 h-8 transition-transform duration-200 ${isActive ? 'scale-125' : ''}`}>
+            <Image
+                src="/assets/game/icons/shotgun.png"
+                alt="Shotgun"
+                fill
+                className={`object-contain ${isActive ? 'brightness-110 drop-shadow-md' : 'grayscale-[0.3]'}`}
+                style={{ imageRendering: 'pixelated' }}
             />
-            {/* Center drop (larger) */}
-            <path
-                d="M14 2C14 2 9 9 9 13C9 16.31 11.24 19 14 19C16.76 19 19 16.31 19 13C19 9 14 2 14 2Z"
-                fill="url(#spreadGrad)"
-                className={isActive ? 'animate-bounce' : ''}
-                style={{ animationDuration: '0.5s' }}
-            />
-            {/* Right drop */}
-            <path
-                d="M21 6C21 6 18 10 18 12.5C18 14.43 19.57 16 21.5 16C23.43 16 25 14.43 25 12.5C25 10 21 6 21 6Z"
-                fill="url(#spreadGrad)"
-                className={isActive ? 'animate-bounce' : ''}
-                style={{ animationDuration: '0.7s' }}
-            />
-            {/* Highlights */}
-            <ellipse cx="12" cy="11" rx="1.5" ry="1" fill="rgba(255,255,255,0.4)" />
-        </svg>
+        </div>
     ),
     inkBomb: (isActive) => (
-        // Big splash/explosion
-        <svg width="30" height="30" viewBox="0 0 24 24" className={`transition-transform duration-300 ${isActive ? 'scale-110 rotate-12' : ''}`}>
-            <defs>
-                <radialGradient id="bombGrad" cx="30%" cy="30%" r="70%">
-                    <stop offset="0%" stopColor="#9B5DE5" />
-                    <stop offset="100%" stopColor="#7B2CBF" />
-                </radialGradient>
-            </defs>
-            {/* Main bomb body */}
-            <circle cx="12" cy="14" r="8" fill="url(#bombGrad)" />
-            {/* Fuse */}
-            <path d="M12 6 Q14 4 16 5" stroke="#94A3B8" strokeWidth="2" fill="none" strokeLinecap="round" />
-            {/* Spark */}
-            <circle cx="16" cy="5" r="2" fill="#FFD700" className={isActive ? 'animate-ping' : ''} />
-            <circle cx="16" cy="5" r="1" fill="#FFF" />
-            {/* Highlight */}
-            <ellipse cx="9" cy="12" rx="2.5" ry="2" fill="rgba(255,255,255,0.35)" />
-            {/* Splash particles */}
-            {isActive && (
-                <>
-                    <circle cx="4" cy="10" r="1.5" fill="#7B2CBF" opacity="0.7" className="animate-ping" />
-                    <circle cx="20" cy="12" r="1.5" fill="#7B2CBF" opacity="0.7" className="animate-ping" style={{ animationDelay: '0.2s' }} />
-                    <circle cx="6" cy="18" r="1" fill="#7B2CBF" opacity="0.7" className="animate-ping" style={{ animationDelay: '0.4s' }} />
-                </>
-            )}
-        </svg>
+        <div className={`relative w-8 h-8 transition-transform duration-200 ${isActive ? 'scale-125 rotate-6' : ''}`}>
+            <Image
+                src="/assets/game/icons/ink_bomb.png"
+                alt="Ink Bomb"
+                fill
+                className={`object-contain ${isActive ? 'brightness-110 drop-shadow-md' : 'grayscale-[0.3]'}`}
+                style={{ imageRendering: 'pixelated' }}
+            />
+        </div>
     ),
 };
 

@@ -117,21 +117,21 @@ export function PvPGameCanvas({ gameState, myTeam, onPlayerInput }: PvPGameCanva
         const p1Cannon: Cannon = {
             ...player1,
             angle: p1Angle,
-            cooldown: 0,
+            cooldown: player1.cooldown,
             powerups: { shield: 0 },
             isFrenzy: player1.isFrenzy || false,
             frenzyEndTime: player1.frenzyEndTime || 0,
-            lastFireTime: 0,
+            lastFireTime: player1.lastFireTime,
             maxInk: INK_MAX,
         };
         const p2Cannon: Cannon = {
             ...player2,
             angle: p2Angle,
-            cooldown: 0,
+            cooldown: player2.cooldown,
             powerups: { shield: 0 },
             isFrenzy: player2.isFrenzy || false,
             frenzyEndTime: player2.frenzyEndTime || 0,
-            lastFireTime: 0,
+            lastFireTime: player2.lastFireTime,
             maxInk: INK_MAX,
         };
 
