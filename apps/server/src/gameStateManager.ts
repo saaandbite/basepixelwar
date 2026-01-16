@@ -24,6 +24,7 @@ export interface PvPCannon {
         isOverheated: boolean;
         cooldownEndTime: number;
     }>;
+    lastFireTime: number;
 }
 
 // Projectile for sync
@@ -201,6 +202,7 @@ export function createGameState(roomId: string): PvPGameState {
                 shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
                 inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
             },
+            lastFireTime: 0,
         },
         player2: {
             x: GAME_WIDTH / 2,
@@ -215,6 +217,7 @@ export function createGameState(roomId: string): PvPGameState {
                 shotgun: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
                 inkBomb: { usage: 0, isOverheated: false, cooldownEndTime: 0 },
             },
+            lastFireTime: 0,
         },
         projectiles: [],
         powerups: [],
@@ -286,8 +289,8 @@ export function startGameLoop(roomId: string) {
     const loopInterval = setInterval(() => {
         tick++;
         updateGameState(roomId);
-        // Optimize: Only send full grid every 30 ticks (approx 1 sec) or initial frames
-        const shouldSendGrid = tick % 30 === 0 || tick < 5;
+        // Optimize: Send grid more frequently (every 10 ticks = ~330ms) for responsiveness
+        const shouldSendGrid = tick % 10 === 0 || tick < 5;
 
         // Snapshot full game state to Redis every 10 seconds (for crash recovery)
         const s = gameStates.get(roomId);
@@ -491,6 +494,21 @@ function updateGameState(roomId: string) {
     updatePlayer(state.player1);
     updatePlayer(state.player2);
 
+    // 4. Update Particles
+    const newParticles: SyncParticle[] = [];
+    const GRAVITY_PARTICLE = 0.15;
+    for (const p of state.particles) {
+        p.vx *= 0.96; // Air friction
+        p.vy += GRAVITY_PARTICLE; // Gravity
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.025; // Faster decay
+        if (p.life > 0) {
+            newParticles.push(p);
+        }
+    }
+    state.particles = newParticles;
+
     // 1. Handle Projectiles
     const newProjectiles: SyncProjectile[] = [];
 
@@ -576,19 +594,23 @@ function updateGameState(roomId: string) {
                     }
                 }
 
-                // Visual Effects - explosion particles
-                for (let i = 0; i < 20; i++) {
-                    const angle = (i / 20) * Math.PI * 2;
-                    const speed = 2 + Math.random() * 3;
+                // Visual Effects - water splash particles
+                for (let i = 0; i < 25; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 3 + Math.random() * 5;
+                    // Upward bias for splash effect
+                    const vx = Math.cos(angle) * speed;
+                    const vy = Math.sin(angle) * speed - 2; // Upward jump
+
                     state.particles.push({
                         x: explosionX,
                         y: explosionY,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        life: 0.8,
-                        size: 4,
+                        vx,
+                        vy,
+                        life: 1.0, // Last longer
+                        size: 3 + Math.random() * 3,
                         color: p.team === 'blue' ? '#3B82F6' : '#EF4444',
-                        glow: true
+                        glow: false // Liquid doesn't glow, it splashes
                     });
                 }
 
@@ -622,17 +644,17 @@ function updateGameState(roomId: string) {
                 const radius = p.paintRadius || 1;
                 paintRadius(state.grid, p.x, p.y, radius, p.team);
 
-                // Visual effects
-                for (let i = 0; i < 5; i++) {
+                // Visual effects - small splash
+                for (let i = 0; i < 8; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = 1 + Math.random() * 2;
+                    const speed = 1 + Math.random() * 3;
                     state.particles.push({
                         x: p.x,
                         y: p.y,
                         vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed,
-                        life: 0.4,
-                        size: 2,
+                        vy: Math.sin(angle) * speed - 1, // Slight upward bias
+                        life: 0.6,
+                        size: 2 + Math.random() * 2,
                         color: p.team === 'blue' ? '#3B82F6' : '#EF4444',
                         glow: false
                     });
@@ -775,6 +797,7 @@ function updateGameState(roomId: string) {
 
         // Set cooldown based on weapon fireRate
         player.cooldown = weaponData.fireRate;
+        player.lastFireTime = Date.now();
 
         // Deduct ink
         if (!isFrenzy) {
@@ -916,17 +939,6 @@ function updateGameState(roomId: string) {
         };
     }
 
-    // 6. Update particles (decay life)
-    for (let i = state.particles.length - 1; i >= 0; i--) {
-        const particle = state.particles[i];
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        particle.life -= 0.1; // Decay rate
-
-        if (particle.life <= 0) {
-            state.particles.splice(i, 1);
-        }
-    }
 
     // 7. Update territory batches (decay radius and opacity)
     for (let i = state.territoryBatches.length - 1; i >= 0; i--) {
