@@ -566,8 +566,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 // Random weapon switching REMOVED in favor of Sequential Overheat Logic
                 // Enemy will only switch when the current weapon overheats.
 
-                // Random target selection (every 1-3 seconds)
-                if (newState.enemy.moveTimer! > 60 + Math.random() * 120) {
+                // Random target selection (every 2-4 seconds - SLOWER REACTION)
+                if (newState.enemy.moveTimer! > 120 + Math.random() * 120) {
                     // Random position on the grid (player side - bottom half)
                     const tx = Math.random() * (newState.cols * GRID_SIZE);
                     const ty = (newState.rows * GRID_SIZE) * 0.4 + Math.random() * (newState.rows * GRID_SIZE * 0.5);
@@ -579,13 +579,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     newState.enemy.moveTimer = 0;
                 }
 
-                // Smooth rotation (player-like)
-                const rotationSpeed = 0.08;
+                // Smooth rotation (SLOWER - easier to dodge)
+                const rotationSpeed = 0.03;
                 newState.enemy.angle += (newState.enemy.targetAngle! - newState.enemy.angle) * rotationSpeed;
 
                 // Random firing pattern (not constant - like a player)
-                // 70% chance to be "firing" each update cycle
-                const shouldFire = Math.random() < 0.7;
+                // 40% chance to be "firing" each update cycle (LESS AGGRESSIVE)
+                const shouldFire = Math.random() < 0.4;
 
                 if (shouldFire) {
                     const currentEnemyMode = newState.enemy.weaponMode || 'machineGun';

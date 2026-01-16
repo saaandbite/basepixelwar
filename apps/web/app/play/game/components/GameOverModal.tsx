@@ -1,9 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Home } from 'lucide-react';
-
-// Game Over Modal Component
+import React, { useEffect, useState } from 'react';
+import { Home, Trophy, Ban, Swords, RotateCcw, Zap, Flame } from 'lucide-react';
 
 interface GameOverModalProps {
     blueScore: number;
@@ -13,6 +11,42 @@ interface GameOverModalProps {
     onExit: () => void;
 }
 
+// Simple CountUp Hook (Internal)
+const useCountUp = (end: number, duration: number = 1000, delay: number = 0) => {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        let startTime: number | null = null;
+        let animationFrame: number;
+
+        const animate = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = timestamp - startTime;
+
+            if (progress < delay) {
+                animationFrame = requestAnimationFrame(animate);
+                return;
+            }
+
+            const animationProgress = Math.min((progress - delay) / duration, 1);
+            // Ease out quart
+            const ease = 1 - Math.pow(1 - animationProgress, 4);
+
+            setCount(Math.floor(end * ease));
+
+            if (animationProgress < 1) {
+                animationFrame = requestAnimationFrame(animate);
+            }
+        };
+
+        animationFrame = requestAnimationFrame(animate);
+
+        return () => cancelAnimationFrame(animationFrame);
+    }, [end, duration, delay]);
+
+    return count;
+};
+
 export function GameOverModal({
     blueScore,
     maxCombo,
@@ -20,121 +54,209 @@ export function GameOverModal({
     onPlayAgain,
     onExit,
 }: GameOverModalProps) {
-    // Determine result
-    let title: string;
-    let titleClass: string;
-    let iconSvg: React.ReactElement;
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        setIsVisible(true);
+    }, []);
+
+    // Determine Theme based on score
+    // > 60: Epic Victory
+    // > 50: Great Win
+    // > 40: Close Match
+    // <= 40: Defeat
+
+    let theme;
 
     if (blueScore > 60) {
-        title = 'EPIC VICTORY!';
-        titleClass = 'font-display text-3xl font-bold text-saweria-pink';
-        iconSvg = (
-            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-saweria-pink">
-                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                <path d="M4 22h16" />
-                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-            </svg>
-        );
+        theme = {
+            gradient: 'from-pink-500 to-pink-600',
+            bgGradient: 'from-pink-50 to-white',
+            borderColor: 'border-pink-200',
+            textColor: 'text-pink-600',
+            icon: Trophy,
+            title: 'EPIC VICTORY!',
+            subtext: 'You Dominated The Arena!',
+            badge: 'Legendary',
+            badgeStyles: 'bg-pink-100 text-pink-700',
+            isWin: true
+        };
     } else if (blueScore > 50) {
-        title = 'GREAT WIN!';
-        titleClass = 'font-display text-3xl font-bold text-saweria-pink';
-        iconSvg = (
-            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-saweria-pink-dark">
-                <circle cx="12" cy="12" r="10" />
-                <path d="m8 14 4 4 4-4" />
-                <path d="M12 8v8" />
-            </svg>
-        );
+        theme = {
+            gradient: 'from-pink-400 to-pink-500',
+            bgGradient: 'from-pink-50 to-white',
+            borderColor: 'border-pink-200',
+            textColor: 'text-pink-500',
+            icon: Trophy,
+            title: 'GREAT WIN!',
+            subtext: 'Well Served!',
+            badge: 'Victor',
+            badgeStyles: 'bg-pink-100 text-pink-700',
+            isWin: true
+        };
     } else if (blueScore > 40) {
-        title = 'CLOSE MATCH!';
-        titleClass = 'font-display text-3xl font-bold text-yellow-600';
-        iconSvg = (
-            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-            </svg>
-        );
-    } else if (blueScore > 25) {
-        title = 'DEFEAT';
-        titleClass = 'font-display text-3xl font-bold text-primary';
-        iconSvg = (
-            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                <circle cx="12" cy="12" r="10" />
-                <path d="m15 9-6 6" />
-                <path d="m9 9 6 6" />
-            </svg>
-        );
+        theme = {
+            gradient: 'from-amber-500 to-amber-600',
+            bgGradient: 'from-amber-50 to-white',
+            borderColor: 'border-amber-200',
+            textColor: 'text-amber-600',
+            icon: Ban, // Stalemate/Close icon
+            title: 'CLOSE MATCH!',
+            subtext: 'Almost There!',
+            badge: 'Runner Up',
+            badgeStyles: 'bg-amber-100 text-amber-700',
+            isWin: false
+        };
     } else {
-        title = 'CRUSHED';
-        titleClass = 'font-display text-3xl font-bold text-red-600';
-        iconSvg = (
-            <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-600">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-        );
+        theme = {
+            gradient: 'from-red-500 to-red-600',
+            bgGradient: 'from-red-50 to-white',
+            borderColor: 'border-red-200',
+            textColor: 'text-red-600',
+            icon: Swords,
+            title: 'CRUSHED',
+            subtext: 'Better Luck Next Time!',
+            badge: 'Defeated',
+            badgeStyles: 'bg-red-100 text-red-700',
+            isWin: false
+        };
     }
 
+    // Animated Values
+    const displayedScore = useCountUp(blueScore, 1500, 200);
+    const displayedCombo = useCountUp(maxCombo, 1500, 400);
+    const displayedPowerups = useCountUp(powerupsCollected, 1500, 600);
+
     return (
-        <div className="absolute inset-0 z-50 bg-gradient-to-b from-saweria-cream/90 to-saweria-coral/90 flex items-center justify-center backdrop-blur-sm transition-opacity opacity-100">
-            <div className="bg-white rounded-3xl shadow-2xl text-center max-w-[340px] w-full transform scale-100 transition-transform duration-300 border-2 border-saweria-coral flex flex-col items-center p-7">
-                {/* Icon */}
-                <div className="flex justify-center mb-5">{iconSvg}</div>
+        <div className="absolute inset-0 z-[100] flex items-center justify-center overflow-hidden">
+            {/* Background Backdrop */}
+            <div
+                className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            />
 
-                {/* Title */}
-                <h2 className={titleClass}>{title}</h2>
-
-                {/* Score Card */}
-                <div className="bg-gradient-to-r from-saweria-coral/30 to-saweria-cream rounded-2xl border-2 border-saweria-pink-light w-full p-4 mt-4">
-                    <p className="text-text-muted font-semibold text-xs mb-1">FINAL SCORE</p>
-                    <p className="text-xl font-bold text-text-main">
-                        BLUE TERRITORY: <span className="text-saweria-pink">{blueScore}%</span>
-                    </p>
-                    <div className="mt-2 h-2 bg-saweria-coral/50 rounded-full overflow-hidden">
+            {/* Confetti Particles (CSS only, simplified) */}
+            {theme.isWin && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    {[...Array(20)].map((_, i) => (
                         <div
-                            className="h-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light"
-                            style={{ width: `${blueScore}%` }}
-                        ></div>
+                            key={i}
+                            className="absolute w-2 h-2 rounded-full animate-confetti"
+                            style={{
+                                backgroundColor: ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32'][i % 4],
+                                left: `${Math.random() * 100}%`,
+                                top: '-20px',
+                                animationDelay: `${Math.random() * 2}s`,
+                                animationDuration: `${3 + Math.random() * 2}s`
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Main Card */}
+            <div
+                className={`
+                    relative bg-white/95 backdrop-blur-xl rounded-3xl p-3 sm:p-6 max-w-sm w-full mx-4 shadow-2xl border-4 ${theme.borderColor}
+                    transform transition-all duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)
+                    max-h-[90vh] overflow-y-auto scrollbar-hide
+                    ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-75 translate-y-10 opacity-0'}
+                `}
+            >
+                {/* Result Icon with Shine Effect */}
+                <div className="relative flex justify-center mb-2 sm:mb-4">
+                    <div className={`relative z-10 p-2 sm:p-3 rounded-full bg-gradient-to-br ${theme.bgGradient} shadow-inner`}>
+                        <theme.icon className={`w-8 h-8 sm:w-12 sm:h-12 ${theme.textColor}`} strokeWidth={1.5} />
+                    </div>
+                    {/* Pulsing Glow behind icon */}
+                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-gradient-to-r ${theme.gradient} blur-xl opacity-20 animate-pulse`} />
+                </div>
+
+                {/* Title & Subtext */}
+                <div className="text-center mb-3 sm:mb-6">
+                    <h1 className={`text-h2 font-black bg-clip-text text-transparent bg-gradient-to-r ${theme.gradient} mb-2 tracking-tight`}>
+                        {theme.title}
+                    </h1>
+                    <p className={`font-bold text-sm tracking-wide uppercase mb-3 text-slate-600`}>
+                        {theme.subtext}
+                    </p>
+
+                    {/* Badge - High Contrast Pill */}
+                    <div className={`
+                        inline-block px-4 py-1.5 rounded-full text-sm font-bold tracking-wider uppercase
+                        ${theme.badgeStyles}
+                    `}>
+                        {theme.badge}
                     </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="flex gap-3 w-full mt-4">
-                    <div className="flex-1 bg-saweria-coral/20 rounded-2xl border-2 border-saweria-pink-light p-3">
-                        <p className="text-[10px] text-text-muted mb-0.5 font-semibold">MAX COMBO</p>
-                        <p className="font-bold text-lg text-amber-500">x{maxCombo}</p>
+                {/* Dominant Score Display */}
+                <div className="flex flex-col items-center mb-6 sm:mb-8">
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-7xl sm:text-8xl font-black tabular-nums tracking-tighter ${theme.textColor}`}>
+                            {displayedScore}
+                        </span>
+                        <span className={`text-3xl font-bold ${theme.textColor} opacity-80`}>%</span>
                     </div>
-                    <div className="flex-1 bg-saweria-coral/20 rounded-2xl border-2 border-saweria-pink-light p-3">
-                        <p className="text-[10px] text-text-muted mb-0.5 font-semibold">POWER-UPS</p>
-                        <p className="font-bold text-lg text-saweria-pink">{powerupsCollected}</p>
+                    <span className="text-sm font-bold text-slate-600 uppercase tracking-widest mt-1">Territory Control</span>
+                </div>
+
+                {/* Statistics Row - Stats specific to Single Player */}
+                <div className="flex items-center justify-center gap-6 sm:gap-8 mb-6 sm:mb-8 px-4">
+                    <div className="flex items-center gap-2">
+                        <div className="text-amber-500">
+                            <Flame size={18} className="sm:w-5 sm:h-5" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-600 uppercase tracking-wide">Max Combo</span>
+                            <span className="font-black text-slate-800 text-xl leading-none">x{displayedCombo}</span>
+                        </div>
+                    </div>
+
+                    <div className="w-px h-10 bg-slate-300"></div>
+
+                    <div className="flex items-center gap-2">
+                        <div className="text-purple-500">
+                            <Zap size={18} className="sm:w-5 sm:h-5" strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-600 uppercase tracking-wide">Powerups</span>
+                            <span className="font-black text-slate-800 text-xl leading-none">{displayedPowerups}</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Play Again Button */}
-                <button
-                    onClick={onPlayAgain}
-                    className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light text-white rounded-full font-bold shadow-lg active:scale-95 transition-transform hover:from-saweria-pink-dark hover:to-saweria-pink flex items-center justify-center gap-2 py-3.5 px-6 mt-4"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                        <path d="M3 3v5h5" />
-                    </svg>
-                    PLAY AGAIN
-                </button>
+                {/* Buttons Action Group */}
+                <div className="space-y-3">
+                    {/* Play Again Button */}
+                    <button
+                        onClick={onPlayAgain}
+                        className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-bold py-3 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
+                    >
+                        <RotateCcw size={18} className="group-hover:-rotate-90 transition-transform duration-300" />
+                        <span>PLAY AGAIN</span>
+                    </button>
 
-                {/* Exit to Lobby Button */}
-                <button
-                    onClick={onExit}
-                    className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-gray-700 hover:text-saweria-pink font-bold py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group mt-3"
-                >
-                    <Home size={18} className="group-hover:-translate-y-0.5 transition-transform" />
-                    EXIT TO LOBBY
-                </button>
+                    {/* Exit to Lobby Button */}
+                    <button
+                        onClick={onExit}
+                        className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-slate-700 hover:text-saweria-pink font-bold py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
+                    >
+                        <Home size={18} className="group-hover:-translate-y-0.5 transition-transform" />
+                        <span>EXIT TO LOBBY</span>
+                    </button>
+                </div>
+
             </div>
+
+            <style jsx>{`
+                @keyframes confetti {
+                    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+                    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+                }
+                .animate-confetti {
+                    animation: confetti 4s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 }
