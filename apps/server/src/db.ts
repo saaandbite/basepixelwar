@@ -168,7 +168,8 @@ export async function createPlayerAccount(walletAddress: string): Promise<bigint
     // Store mapping in Redis
     await setWalletMapping(walletAddress, accountId);
 
-    console.log(`[TigerBeetle] Created player account ${accountId} for ${walletAddress}`);
+    const mask = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    console.log(`[TigerBeetle] Created player account ${accountId} for ${mask}`);
     return accountId;
 }
 
@@ -267,7 +268,8 @@ export async function recordDeposit(
         throw new Error(`Deposit failed: ${CreateTransferError[errors[0].result]}`);
     }
 
-    console.log(`[TigerBeetle] Deposit ${amount} to ${walletAddress} (Account: ${accountId})`);
+    const mask = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    console.log(`[TigerBeetle] Deposit ${amount} to ${mask} (Account: ${accountId})`);
 
     // Sync to Leaderboard
     const newBalance = await getAccountBalance(accountId);
@@ -313,7 +315,8 @@ export async function recordStake(
         throw new Error(`Stake recording failed: ${CreateTransferError[errors[0].result]}`);
     }
 
-    console.log(`[TigerBeetle] Stake ${amount} recorded from ${walletAddress} to Treasury (Account: ${accountId})`);
+    const mask = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    console.log(`[TigerBeetle] Stake ${amount} recorded from ${mask} to Treasury (Account: ${accountId})`);
 
     return transferId;
 }
@@ -365,7 +368,8 @@ export async function recordWithdraw(
         throw new Error(`Withdrawal failed: ${CreateTransferError[errors[0].result]}`);
     }
 
-    console.log(`[TigerBeetle] Withdraw ${amount} from ${walletAddress}`);
+    const mask = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    console.log(`[TigerBeetle] Withdraw ${amount} from ${mask}`);
 
     // Sync to Leaderboard
     const newBalance = await getAccountBalance(accountId);
@@ -417,7 +421,8 @@ export async function transferPrizeFromVault(
     // Ensure winner account exists
     const toAccountId = await getOrCreateAccount(toWallet);
 
-    console.log(`[TigerBeetle] Transferring prize: ${amount} from Treasury to ${toWallet} (Account: ${toAccountId})`);
+    const mask = `${toWallet.slice(0, 6)}...${toWallet.slice(-4)}`;
+    console.log(`[TigerBeetle] Transferring prize: ${amount} from Treasury to ${mask} (Account: ${toAccountId})`);
 
     const transferId = generateTransferId();
 
@@ -445,7 +450,7 @@ export async function transferPrizeFromVault(
         throw new Error(`Prize transfer failed: ${CreateTransferError[errors[0].result]}`);
     }
 
-    console.log(`[TigerBeetle] Prize ${amount} transferred successfully to ${toWallet}`);
+    console.log(`[TigerBeetle] Prize ${amount} transferred successfully to ${mask}`);
 
     // Log statistics with clearer terminology
     const treasuryBalance = await getTreasuryBalance();

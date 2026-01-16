@@ -60,7 +60,7 @@ export async function joinTournament(
         const data = JSON.parse(existing) as PlayerLocation;
         // If joined this week, return existing info
         if (data.week === week) {
-            console.log(`[Tournament] ${wallet} rejoined Week ${week}, Room ${data.roomId} (Existing)`);
+            console.log(`[Tournament] ${wallet.slice(0, 6)}...${wallet.slice(-4)} rejoined Week ${week}, Room ${data.roomId} (Existing)`);
             return { roomId: data.roomId, isNew: false };
         }
     }
@@ -94,13 +94,14 @@ export async function joinTournament(
             // 0.001 ETH = 1000000000000000 wei
             const TICKET_PRICE = 1000000000000000n;
             await recordDeposit(wallet, TICKET_PRICE, txHash);
-            console.log(`[Tournament] TigerBeetle audit log created for ${wallet}`);
+            const mask = `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+            console.log(`[Tournament] TigerBeetle audit log created for ${mask}`);
         } catch (err) {
             console.error(`[Tournament] TigerBeetle audit failed:`, err);
         }
     });
 
-    console.log(`[Tournament] ${wallet} joined Week ${week}, Room ${roomId}`);
+    console.log(`[Tournament] ${wallet.slice(0, 6)}...${wallet.slice(-4)} joined Week ${week}, Room ${roomId}`);
 
     return { roomId, isNew: true };
 }
@@ -109,6 +110,7 @@ export async function joinTournament(
  * Get players in a specific room
  */
 export async function getRoomPlayers(week: number, roomId: number): Promise<TournamentPlayer[]> {
+    console.log(`[Redis] Fetching players for Week ${week} Room ${roomId}`);
     const r = getRedis();
     const list = await r.lrange(KEYS.TOURNAMENT_ROOM(week, roomId), 0, -1);
 
@@ -119,6 +121,8 @@ export async function getRoomPlayers(week: number, roomId: number): Promise<Tour
  * Get player's current room info
  */
 export async function getPlayerRoom(walletAddress: string): Promise<PlayerLocation | null> {
+    const mask = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    console.log(`[Redis] Checking room for player: ${mask}`);
     const r = getRedis();
     const data = await r.get(KEYS.TOURNAMENT_PLAYER(walletAddress.toLowerCase()));
     if (!data) return null;

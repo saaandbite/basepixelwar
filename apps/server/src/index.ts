@@ -152,12 +152,13 @@ async function main() {
             return;
           }
 
-          console.log(`[Server] Tournament Join Request: ${walletAddress} (Week ${week})`);
+          const maskWallet = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+          console.log(`[Server] Tournament Join Request: ${maskWallet} (Week ${week})`);
 
           const { joinTournament } = await import('./tournamentManager.js');
           const result = await joinTournament(walletAddress, Number(week), txHash);
 
-          console.log(`[Server] Tournament Join Processed: ${walletAddress} -> Room ${result.roomId} (New: ${result.isNew})`);
+          console.log(`[Server] Tournament Join Processed: ${maskWallet} -> Room ${result.roomId} (New: ${result.isNew})`);
 
           res.writeHead(200, {
             'Content-Type': 'application/json',
@@ -178,6 +179,9 @@ async function main() {
       const week = url.searchParams.get('week');
       const roomId = url.searchParams.get('roomId');
       const wallet = url.searchParams.get('wallet');
+      const maskWallet = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : 'N/A';
+
+      console.log(`[Server] API Request: GET /api/tournament/room (Week: ${week}, Room: ${roomId}, Wallet: ${maskWallet})`);
 
       try {
         const { getRoomPlayers, getPlayerRoom } = await import('./tournamentManager.js');
