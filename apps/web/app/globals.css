@@ -1,41 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Nunito:wght@200..1000&display=swap');
-
-/* Custom Tailwind config via CSS */
-@theme {
-  /* Saweria Theme Colors */
-  --color-primary: #FF8395;
-  --color-secondary: #FDB1BD;
-  --color-saweria-pink: #FF8395;
-  --color-saweria-pink-light: #FDB1BD;
-  --color-saweria-pink-dark: #E57384;
-  --color-saweria-cream: #FFF8F4;
-  --color-saweria-coral: #FFE5E5;
-  --color-saweria-accent: #FFCDD2;
-  --color-surface-light: #FFFFFF;
-  --color-card-bg: #FFFFFF;
-  --color-text-main: #333333;
-  --color-text-muted: #666666;
-  --color-accent: #F9C74F;
-  --color-success: #4CAF50;
-  /* Game colors preserved */
-  --color-game-red: #FF8888;
-  --color-game-blue: #72C4FF;
-  --color-powerup-purple: #9D4EDD;
-  --color-powerup-green: #4CAF50;
-  --color-powerup-orange: #FF9800;
-
-  --font-display: var(--font-fredoka), "Fredoka", cursive;
-  --font-sans: var(--font-nunito), "Nunito", sans-serif;
-
-  --shadow-game: 0 20px 40px -5px rgba(255, 131, 149, 0.25);
-  --shadow-btn: 0 6px 0 rgba(229, 115, 132, 0.8);
-  --shadow-btn-active: 0 2px 0 rgba(229, 115, 132, 0.8);
-  --shadow-card: 0 4px 20px rgba(255, 131, 149, 0.15);
-  --shadow-powerup: 0 0 15px rgba(157, 78, 221, 0.6);
-  --shadow-meteor: 0 0 20px rgba(249, 199, 79, 0.8);
-  --shadow-combo: 0 0 20px rgba(255, 215, 0, 0.9);
-}
+@import "tailwindcss";
 
 :root {
   --background: #FFF8F4;

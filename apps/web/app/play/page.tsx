@@ -94,6 +94,11 @@ export default function Home() {
             Leaderboard
           </Link>
 
+          <Link href="/tournament" className={styles.startButton} style={{ background: 'linear-gradient(45deg, #FFD700, #FFA500)', border: 'none' }}>
+            <Trophy className="w-6 h-6 text-black" />
+            <span className="text-black font-bold">Tournament</span>
+          </Link>
+
           {/* Wallet Button - Wrapped for consistent width */}
           <div className={styles.walletWrapper}>
             {!isConnected ? (

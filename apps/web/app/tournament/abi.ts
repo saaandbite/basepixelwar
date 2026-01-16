@@ -58,6 +58,8 @@ export const TOURNAMENT_ABI = [
         "stateMutability": "nonpayable",
         "type": "function"
     },
+    // UNCOMMENT AFTER DEPLOYMENT (New TournamentMCL)
+    /*
     {
         "inputs": [
             {
@@ -82,6 +84,7 @@ export const TOURNAMENT_ABI = [
         "stateMutability": "view",
         "type": "function"
     },
+    */
     {
         "inputs": [
             {

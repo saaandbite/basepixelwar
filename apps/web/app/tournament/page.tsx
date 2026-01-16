@@ -50,7 +50,11 @@ export default function TournamentPage() {
         query: { enabled: isJoined && weekNum > 0 }
     });
 
-    // List Players using getRoomPlayers helper
+    // LIST PLAYER DI-SKIP DULU (Versi tanpa Deploy Ulang)
+    const roomPlayers: readonly `0x${string}`[] = [];
+
+    // UNCOMMENT AFTER DEPLOYMENT (Pastikan ABI juga di-uncomment)
+    /*
     const { data: playerList } = useReadContract({
         address: TOURNAMENT_ADDRESS,
         abi: TOURNAMENT_ABI,
@@ -58,8 +62,10 @@ export default function TournamentPage() {
         args: [BigInt(weekNum), BigInt(joinedRoomId)],
         query: { enabled: isJoined && weekNum > 0, refetchInterval: 5000 }
     });
-
-    const roomPlayers: readonly `0x${string}`[] = playerList ? (playerList as unknown as readonly `0x${string}`[]) : [];
+    
+    // Override roomPlayers jika fitur aktif
+    // const roomPlayers = playerList ? (playerList as unknown as readonly `0x${string}`[]) : ([] as const);
+    */
     const prizePool = roomData ? (roomData as unknown as bigint) : 0n;
 
     // Actions
