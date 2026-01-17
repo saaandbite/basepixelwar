@@ -15,6 +15,8 @@ const KEYS = {
     PLAYER_ROOM: 'player_room:', // player_room:socketId -> roomId
     GRID: 'grid:', // grid:roomId -> JSON grid
     LEADERBOARD: 'leaderboard:', // leaderboard:category -> ZSET
+    TOURNAMENT_LEADERBOARD: (week: string | number, roomId: string | number) => `tournament:${week}:room:${roomId}:leaderboard`,
+    TOURNAMENT_LOBBY_PLAYERS: (week: string | number, roomId: string | number) => `tournament:${week}:room:${roomId}:online`,
 } as const;
 
 // Configuration
@@ -456,6 +458,67 @@ export async function getLeaderboard(
     }
     return results;
 }
+
+// ============================================
+// TOURNAMENT LEADERBOARD
+// ============================================
+
+export async function updateTournamentScore(
+    week: number,
+    roomId: string,
+    walletAddress: string,
+    scoreToAdd: number
+): Promise<number> {
+    const r = getRedis();
+    const key = KEYS.TOURNAMENT_LEADERBOARD(week, roomId);
+    // Incrby returns the new score
+    const newScore = await r.zincrby(key, scoreToAdd, walletAddress.toLowerCase());
+    return parseFloat(newScore);
+}
+
+export async function getTournamentLeaderboard(
+    week: number,
+    roomId: string
+): Promise<{ wallet: string; score: number }[]> {
+    const r = getRedis();
+    const key = KEYS.TOURNAMENT_LEADERBOARD(week, roomId);
+    const data = await r.zrevrange(key, 0, -1, 'WITHSCORES');
+
+    const results: { wallet: string; score: number }[] = [];
+    for (let i = 0; i < data.length; i += 2) {
+        results.push({
+            wallet: data[i],
+            score: parseFloat(data[i + 1])
+        });
+    }
+    return results;
+}
+
+// Lobby Online Status
+export async function setTournamentLobbyPresence(
+    week: number,
+    roomId: string,
+    walletAddress: string,
+    isOnline: boolean
+): Promise<void> {
+    const r = getRedis();
+    const key = KEYS.TOURNAMENT_LOBBY_PLAYERS(week, roomId);
+    if (isOnline) {
+        await r.sadd(key, walletAddress.toLowerCase());
+    } else {
+        await r.srem(key, walletAddress.toLowerCase());
+    }
+}
+
+export async function getTournamentLobbyOnlinePlayers(
+    week: number,
+    roomId: string
+): Promise<string[]> {
+    const r = getRedis();
+    const key = KEYS.TOURNAMENT_LOBBY_PLAYERS(week, roomId);
+    return r.smembers(key);
+}
+
 
 // ============================================
 // GAME STATE SNAPSHOTS (For Crash Recovery)

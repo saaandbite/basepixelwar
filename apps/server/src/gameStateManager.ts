@@ -1029,25 +1029,46 @@ async function endGame(roomId: string) {
     const room = await RoomManager.getRoom(roomId);
     const io = ioInstance; // Capture reference for async callback
 
-    // === TOURNAMENT LOGIC ===
-    if (roomId.startsWith('TOURNAMENT-')) {
-        console.log(`[GameStateManager] Tournament Room ${roomId} ended. Winner: ${winner}`);
+    // === TOURNAMENT CHECK ===
+    // Check if this game is part of a tournament
+    const r = Redis.getRedis();
+    const tournamentDataJson = await r.get(`game_to_tournament:${roomId}`);
+
+    if (tournamentDataJson) {
+        const tData = JSON.parse(tournamentDataJson) as { week: number; tournamentRoomId: string };
+        console.log(`[GameStateManager] Tournament Match Ended: ${roomId} (Week ${tData.week}, Room ${tData.tournamentRoomId})`);
+
+        // Update Tournament Leaderboard
         if (winner !== 'draw') {
             const winnerTeam = winner;
             const winnerPlayer = room?.players.find(p => p.team === winnerTeam);
+            const loserPlayer = room?.players.find(p => p.team !== winnerTeam);
+
             if (winnerPlayer?.walletAddress) {
-                // Add Score to Tournament Contract
-                // We don't wait for this to finish to avoid blocking cleanup, but it's important.
-                contractService.addTournamentScore(winnerPlayer.walletAddress)
-                    .then(tx => {
-                        if (tx) console.log(`[GameStateManager] Tournament Score Updated: ${tx}`);
-                        else console.error(`[GameStateManager] Failed to update tournament score`);
-                    });
+                // Winner gets +3 points
+                const newScore = await Redis.updateTournamentScore(tData.week, tData.tournamentRoomId, winnerPlayer.walletAddress, 3);
+                console.log(`[Tournament] Winner ${winnerPlayer.name} (+3) -> Score: ${newScore}`);
+            }
+
+            if (loserPlayer?.walletAddress) {
+                // Loser gets +1 point for participation
+                const newScore = await Redis.updateTournamentScore(tData.week, tData.tournamentRoomId, loserPlayer.walletAddress, 1);
+                console.log(`[Tournament] Loser ${loserPlayer.name} (+1) -> Score: ${newScore}`);
             }
         }
-        // Skip standard GameVault settlement
+
+        // Broadcast new leaderboard to the Tournament Protocol Room (Socket Room)
+        // Note: The players are in 'gameRoomId', but the lobby is 'tournament_lobby_{id}'
+        // We can emit to the lobby room directly if we have the ID
+        const lobbyRoomId = `tournament_lobby_${tData.tournamentRoomId}`;
+        const leaderboard = await Redis.getTournamentLeaderboard(tData.week, tData.tournamentRoomId);
+        ioInstance.to(lobbyRoomId).emit('lobby_leaderboard_update', leaderboard);
+
+        // CLEANUP
         await RoomManager.updateRoomStatus(roomId, 'finished');
         cleanupRoom(roomId);
+        // Clean the mapping key
+        await r.del(`game_to_tournament:${roomId}`);
         return;
     }
     // ========================
@@ -1159,14 +1180,6 @@ async function endGame(roomId: string) {
                 await Redis.updateLeaderboard('wins', winnerWallet, 1);
             }
         }
-
-        // 2. Territory Leaderboard (Removed in favor of ETH/Wins only)
-        // for (const p of room.players) {
-        //     if (p.walletAddress) {
-        //         const score = p.team === 'blue' ? state.scores.blue : state.scores.red;
-        //         await Redis.updateLeaderboard('territory', p.walletAddress, score);
-        //     }
-        // }
     }
 
     console.log(`[GameStateManager] Game ended for room ${roomId} (Leaderboard Updated)`);

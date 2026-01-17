@@ -80,6 +80,12 @@ function handleConnection(socket: GameSocket) {
     // Payment events
     socket.on('payment_confirmed', (data) => handlePaymentConfirmed(socket, data));
     socket.on('cancel_payment', () => handleCancelPayment(socket));
+
+    // Tournament Lobby Events
+    socket.on('join_tournament_lobby', (data: { week: number; roomId: string; walletAddress: string }) => handleJoinTournamentLobby(socket, data));
+    socket.on('challenge_player', (data: { targetWallet: string; tournamentRoomId: string }) => handleChallengePlayer(socket, data));
+    socket.on('accept_challenge', (data: { challengerWallet: string; tournamentRoomId: string; week: number }) => handleAcceptChallenge(socket, data));
+
 }
 
 // Helper to get the ID used in Redis queue (wallet address preferred for deduplication)
@@ -672,6 +678,155 @@ async function startGame(roomId: string) {
     GameStateManager.createGameState(roomId);
     GameStateManager.startGameLoop(roomId);
 }
+
+
+// ============================================
+// TOURNAMENT LOBBY HANDLERS
+// ============================================
+
+async function handleJoinTournamentLobby(socket: GameSocket, data: { week: number; roomId: string; walletAddress: string }) {
+    const { week, roomId, walletAddress } = data;
+    const normalizedWallet = walletAddress.toLowerCase();
+
+    console.log(`[SocketServer] Player ${normalizedWallet} joining Tournament Lobby ${roomId} (Week ${week})`);
+
+    // Verify player is actually in this room?
+    // Ideally yes, but for now we trust the client or adding a check would be better (TODO)
+
+    socket.join(`tournament_lobby_${roomId}`);
+    socket.data.walletAddress = normalizedWallet;
+    // Store tournament context in socket data to handle disconnects
+    socket.data.tournamentRoomId = roomId;
+    socket.data.week = week;
+
+    // Mark as online in Redis
+    const { setTournamentLobbyPresence, getTournamentLobbyOnlinePlayers, getTournamentLeaderboard } = await import('./redis.js');
+    await setTournamentLobbyPresence(week, roomId, normalizedWallet, true);
+
+    // Fetch initial state
+    const onlinePlayers = await getTournamentLobbyOnlinePlayers(week, roomId);
+    const leaderboard = await getTournamentLeaderboard(week, roomId);
+
+    // Emit state to THIS player
+    socket.emit('lobby_state', {
+        roomId,
+        onlinePlayers,
+        leaderboard
+    });
+
+    // Notify OTHERS that I joined
+    socket.to(`tournament_lobby_${roomId}`).emit('lobby_player_update', {
+        walletAddress: normalizedWallet,
+        isOnline: true
+    });
+}
+
+function getSocketByWallet(walletAddress: string): GameSocket | undefined {
+    let bestSocket: GameSocket | undefined = undefined;
+    const target = walletAddress.toLowerCase();
+
+    for (const [_, socket] of io.sockets.sockets) {
+        if (socket.data.walletAddress?.toLowerCase() === target && socket.connected) {
+            bestSocket = socket;
+            break;
+        }
+    }
+    return bestSocket;
+}
+
+async function handleChallengePlayer(socket: GameSocket, data: { targetWallet: string; tournamentRoomId: string }) {
+    const { targetWallet, tournamentRoomId } = data;
+    const challengerWallet = socket.data.walletAddress;
+
+    if (!challengerWallet) return;
+
+    console.log(`[SocketServer] Challenge: ${challengerWallet} -> ${targetWallet} in Room ${tournamentRoomId}`);
+
+    const targetSocket = getSocketByWallet(targetWallet);
+    if (targetSocket) {
+        targetSocket.emit('challenge_received', {
+            challengerWallet,
+            tournamentRoomId
+        });
+    } else {
+        socket.emit('challenge_failed', { reason: 'Player offline' });
+    }
+}
+
+async function handleAcceptChallenge(socket: GameSocket, data: { challengerWallet: string; tournamentRoomId: string; week: number }) {
+    // 1. Validate
+    const acceptorWallet = socket.data.walletAddress;
+    if (!acceptorWallet) return;
+
+    const challengerWallet = data.challengerWallet;
+    const challengerSocket = getSocketByWallet(challengerWallet);
+
+    if (!challengerSocket) {
+        socket.emit('challenge_failed', { reason: 'Challenger no longer available' });
+        return;
+    }
+
+    // 2. Create Match
+    // We need to construct PvPPlayer objects
+    const p1: PvPPlayer = {
+        id: challengerWallet, // Use wallet as ID for tournament games
+        name: `Player ${challengerWallet.slice(0, 4)}`,
+        walletAddress: challengerWallet,
+        team: 'blue',
+        ready: true
+    };
+
+    const p2: PvPPlayer = {
+        id: acceptorWallet,
+        name: `Player ${acceptorWallet.slice(0, 4)}`,
+        walletAddress: acceptorWallet,
+        team: 'red',
+        ready: true
+    };
+
+    const room = await RoomManager.createTournamentMatch(p1, p2, data.tournamentRoomId, data.week);
+
+    // 3. Move players to game
+    challengerSocket.join(room.id);
+    socket.join(room.id);
+
+    challengerSocket.data.roomId = room.id;
+    socket.data.roomId = room.id;
+
+    // 4. Start Game Immediately (Skip payment)
+    const gameConfig: GameStartData['config'] = {
+        duration: 90,
+        gridCols: 35,
+        gridRows: 54,
+        canvasWidth: 420,
+        canvasHeight: 640,
+    };
+
+    // Emit game_start to P1
+    challengerSocket.emit('game_start', {
+        roomId: room.id,
+        yourTeam: 'blue',
+        opponent: p2,
+        config: gameConfig,
+        startTime: Date.now()
+    });
+
+    // Emit game_start to P2 (Acceptor)
+    socket.emit('game_start', {
+        roomId: room.id,
+        yourTeam: 'red',
+        opponent: p1,
+        config: gameConfig,
+        startTime: Date.now()
+    });
+
+    // Start Engine
+    GameStateManager.createGameState(room.id);
+    GameStateManager.startGameLoop(room.id);
+
+    console.log(`[SocketServer] Tournament Match Started: ${room.id}`);
+}
+
 
 export function getIO() {
     return io;

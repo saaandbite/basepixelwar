@@ -57,6 +57,11 @@ export type ClientToServerEvents = {
     'create_room': (name: string) => void;
     'join_room': (roomId: string) => void;
     'leave_room': () => void;
+
+    // Tournament
+    'join_tournament_lobby': (data: { week: number; roomId: string; walletAddress: string }) => void;
+    'challenge_player': (data: { targetWallet: string; tournamentRoomId: string }) => void;
+    'accept_challenge': (data: { challengerWallet: string; tournamentRoomId: string; week: number }) => void;
 };
 
 export interface PlayerInput {
@@ -106,6 +111,13 @@ export type ServerToClientEvents = {
 
     // PvP Input Relay - Server broadcasts opponent's input to you
     'opponent_input': (input: PlayerInput & { team: 'blue' | 'red' }) => void;
+
+    // Tournament Lobby
+    'lobby_state': (data: { roomId: string; onlinePlayers: string[]; leaderboard: { wallet: string; score: number }[] }) => void;
+    'lobby_player_update': (data: { walletAddress: string; isOnline: boolean }) => void;
+    'lobby_leaderboard_update': (data: { wallet: string; score: number }[]) => void;
+    'challenge_received': (data: { challengerWallet: string; tournamentRoomId: string }) => void;
+    'challenge_failed': (data: { reason: string }) => void;
 };
 
 export interface GameStartData {
@@ -263,4 +275,7 @@ export interface SocketData {
     playerName: string;
     roomId?: string;
     walletAddress?: string;
+    // Tournament context
+    tournamentRoomId?: string;
+    week?: number;
 }
