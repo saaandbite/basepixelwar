@@ -22,20 +22,26 @@ type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 // Nginx Proxy Setup:
 // We return EMPTY string so Socket.io connects to window.location.origin
 // This works perfectly with the Nginx reverse proxy Setup ( / -> web, /socket.io -> server )
+// Nginx Proxy Setup:
+// We return EMPTY string so Socket.io connects to window.location.origin
+// This works perfectly with the Nginx reverse proxy Setup ( / -> web, /socket.io -> server )
 const getServerUrl = () => {
-    // Still respect env var if explicitly set (for dev/testing without nginx)
-    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
-
-    // Fallback for local development
+    // 1. Dynamic Detection (Best for LAN / Mobile Testing)
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
 
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+        // If we are accessing via IP (e.g. 192.168.x.x) or special domain, use it!
+        // We ignored the Env Var here because it often defaults to localhost in build time
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             return `${protocol}//${hostname}:3000`;
         }
     }
 
+    // 2. Fallback to Env Var (Production domain or configured localhost)
+    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
+
+    // 3. Last Resort
     // In production with Nginx, we want a relative connection
     // Socket.io will automatically append /socket.io to the current URL
     return undefined;

@@ -365,7 +365,7 @@ export function PvPGamePage() {
         return (
             <div className="game-container bg-slate-50">
                 <div className="flex flex-col items-center justify-center h-screen gap-6">
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">CHROMA DUEL <span className="text-blue-500">PVP</span></h1>
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">PIXEL WAR <span className="text-blue-500">BATTLE</span></h1>
 
                     <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-4 w-80">
                         {!pvp.isConnected && (

@@ -520,11 +520,6 @@ export default function TournamentPage() {
                     </div>
                 )}
             </main>
-
-            {/* Debug Footer */}
-            <div className="fixed bottom-0 left-0 w-full bg-black/80 text-xs text-green-400 p-1 text-center font-mono pointer-events-none z-[200]">
-                MOBILE DEBUG: {debugMsg}
-            </div>
         </div>
     );
 }

@@ -44,29 +44,24 @@ export interface MultiplayerState {
 }
 
 // Nginx Proxy Setup:
+// Nginx Proxy Setup:
 const getServerUrl = () => {
-    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
-
-    // In browser
+    // 1. Dynamic Detection (Best for LAN / Mobile Testing)
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
 
-        // If we are on localhost, connect to port 3000
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+        // If we are accessing via IP (e.g. 192.168.x.x) or special domain, use it!
+        // We ignored the Env Var here because it often defaults to localhost in build time
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             return `${protocol}//${hostname}:3000`;
-        }
-        const parts = hostname.split('.');
-        const secondOctetStr = parts[1];
-        if (hostname.startsWith('172.') && secondOctetStr) {
-            const secondOctet = parseInt(secondOctetStr, 10);
-            if (secondOctet >= 16 && secondOctet <= 31) {
-                return `${protocol}//${hostname}:3000`;
-            }
         }
     }
 
-    // Fallback let socket.io figure it out (connects to current host/port)
+    // 2. Fallback to Env Var (Production domain or configured localhost)
+    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
+
+    // 3. Last Resort - Nginx Relative or Default Localhost
     return undefined;
 };
 
