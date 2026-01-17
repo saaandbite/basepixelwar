@@ -58,6 +58,7 @@ export interface PvPState {
     roomId: string | null;
     myTeam: 'blue' | 'red' | null;
     opponentName: string | null;
+    opponentWallet: string | null;
 
     // Game
     isPlaying: boolean;
@@ -101,6 +102,7 @@ export function usePvPGame() {
         roomId: null,
         myTeam: null,
         opponentName: null,
+        opponentWallet: null, // Initialize
         isPlaying: false,
         countdown: 0,
         gameState: null,
@@ -164,6 +166,7 @@ export function usePvPGame() {
                 ...prev,
                 roomId,
                 opponentName: opponent.name,
+                opponentWallet: opponent.walletAddress || null, // Capture wallet
                 myTeam: inferredTeam, // Set team early for countdown display
                 gameOverResult: null, // Reset previous game over
             }));
@@ -178,6 +181,7 @@ export function usePvPGame() {
                 ...prev,
                 roomId,
                 opponentName: opponent.name,
+                opponentWallet: opponent.walletAddress || null, // Capture wallet
                 myTeam: inferredTeam,
                 pendingPayment: true,
                 isFirstPlayer,
@@ -243,6 +247,7 @@ export function usePvPGame() {
                 isPlaying: true,
                 countdown: 0,
                 opponentName: data.opponent.name,
+                opponentWallet: data.opponent.walletAddress || null, // Capture wallet
                 gameOverResult: null,
                 pendingPayment: false,
                 paymentStatus: null,
@@ -355,6 +360,7 @@ export function usePvPGame() {
             roomId: null,
             myTeam: null,
             opponentName: null,
+            opponentWallet: null, // Reset
             isPlaying: false,
             countdown: 0,
             gameState: null,

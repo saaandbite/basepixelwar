@@ -122,7 +122,7 @@ export interface PvPGameState {
 const GRID_SIZE = 15;
 const GRID_COLS = 26; // 390 / 15
 const GRID_ROWS = 44; // 660 / 15
-const GAME_DURATION = 90; // Matched client (updated to 90s)
+const GAME_DURATION = 30; // Matched client (updated to 90s)
 const GAME_WIDTH = 390;
 const GAME_HEIGHT = 660;
 const INK_MAX = 100;

@@ -5,36 +5,27 @@ interface PvPGameNavbarProps {
     scoreRed: number;
     timeLeft: number;
     myTeam: 'blue' | 'red';
+    blueWallet?: string | null;
+    redWallet?: string | null;
+}
+
+function shortenAddress(address?: string | null) {
+    if (!address) return 'UNKNOWN';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 export function PvPGameNavbar({
     scoreBlue,
     scoreRed,
     timeLeft,
-    myTeam
+    myTeam,
+    blueWallet,
+    redWallet
 }: PvPGameNavbarProps) {
     // Format time mm:ss
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
     const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-    // Helper to determine if a score belongs to "You" or "Enemy"
-    // Assuming Blue is always Bottom/You in this view layer due to rotation?
-    // Actually, `myTeam` tells us who we are.
-    // If myTeam is blue: Blue is YOU.
-    // If myTeam is red: Red is YOU.
-
-    // BUT the design typically puts YOU on the left?
-    // Let's stick to Blue = Left, Red = Right for consistency with the bar colors often used,
-    // OR we can swap them so "YOU" is always left.
-    // The design shows "YOU" on the left with Blue icon.
-    // If I am Red team, do I see myself as Red on the left?
-    // Usually in these games, "YOU" is always Blue/Left locally?
-    // But the server enforces Blue vs Red teams.
-    // If I am Red, I am "Enemy" color? 
-    // The prompt says "You" is Blue 44%, Enemy 56% Red in one shot.
-    // Let's assume strict Team Blue = Left, Team Red = Right for now,
-    // but label them "YOU" and "ENEMY" dynamically.
 
     const isBlueMe = myTeam === 'blue';
 
@@ -47,7 +38,7 @@ export function PvPGameNavbar({
                 </div>
                 <div className="flex flex-col">
                     <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider ${isBlueMe ? 'text-[#4CC9F0]' : 'text-gray-400'}`}>
-                        {isBlueMe ? 'YOU' : 'ENEMY'}
+                        {shortenAddress(blueWallet)} {isBlueMe && <span className="text-[8px] sm:text-[10px]">(You)</span>}
                     </span>
                     <span className="text-base sm:text-xl font-black text-[#4CC9F0] leading-none">
                         {scoreBlue}%
@@ -64,7 +55,7 @@ export function PvPGameNavbar({
             <div className="flex items-center gap-1.5 sm:gap-3 text-right">
                 <div className="flex flex-col items-end">
                     <span className={`text-[9px] sm:text-xs font-bold uppercase tracking-wider ${!isBlueMe ? 'text-[#FF6B6B]' : 'text-gray-400'}`}>
-                        {!isBlueMe ? 'YOU' : 'ENEMY'}
+                        {shortenAddress(redWallet)} {!isBlueMe && <span className="text-[8px] sm:text-[10px]">(You)</span>}
                     </span>
                     <span className="text-base sm:text-xl font-black text-[#FF6B6B] leading-none">
                         {scoreRed}%

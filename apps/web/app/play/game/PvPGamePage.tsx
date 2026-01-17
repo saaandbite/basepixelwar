@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { usePvPGame } from './hooks/usePvPGame';
+import { useWallet } from '../../contexts/WalletContext'; // Import useWallet
 import { PvPGameCanvas } from './components/PvPGameCanvas';
 import { PvPGameNavbar } from './components/PvPGameNavbar';
 import { PvPGameControls } from './components/PvPGameControls';
@@ -16,6 +17,7 @@ import './game.css';
 
 export function PvPGamePage() {
     const pvp = usePvPGame();
+    const { address: myWallet } = useWallet();
     const [weaponMode, setWeaponMode] = useState<'machineGun' | 'shotgun' | 'inkBomb'>('machineGun');
     const [justUsedInkBomb, setJustUsedInkBomb] = useState(false);
     const [isTournament, setIsTournament] = useState(false);
@@ -27,7 +29,7 @@ export function PvPGamePage() {
 
         // Check for session storage data from /room page (commented out for persistence)
         // const team = sessionStorage.getItem('pvp_team') as 'blue' | 'red' | null;
-        // if (team) { ... }
+        // if (team) {... }
 
         // Small delay then set ready
         const readyTimeout = setTimeout(() => {
@@ -428,6 +430,8 @@ export function PvPGamePage() {
                     scoreRed={pvp.scores.red}
                     timeLeft={pvp.timeLeft}
                     myTeam={pvp.myTeam || 'blue'}
+                    blueWallet={pvp.myTeam === 'blue' ? myWallet || undefined : pvp.opponentWallet || undefined}
+                    redWallet={pvp.myTeam === 'red' ? myWallet || undefined : pvp.opponentWallet || undefined}
                 />
 
                 {/* Game Area - Flex Grow to take available space */}
