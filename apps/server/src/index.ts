@@ -166,7 +166,7 @@ async function main() {
         });
         res.end(JSON.stringify({
           wallet,
-          username: username || 'Anonymous',
+          username: username || `Player ${wallet.slice(0, 6)}...`,
           stats
         }));
 
