@@ -731,7 +731,25 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
     const { week, roomId, walletAddress } = data;
     const normalizedWallet = walletAddress.toLowerCase();
 
-    console.log(`[SocketServer] Player ${normalizedWallet} joining Tournament Lobby ${roomId} (Week ${week})`);
+    console.log(`[SocketServer] Player ${normalizedWallet} attempting to join Tournament Lobby ${roomId} (Week ${week})`);
+
+    // PAYMENT VALIDATION: Verify wallet is registered via payment
+    const { getPlayerRoom } = await import('./tournamentManager.js');
+    const playerRoom = await getPlayerRoom(normalizedWallet);
+
+    if (!playerRoom) {
+        console.warn(`[SocketServer] REJECTED: Wallet ${normalizedWallet} NOT registered in tournament (no payment found)`);
+        socket.emit('lobby_join_failed', { reason: 'NOT_REGISTERED' });
+        return;
+    }
+
+    if (playerRoom.roomId.toString() !== roomId || playerRoom.week !== week) {
+        console.warn(`[SocketServer] REJECTED: Wallet ${normalizedWallet} room mismatch. Registered: Room ${playerRoom.roomId} Week ${playerRoom.week}, Requested: Room ${roomId} Week ${week}`);
+        socket.emit('lobby_join_failed', { reason: 'ROOM_MISMATCH' });
+        return;
+    }
+
+    console.log(`[SocketServer] VERIFIED: Wallet ${normalizedWallet} confirmed for Room ${roomId} Week ${week}`);
 
     // GRACEFUL DISCONNECT: Clear any pending timeout for this wallet
     if (lobbyDisconnectTimeouts.has(normalizedWallet)) {
@@ -739,9 +757,6 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
         clearTimeout(lobbyDisconnectTimeouts.get(normalizedWallet));
         lobbyDisconnectTimeouts.delete(normalizedWallet);
     }
-
-    // Verify player is actually in this room?
-    // Ideally yes, but for now we trust the client or adding a check would be better (TODO)
 
     socket.join(`tournament_lobby_${roomId}`);
     socket.data.walletAddress = normalizedWallet;

@@ -118,6 +118,7 @@ export type ServerToClientEvents = {
     'lobby_leaderboard_update': (data: { wallet: string; score: number }[]) => void;
     'challenge_received': (data: { challengerWallet: string; tournamentRoomId: string }) => void;
     'challenge_failed': (data: { reason: string }) => void;
+    'lobby_join_failed': (data: { reason: 'NOT_REGISTERED' | 'ROOM_MISMATCH' }) => void;
 };
 
 export interface GameStartData {
