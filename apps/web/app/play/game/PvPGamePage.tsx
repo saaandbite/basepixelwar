@@ -18,9 +18,11 @@ export function PvPGamePage() {
     const pvp = usePvPGame();
     const [weaponMode, setWeaponMode] = useState<'machineGun' | 'shotgun' | 'inkBomb'>('machineGun');
     const [justUsedInkBomb, setJustUsedInkBomb] = useState(false);
+    const [isTournament, setIsTournament] = useState(false);
 
     // Connect and join queue on mount
     useEffect(() => {
+        setIsTournament(sessionStorage.getItem('is_tournament') === 'true');
         pvp.connect();
 
         // Check for session storage data from /room page (commented out for persistence)
@@ -408,7 +410,13 @@ export function PvPGamePage() {
         sessionStorage.removeItem('pvp_mode');
         sessionStorage.removeItem('pvp_room_id');
         sessionStorage.removeItem('pvp_team');
-        window.location.href = '/room';
+        sessionStorage.removeItem('is_tournament');
+
+        if (isTournament) {
+            window.location.href = '/tournament';
+        } else {
+            window.location.href = '/room';
+        }
     };
 
     return (
@@ -473,6 +481,7 @@ export function PvPGamePage() {
                             }}
                             settlementTxHash={pvp.settlementTxHash}
                             onExit={handleExit}
+                            isTournament={isTournament}
                         />
                     )}
                 </div>

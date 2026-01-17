@@ -212,6 +212,7 @@ export default function TournamentPage() {
             sessionStorage.setItem('pvp_mode', 'true');
             sessionStorage.setItem('pvp_room_id', data.roomId);
             sessionStorage.setItem('pvp_team', data.yourTeam);
+            sessionStorage.setItem('is_tournament', 'true'); // Flag for game page to know it's tournament
             // Use router to push
             router.push('/play/game');
         });

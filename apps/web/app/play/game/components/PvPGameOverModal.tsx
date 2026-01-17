@@ -12,6 +12,7 @@ interface PvPGameOverModalProps {
     };
     settlementTxHash?: string | null;
     onExit: () => void;
+    isTournament?: boolean;
 }
 
 // Simple CountUp Hook
@@ -56,6 +57,7 @@ export function PvPGameOverModal({
     stats,
     settlementTxHash,
     onExit,
+    isTournament = false,
 }: PvPGameOverModalProps) {
     const myScore = myTeam === 'blue' ? scores.blue : scores.red;
     const enemyScore = myTeam === 'blue' ? scores.red : scores.blue;
@@ -215,7 +217,7 @@ export function PvPGameOverModal({
                 </div>
 
                 {/* Claim Reward Section (Winner Only) */}
-                {isWinner && (
+                {isWinner && !isTournament && (
                     <div className="mb-3">
                         {!claimed ? (
                             <button
@@ -280,7 +282,7 @@ export function PvPGameOverModal({
                     className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-text-main hover:text-saweria-pink font-bold py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
                 >
                     <Home size={16} className="group-hover:-translate-y-0.5 transition-transform" />
-                    <span>EXIT TO LOBBY</span>
+                    <span>{isTournament ? 'BACK TO TOURNAMENT' : 'EXIT TO LOBBY'}</span>
                 </button>
             </div>
 

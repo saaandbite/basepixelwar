@@ -472,10 +472,10 @@ async function handleRejoinGame(socket: GameSocket, roomId: string, walletAddres
     // Standard Rejoin (Active Game)
     const gameConfig: GameStartData['config'] = {
         duration: 90,
-        gridCols: 35,
-        gridRows: 54,
-        canvasWidth: 420,
-        canvasHeight: 640,
+        gridCols: 26,
+        gridRows: 44,
+        canvasWidth: 390,
+        canvasHeight: 660,
     };
 
     const startData: GameStartData = {
@@ -690,10 +690,10 @@ async function startGame(roomId: string) {
 
     const gameConfig: GameStartData['config'] = {
         duration: 90,
-        gridCols: 35,
-        gridRows: 54,
-        canvasWidth: 420,
-        canvasHeight: 640,
+        gridCols: 26,
+        gridRows: 44,
+        canvasWidth: 390,
+        canvasHeight: 660,
     };
 
     // Send game start to each player with their team info
@@ -850,10 +850,10 @@ async function handleAcceptChallenge(socket: GameSocket, data: { challengerWalle
     // 4. Start Game Immediately (Skip payment)
     const gameConfig: GameStartData['config'] = {
         duration: 90,
-        gridCols: 35,
-        gridRows: 54,
-        canvasWidth: 420,
-        canvasHeight: 640,
+        gridCols: 26,
+        gridRows: 44,
+        canvasWidth: 390,
+        canvasHeight: 660,
     };
 
     // Emit game_start to P1

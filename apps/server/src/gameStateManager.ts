@@ -1044,16 +1044,26 @@ async function endGame(roomId: string) {
             const winnerPlayer = room?.players.find(p => p.team === winnerTeam);
             const loserPlayer = room?.players.find(p => p.team !== winnerTeam);
 
+            // LOGIC VERIFICATION:
+            // Ensure we are awarding to the specific wallet that WON.
+            // Do NOT fallback to indexes (like players[0]) unless we are sure.
+
+            console.log(`[Verification] Game End -> Winner Team: ${winnerTeam.toUpperCase()}`);
+            console.log(`[Verification] Room Player ${winnerTeam} -> Wallet: ${winnerPlayer?.walletAddress || 'MISSING'}`);
+
             if (winnerPlayer?.walletAddress) {
                 // Winner gets +3 points
                 const newScore = await Redis.updateTournamentScore(tData.week, tData.tournamentRoomId, winnerPlayer.walletAddress, 3);
-                console.log(`[Tournament] Winner ${winnerPlayer.name} (+3) -> Score: ${newScore}`);
+                console.log(`[Tournament] VERIFIED WIN: Awarding +3 to ${winnerPlayer.walletAddress}`);
+                console.log(`[Tournament] Winner ${winnerPlayer.name} -> New Score: ${newScore}`);
+            } else {
+                console.error(`[Tournament] CRITICAL: Winner determined as ${winnerTeam} but no wallet found! Score update ABORTED.`);
             }
 
             if (loserPlayer?.walletAddress) {
                 // Loser gets +1 point for participation
                 const newScore = await Redis.updateTournamentScore(tData.week, tData.tournamentRoomId, loserPlayer.walletAddress, 1);
-                console.log(`[Tournament] Loser ${loserPlayer.name} (+1) -> Score: ${newScore}`);
+                console.log(`[Tournament] Participation: Awarding +1 to ${loserPlayer.walletAddress}`);
             }
         }
 
