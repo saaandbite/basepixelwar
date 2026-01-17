@@ -545,6 +545,49 @@ export async function collectTreasuryFee(
     return transferId;
 }
 
+/**
+ * Record an NFT Win (Shadow Ledger)
+ * This logs the event that a player won an NFT for a specific week.
+ * It transfers 1 "unit" (abstract) from Treasury to Player.
+ */
+export async function recordNFTWin(
+    walletAddress: string,
+    week: number,
+    tokenId: number = 1 // Default to 1 (Generic Trophy) or specific ID
+): Promise<bigint> {
+    const client = getTigerBeetle();
+    const accountId = await getOrCreateAccount(walletAddress);
+    const transferId = generateTransferId();
+
+    const transfer: Transfer = {
+        id: transferId,
+        debit_account_id: TREASURY_ACCOUNT_ID,
+        credit_account_id: accountId,
+        amount: 1n, // 1 Unit = 1 NFT Win
+        pending_id: 0n,
+        user_data_128: BigInt(week),
+        user_data_64: BigInt(tokenId),
+        user_data_32: 0,
+        timeout: 0,
+        ledger: Number(LEDGER.PLAYER),
+        code: 6, // NFT Reward Code
+        flags: 0,
+        timestamp: 0n,
+    };
+
+    const errors = await client.createTransfers([transfer]);
+
+    if (errors.length > 0) {
+        console.error('[TigerBeetle] NFT Win recording failed:', errors);
+        throw new Error(`NFT Win recording failed: ${CreateTransferError[errors[0].result]}`);
+    }
+
+    const mask = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+    console.log(`[TigerBeetle] NFT Win recorded for ${mask} (Week: ${week})`);
+
+    return transferId;
+}
+
 // NOTE: recordAmmoUsage was removed - ammo tracking is done in-memory during gameplay
 // TigerBeetle is now used ONLY for financial settlements (deposits, withdrawals, prize transfers)
 

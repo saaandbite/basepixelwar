@@ -87,7 +87,9 @@ function handleConnection(socket: GameSocket) {
     // Tournament Lobby Events
     socket.on('join_tournament_lobby', (data: { week: number; roomId: string; walletAddress: string }) => handleJoinTournamentLobby(socket, data));
     socket.on('challenge_player', (data: { targetWallet: string; tournamentRoomId: string }) => handleChallengePlayer(socket, data));
+    socket.on('challenge_player', (data: { targetWallet: string; tournamentRoomId: string }) => handleChallengePlayer(socket, data));
     socket.on('accept_challenge', (data: { challengerWallet: string; tournamentRoomId: string; week: number }) => handleAcceptChallenge(socket, data));
+    socket.on('lobby_heartbeat', (data: { week: number; roomId: string }) => handleLobbyHeartbeat(socket, data));
 
 }
 
@@ -347,8 +349,8 @@ async function handleDisconnect(socket: GameSocket) {
         }
 
         if (remainingSockets === 0) {
-            // GRACEFUL DISCONNECT: Wait 15s before marking offline
-            console.log(`[SocketServer] Player ${wAddress} disconnected from Lobby. Starting grace period (15s).`);
+            // GRACEFUL DISCONNECT: Wait 2s before marking offline (Enough for reload, fast enough for UX)
+            console.log(`[SocketServer] Player ${wAddress} disconnected from Lobby. Starting grace period (2s).`);
 
             // Clear existing if any (shouldn't happen if we clear on join, but safe)
             if (lobbyDisconnectTimeouts.has(wAddress)) {
@@ -366,7 +368,7 @@ async function handleDisconnect(socket: GameSocket) {
                     });
                     lobbyDisconnectTimeouts.delete(wAddress);
                 });
-            }, 15000); // 15 seconds
+            }, 2000); // 2 seconds
 
             lobbyDisconnectTimeouts.set(wAddress, timeout);
         }
@@ -896,6 +898,17 @@ async function handleAcceptChallenge(socket: GameSocket, data: { challengerWalle
     GameStateManager.startGameLoop(room.id);
 
     console.log(`[SocketServer] Tournament Match Started: ${room.id}`);
+}
+
+async function handleLobbyHeartbeat(socket: GameSocket, data: { week: number; roomId: string }) {
+    const { week, roomId } = data;
+    const walletAddress = socket.data.walletAddress;
+
+    if (!walletAddress) return;
+
+    // Update presence timestamp
+    const { setTournamentLobbyPresence } = await import('./redis.js');
+    await setTournamentLobbyPresence(week, roomId, walletAddress, true);
 }
 
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Trophy, Coins } from "lucide-react";
 import styles from "./leaderboard.module.css";
+import PlayerProfileModal from "../components/PlayerProfileModal";
 
 interface LeaderboardEntry {
     wallet: string;
@@ -19,6 +20,7 @@ export default function LeaderboardPage() {
     const [data, setData] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
 
     useEffect(() => {
         fetchLeaderboard();
@@ -59,6 +61,12 @@ export default function LeaderboardPage() {
             <div className={styles.backgroundGrid} />
             <div className={styles.glowOrb1} />
             <div className={styles.glowOrb2} />
+
+            {/* Profile Modal */}
+            <PlayerProfileModal
+                walletAddress={selectedWallet}
+                onClose={() => setSelectedWallet(null)}
+            />
 
             <main className={styles.main}>
                 {/* Header */}
@@ -118,7 +126,11 @@ export default function LeaderboardPage() {
                             </div>
 
                             {data.map((entry, index) => (
-                                <div key={entry.wallet} className={styles.tableRow}>
+                                <div
+                                    key={entry.wallet}
+                                    className={`${styles.tableRow} cursor-pointer hover:bg-slate-800/50 transition-colors`}
+                                    onClick={() => setSelectedWallet(entry.wallet)}
+                                >
                                     <div className={styles.rankCol}>
                                         <span className={`${styles.rank} ${index < 3 ? styles[`rank${index + 1}`] : ''}`}>
                                             #{index + 1}

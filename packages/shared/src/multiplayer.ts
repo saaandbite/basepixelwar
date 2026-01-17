@@ -62,6 +62,7 @@ export type ClientToServerEvents = {
     'join_tournament_lobby': (data: { week: number; roomId: string; walletAddress: string }) => void;
     'challenge_player': (data: { targetWallet: string; tournamentRoomId: string }) => void;
     'accept_challenge': (data: { challengerWallet: string; tournamentRoomId: string; week: number }) => void;
+    'lobby_heartbeat': (data: { week: number; roomId: string }) => void;
 };
 
 export interface PlayerInput {

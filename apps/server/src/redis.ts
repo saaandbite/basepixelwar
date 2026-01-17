@@ -17,6 +17,8 @@ const KEYS = {
     LEADERBOARD: 'leaderboard:', // leaderboard:category -> ZSET
     TOURNAMENT_LEADERBOARD: (week: string | number, roomId: string | number) => `tournament:${week}:room:${roomId}:leaderboard`,
     TOURNAMENT_LOBBY_PLAYERS: (week: string | number, roomId: string | number) => `tournament:${week}:room:${roomId}:online`,
+    TOURNAMENT_STATS_WINS: 'tournament:stats:wins',
+    TOURNAMENT_STATS_EARNINGS: 'tournament:stats:earnings',
 } as const;
 
 // Configuration
@@ -459,6 +461,61 @@ export async function getLeaderboard(
     return results;
 }
 
+/**
+ * Get aggregated stats for a single player
+ */
+export async function getPlayerStats(walletAddress: string): Promise<{ wins: number; totalEarnings: number }> {
+    const r = getRedis();
+    const normalized = walletAddress.toLowerCase();
+
+    // Fetch scores directly from the sorted sets
+    const [winsStr, ethStr] = await Promise.all([
+        r.zscore(`${KEYS.LEADERBOARD}wins`, normalized),
+        r.zscore(`${KEYS.LEADERBOARD}eth`, normalized)
+    ]);
+
+    return {
+        wins: winsStr ? parseInt(winsStr, 10) : 0,
+        totalEarnings: ethStr ? parseFloat(ethStr) : 0
+    };
+}
+
+
+/**
+ * Get Tournament Stats for a player
+ */
+export async function getTournamentPlayerStats(walletAddress: string): Promise<{ wins: number; totalEarnings: number }> {
+    const r = getRedis();
+    const normalized = walletAddress.toLowerCase();
+
+    const [winsStr, ethStr] = await Promise.all([
+        r.zscore(KEYS.TOURNAMENT_STATS_WINS, normalized),
+        r.zscore(KEYS.TOURNAMENT_STATS_EARNINGS, normalized)
+    ]);
+
+    return {
+        wins: winsStr ? parseInt(winsStr, 10) : 0,
+        totalEarnings: ethStr ? parseFloat(ethStr) : 0
+    };
+}
+
+/**
+ * Update Tournament Lifetime Stats
+ */
+export async function updateTournamentStats(
+    category: 'wins' | 'earnings',
+    walletAddress: string,
+    amount: number
+): Promise<number> {
+    const r = getRedis();
+    const normalized = walletAddress.toLowerCase();
+    const key = category === 'wins' ? KEYS.TOURNAMENT_STATS_WINS : KEYS.TOURNAMENT_STATS_EARNINGS;
+
+    // Increment score
+    const newScore = await r.zincrby(key, amount, normalized);
+    return parseFloat(newScore);
+}
+
 // ============================================
 // TOURNAMENT LEADERBOARD
 // ============================================
@@ -495,6 +552,9 @@ export async function getTournamentLeaderboard(
 }
 
 // Lobby Online Status
+// We use a Sorted Set (ZSET) where score = timestamp
+// This allows auto-expiration of ghosts (Heartbeat Pattern)
+
 export async function setTournamentLobbyPresence(
     week: number,
     roomId: string,
@@ -503,10 +563,33 @@ export async function setTournamentLobbyPresence(
 ): Promise<void> {
     const r = getRedis();
     const key = KEYS.TOURNAMENT_LOBBY_PLAYERS(week, roomId);
+
     if (isOnline) {
-        await r.sadd(key, walletAddress.toLowerCase());
+        // Update heartbeat (Score = Current Time)
+        try {
+            await r.zadd(key, Date.now(), walletAddress.toLowerCase());
+        } catch (error: any) {
+            // Auto-Migration: If key is wrong type (old Set vs new ZSet), delete and retry
+            if (error.message && error.message.includes('WRONGTYPE')) {
+                console.warn(`[Redis] Detected legacy key type for ${key}. Deleting and migrating to ZSET.`);
+                await r.del(key);
+                await r.zadd(key, Date.now(), walletAddress.toLowerCase());
+            } else {
+                throw error;
+            }
+        }
+        // Set expiry for the whole key to avoid stale data if lobby is empty for a long time (e.g. 1 hour)
+        await r.expire(key, 3600);
     } else {
-        await r.srem(key, walletAddress.toLowerCase());
+        // Explicit remove
+        try {
+            await r.zrem(key, walletAddress.toLowerCase());
+        } catch (error: any) {
+            if (error.message && error.message.includes('WRONGTYPE')) {
+                // If it's the wrong type, just delete the whole key to be safe/clean
+                await r.del(key);
+            }
+        }
     }
 }
 
@@ -516,7 +599,14 @@ export async function getTournamentLobbyOnlinePlayers(
 ): Promise<string[]> {
     const r = getRedis();
     const key = KEYS.TOURNAMENT_LOBBY_PLAYERS(week, roomId);
-    return r.smembers(key);
+
+    // 1. Clean up "ghosts" (players who haven't pinged in 10 seconds)
+    // We use 10s buffer (client pings every 5s) - Fast but safe from jitter
+    const threshold = Date.now() - 10000;
+    await r.zremrangebyscore(key, 0, threshold);
+
+    // 2. Return active players
+    return r.zrange(key, 0, -1);
 }
 
 

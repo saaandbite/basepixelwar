@@ -137,6 +137,47 @@ async function main() {
       return;
     }
 
+    // Profile endpoint
+    if (req.method === 'GET' && req.url && req.url.startsWith('/api/profile')) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const wallet = url.searchParams.get('wallet');
+      const type = url.searchParams.get('type'); // 'tournament' | 'global'
+
+      if (!wallet) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing wallet parameter' }));
+        return;
+      }
+
+      try {
+        const { getUsername, getPlayerStats, getTournamentPlayerStats } = await import('./redis.js');
+        const username = await getUsername(wallet);
+
+        let stats;
+        if (type === 'tournament') {
+          stats = await getTournamentPlayerStats(wallet);
+        } else {
+          stats = await getPlayerStats(wallet);
+        }
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify({
+          wallet,
+          username: username || 'Anonymous',
+          stats
+        }));
+
+      } catch (error: any) {
+        console.error('[Server] Profile error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
     // Tournament endpoints
     if (req.method === 'POST' && req.url === '/api/tournament/join') {
       let body = '';
