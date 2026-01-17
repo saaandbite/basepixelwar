@@ -262,8 +262,8 @@ async function main() {
       return;
     }
 
-    // Handle CORS preflight for tournament endpoints
-    if (req.method === 'OPTIONS' && req.url?.startsWith('/api/tournament')) {
+    // Global CORS preflight handler
+    if (req.method === 'OPTIONS') {
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
