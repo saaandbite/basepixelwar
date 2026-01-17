@@ -264,14 +264,31 @@ async function main() {
   const shutdown = async () => {
     console.log('[Server] Shutting down...');
 
-    // Close database connections
+    // 1. Close HTTP/Socket Server FIRST
+    // This stops new connections and handles existing ones (depending on config)
+    await new Promise<void>((resolve) => {
+      httpServer.close(() => {
+        console.log('[Server] HTTP/Socket Server closed');
+        resolve();
+      });
+
+      // Force close any existing sockets if needed
+      // io.close() // already handled by httpServer.close() usually, but explicit io.disconnectSockets() is safer if needed
+      const { getIO } = require('./socketServer');
+      const io = getIO();
+      if (io) {
+        io.disconnectSockets(true); // Force disconnect all clients
+        console.log('[Server] Forced disconnect of all sockets');
+      }
+    });
+
+    // 2. Close Database Connections
+    // Now safe to close because no clients can trigger DB ops
     await closeRedis();
     await closeTigerBeetle();
 
-    httpServer.close(() => {
-      console.log('[Server] Closed');
-      process.exit(0);
-    });
+    console.log('[Server] Closed');
+    process.exit(0);
   };
 
   process.on('SIGTERM', shutdown);

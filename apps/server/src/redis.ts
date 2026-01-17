@@ -235,6 +235,11 @@ export async function addToQueue(player: QueuePlayer): Promise<number> {
  * Remove player from matchmaking queue
  */
 export async function removeFromQueue(playerId: string): Promise<boolean> {
+    if (!isRedisConnected()) {
+        console.warn(`[Redis] Skipping removeFromQueue(${playerId}) - Connection closed`);
+        return false;
+    }
+
     const r = getRedis();
 
     // Note: playerId here might be socket.id or wallet.

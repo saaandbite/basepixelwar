@@ -314,6 +314,14 @@ async function handleDisconnect(socket: GameSocket) {
 
     console.log(`[SocketServer] Client disconnected: ${playerId}`);
 
+    // SAFETY CHECK: If Redis is down/closed (e.g. during shutdown), skip cleanup
+    // This prevents "Connection is closed" crash
+    const { isRedisConnected } = await import('./redis.js');
+    if (!isRedisConnected()) {
+        console.warn(`[SocketServer] Redis closed. Skipping cleanup for disconnected player ${playerId}`);
+        return;
+    }
+
     // Remove from queue if they were in it
     await RoomManager.leaveQueue(queueId);
     socket.data.walletAddress = undefined; // Clear wallet address from socket data
