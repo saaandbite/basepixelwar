@@ -4,6 +4,7 @@ import * as RoomManager from './roomManager';
 import { updateRoomStatus } from './roomManager';
 import * as Redis from './redis';
 import { transferPrizeFromVault } from './db';
+import * as TournamentService from './tournamentService';
 
 // PvP Cannon state
 export interface PvPCannon {
@@ -113,6 +114,7 @@ export interface PvPGameState {
     lastSnapshotTime: number; // For periodic Redis saving
     wallet1?: string; // Cache for TigerBeetle ammo recording
     wallet2?: string;
+    gameType: 'tournament' | 'standard'; // Strict separation
 }
 
 // Game constants (Matching Client)
@@ -174,7 +176,7 @@ export function initGameStateManager(io: Server) {
 }
 
 // Create initial game state for a room
-export function createGameState(roomId: string): PvPGameState {
+export function createGameState(roomId: string, gameType: 'tournament' | 'standard' = 'standard'): PvPGameState {
     // Initialize grid (50/50 split)
     const grid: ('blue' | 'red')[][] = [];
     for (let x = 0; x < GRID_COLS; x++) {
@@ -232,6 +234,7 @@ export function createGameState(roomId: string): PvPGameState {
         powerupEffects: [],
         screenFlash: 0,
         lastSnapshotTime: Date.now(),
+        gameType,
     };
 
     // Populate wallets if room is available
@@ -1025,79 +1028,78 @@ async function endGame(roomId: string) {
         }
     });
 
-    // START: On-Chain Settlement (async - will emit settlement_complete when done)
+    // Update RoomManager status to prevent early cleanup
+    await RoomManager.updateRoomStatus(roomId, 'finished');
+
+    // === STRICT LOGIC SEPARATION ===
+    if (state.gameType === 'tournament') {
+        await handleTournamentEnd(roomId, state, winner);
+    } else {
+        await handleStandardEnd(roomId, state, winner);
+    }
+
+    console.log(`[GameStateManager] Game ended for room ${roomId} (Type: ${state.gameType})`);
+}
+
+// === TOURNAMENT END LOGIC (ISOLATED) ===
+async function handleTournamentEnd(roomId: string, state: PvPGameState, winner: 'blue' | 'red' | 'draw') {
     const room = await RoomManager.getRoom(roomId);
-    const io = ioInstance; // Capture reference for async callback
-
-    // === TOURNAMENT CHECK ===
-    // Check if this game is part of a tournament
     const r = Redis.getRedis();
+
+    // Double check if this is indeed a tournament match via Redis mapping
     const tournamentDataJson = await r.get(`game_to_tournament:${roomId}`);
-
-    if (tournamentDataJson) {
-        const tData = JSON.parse(tournamentDataJson) as { week: number; tournamentRoomId: string };
-        console.log(`[GameStateManager] Tournament Match Ended: ${roomId} (Week ${tData.week}, Room ${tData.tournamentRoomId})`);
-
-        // Update Tournament Leaderboard
-        if (winner !== 'draw') {
-            const winnerTeam = winner;
-            const winnerPlayer = room?.players.find(p => p.team === winnerTeam);
-            const loserPlayer = room?.players.find(p => p.team !== winnerTeam);
-
-            // LOGIC VERIFICATION:
-            // Ensure we are awarding to the specific wallet that WON.
-            // Do NOT fallback to indexes (like players[0]) unless we are sure.
-
-            console.log(`[Verification] Game End -> Winner Team: ${winnerTeam.toUpperCase()}`);
-            console.log(`[Verification] Room Player ${winnerTeam} -> Wallet: ${winnerPlayer?.walletAddress || 'MISSING'}`);
-
-            if (winnerPlayer?.walletAddress) {
-                // Winner gets +3 points
-                const newScore = await Redis.updateTournamentScore(tData.week, tData.tournamentRoomId, winnerPlayer.walletAddress, 3);
-                console.log(`[Tournament] VERIFIED WIN: Awarding +3 to ${winnerPlayer.walletAddress}`);
-                console.log(`[Tournament] Winner ${winnerPlayer.name} -> New Score: ${newScore}`);
-            } else {
-                console.error(`[Tournament] CRITICAL: Winner determined as ${winnerTeam} but no wallet found! Score update ABORTED.`);
-            }
-
-            if (loserPlayer?.walletAddress) {
-                // Loser gets +1 point for participation
-                const newScore = await Redis.updateTournamentScore(tData.week, tData.tournamentRoomId, loserPlayer.walletAddress, 1);
-                console.log(`[Tournament] Participation: Awarding +1 to ${loserPlayer.walletAddress}`);
-            }
-        }
-
-        // Broadcast new leaderboard to the Tournament Protocol Room (Socket Room)
-        // Note: The players are in 'gameRoomId', but the lobby is 'tournament_lobby_{id}'
-        // We can emit to the lobby room directly if we have the ID
-        const lobbyRoomId = `tournament_lobby_${tData.tournamentRoomId}`;
-        const leaderboard = await Redis.getTournamentLeaderboard(tData.week, tData.tournamentRoomId);
-        ioInstance.to(lobbyRoomId).emit('lobby_leaderboard_update', leaderboard);
-
-        // CLEANUP
-        await RoomManager.updateRoomStatus(roomId, 'finished');
-        cleanupRoom(roomId);
-        // Clean the mapping key
-        await r.del(`game_to_tournament:${roomId}`);
+    if (!tournamentDataJson) {
+        console.error(`[Tournament] Critical: Game ${roomId} marked as tournament but no mapping found!`);
         return;
     }
-    // ========================
+
+    const tData = JSON.parse(tournamentDataJson) as { week: number; tournamentRoomId: string };
+    console.log(`[TournamentService] Match Ended: ${roomId} (Week ${tData.week}, Room ${tData.tournamentRoomId})`);
+
+    // DELEGATE TO SERVICE
+    if (winner !== 'draw') {
+        const winnerTeam = winner;
+        const winnerPlayer = room?.players.find(p => p.team === winnerTeam);
+        const loserPlayer = room?.players.find(p => p.team !== winnerTeam);
+
+        await TournamentService.processMatchResult(
+            ioInstance!,
+            tData.tournamentRoomId,
+            tData.week,
+            winnerPlayer?.walletAddress,
+            loserPlayer?.walletAddress
+        );
+    } else {
+        console.log(`[TournamentService] Match Draw - No points awarded via Service`);
+    }
+
+    // Clean the mapping key
+    await r.del(`game_to_tournament:${roomId}`);
+
+    // Cleanup room data
+    cleanupRoom(roomId);
+}
+
+// === STANDARD GAME END LOGIC (ISOLATED) ===
+async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'blue' | 'red' | 'draw') {
+    const room = await RoomManager.getRoom(roomId);
+    const io = ioInstance!; // Safe here
 
     if (room && room.onChainGameId) {
         console.log(`\n==================================================`);
-        console.log(`[GameStateManager]  STARTING SETTLEMENT FOR GAME ${room.onChainGameId}`);
+        console.log(`[StandardGame] STARTING SETTLEMENT FOR GAME ${room.onChainGameId}`);
         console.log(`==================================================`);
 
         if (winner !== 'draw') {
             const winnerTeam = winner;
             const winnerPlayer = room.players.find(p => p.team === winnerTeam);
 
-            console.log(`[GameStateManager]  Winner Team: ${winnerTeam.toUpperCase()}`);
-            console.log(`[GameStateManager]  Winner Name: ${winnerPlayer?.name}`);
-            console.log(`[GameStateManager]  Wallet Addr: ${winnerPlayer?.walletAddress || 'MISSING '}`);
+            console.log(`[StandardGame] Winner Team: ${winnerTeam.toUpperCase()}`);
+            console.log(`[StandardGame] Winner Name: ${winnerPlayer?.name}`);
+            console.log(`[StandardGame] Wallet Addr: ${winnerPlayer?.walletAddress || 'MISSING '}`);
 
             if (winnerPlayer && winnerPlayer.walletAddress) {
-                console.log(`[GameStateManager]  Initiating finalizeGame1vs1 transaction...`);
+                console.log(`[StandardGame] Initiating finalizeGame1vs1 transaction...`);
 
                 try {
                     contractService.finalizeGame1vs1(
@@ -1105,11 +1107,10 @@ async function endGame(roomId: string) {
                         winnerPlayer.walletAddress
                     ).then((tx: string | null) => {
                         if (tx) {
-                            console.log(`\n [GameStateManager] SETTLEMENT SUCCESS!`);
+                            console.log(`\n [StandardGame] SETTLEMENT SUCCESS!`);
                             console.log(` Ref: https://sepolia.basescan.org/tx/${tx}`);
-                            console.log(`==================================================\n`);
 
-                            // Emit settlement complete to room with tx hash
+                            // Emit settlement complete
                             io.to(roomId).emit('settlement_complete', {
                                 success: true,
                                 txHash: tx,
@@ -1119,71 +1120,29 @@ async function endGame(roomId: string) {
                             });
 
                             // RECORD IN TIGERBEETLE LEDGER
-                            // Transfer prize from Game Vault (Treasury) to winner
-                            console.log(`[TigerBeetle] Initiating prize transfer from vault...`);
-
                             transferPrizeFromVault(
                                 winnerPlayer.walletAddress as string,
-                                1980000000000000n, // 0.00198 ETH (0.002 - 1% fee)
-                                room.onChainGameId
-                            ).then(() => {
-                                console.log(`[TigerBeetle] Prize transferred successfully to ${winnerPlayer.walletAddress}`);
-                            }).catch((e: unknown) => {
-                                const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-                                console.error(`[TigerBeetle] Prize transfer failed for game ${room.onChainGameId}:`, errorMessage);
-
-                                // Emit error to client for manual resolution
-                                io.to(roomId).emit('prize_transfer_failed', {
-                                    gameId: room.onChainGameId,
-                                    winner: winnerPlayer.walletAddress,
-                                    error: errorMessage
-                                });
+                                1980000000000000n, // 0.00198 ETH
+                                room.onChainGameId!
+                            ).catch((e) => {
+                                console.error(`[TigerBeetle] Prize transfer failed:`, e);
                             });
                         } else {
-                            console.error(`\n [GameStateManager] SETTLEMENT FAILED (See above for details)`);
-                            console.error(`==================================================\n`);
-
-                            // Emit settlement failed
-                            io.to(roomId).emit('settlement_complete', {
-                                success: false,
-                                error: 'Transaction failed'
-                            });
+                            console.error(`\n [StandardGame] SETTLEMENT FAILED`);
+                            io.to(roomId).emit('settlement_complete', { success: false, error: 'Transaction failed' });
                         }
-                    }).catch((err: unknown) => {
-                        console.error(`\n [GameStateManager] SETTLEMENT EXCEPTION:`, err);
-                        console.error(`==================================================\n`);
-
-                        io.to(roomId).emit('settlement_complete', {
-                            success: false,
-                            error: 'Transaction exception'
-                        });
                     });
                 } catch (error) {
-                    console.error(`\n [GameStateManager] CRITICAL ERROR calling finalizeGame1vs1:`, error);
-                    console.error(`==================================================\n`);
+                    console.error(`\n [StandardGame] CRITICAL ERROR calling finalizeGame1vs1:`, error);
                 }
-            } else {
-                console.error(`\n [GameStateManager] ABORTED: Winner has no wallet address!`);
-                console.error(`==================================================\n`);
             }
         } else {
-            console.log(`[GameStateManager]  Game Draw - No settlement required.`);
-            console.log(`==================================================\n`);
-        }
-    } else {
-        // Only log if we expected a settlement but data is missing
-        if (room && !room.onChainGameId) {
-            console.warn(`[GameStateManager]  Room finished but NO onChainGameId found. Was this a test game?`);
+            console.log(`[StandardGame] Game Draw - No settlement required.`);
         }
     }
-    // END: On-Chain Settlement
 
-    // Update RoomManager status to prevent early cleanup
-    await RoomManager.updateRoomStatus(roomId, 'finished');
-
-    // Update Leaderboard
+    // Update Global Leaderboard (Standard only)
     if (room && room.players.length === 2) {
-        // 1. Wins Leaderboard
         if (winner !== 'draw') {
             const winnerWallet = room.players.find(p => p.team === winner)?.walletAddress;
             if (winnerWallet) {
@@ -1191,8 +1150,6 @@ async function endGame(roomId: string) {
             }
         }
     }
-
-    console.log(`[GameStateManager] Game ended for room ${roomId} (Leaderboard Updated)`);
 }
 
 // Cleanup room

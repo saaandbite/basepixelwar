@@ -717,7 +717,8 @@ async function startGame(roomId: string) {
     console.log(`[SocketServer] Game started in room ${roomId}`);
 
     // Create and start server-side game state
-    GameStateManager.createGameState(roomId);
+    // Create and start server-side game state
+    GameStateManager.createGameState(roomId, 'standard');
     GameStateManager.startGameLoop(roomId);
 }
 
@@ -875,7 +876,8 @@ async function handleAcceptChallenge(socket: GameSocket, data: { challengerWalle
     });
 
     // Start Engine
-    GameStateManager.createGameState(room.id);
+    // Start Engine
+    GameStateManager.createGameState(room.id, 'tournament');
     GameStateManager.startGameLoop(room.id);
 
     console.log(`[SocketServer] Tournament Match Started: ${room.id}`);
