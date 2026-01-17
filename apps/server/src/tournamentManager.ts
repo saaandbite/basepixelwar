@@ -40,32 +40,48 @@ export async function joinTournament(
     week: number,
     txHash: string
 ): Promise<{ roomId: number; isNew: boolean }> {
-    // 0. Security Check
+    const wallet = walletAddress.toLowerCase();
+    const mask = `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+
+    console.log(`\n========================================`);
+    console.log(`[Tournament] PAYMENT PROCESSING - ${mask}`);
+    console.log(`========================================`);
+    console.log(`[Tournament] Week: ${week}, TxHash: ${txHash.slice(0, 10)}...`);
+
+    // 0. Security Check - On-Chain Verification
+    console.log(`[Tournament] Step 1/4: Verifying transaction on-chain...`);
     const isValid = await verifyTransaction({
         txHash,
         sender: walletAddress,
         amount: TOURNAMENT_PRICE_ETH,
         toAddress: TOURNAMENT_ADDRESS
     });
+
     if (!isValid) {
+        console.error(`[Tournament] PAYMENT FAILED: On-chain verification failed for ${mask}`);
+        console.error(`[Tournament] TxHash: ${txHash}`);
         throw new Error('Invalid Transaction: Verification failed on-chain');
     }
+    console.log(`[Tournament] Step 1/4: On-chain verification PASSED`);
 
     const r = getRedis();
-    const wallet = walletAddress.toLowerCase();
 
     // 1. Check if already joined
+    console.log(`[Tournament] Step 2/4: Checking duplicate registration...`);
     const existing = await r.get(KEYS.TOURNAMENT_PLAYER(wallet));
     if (existing) {
         const data = JSON.parse(existing) as PlayerLocation;
         // If joined this week, return existing info
         if (data.week === week) {
-            console.log(`[Tournament] ${wallet.slice(0, 6)}...${wallet.slice(-4)} rejoined Week ${week}, Room ${data.roomId} (Existing)`);
+            console.log(`[Tournament] DUPLICATE: ${mask} already in Week ${week}, Room ${data.roomId}`);
+            console.log(`========================================\n`);
             return { roomId: data.roomId, isNew: false };
         }
     }
+    console.log(`[Tournament] Step 2/4: New player confirmed`);
 
     // 2. Increment counter to determine room
+    console.log(`[Tournament] Step 3/4: Assigning room...`);
     const count = await r.incr(KEYS.TOURNAMENT_COUNTER(week));
 
     // 3. Calculate Room ID (1-based)
@@ -81,27 +97,28 @@ export async function joinTournament(
     };
 
     await r.rpush(KEYS.TOURNAMENT_ROOM(week, roomId), JSON.stringify(playerEntry));
+    console.log(`[Tournament] Step 3/4: Player #${count} assigned to Room ${roomId}`);
 
     // 5. Save Player Mapping
     const location: PlayerLocation = { week, roomId };
     await r.set(KEYS.TOURNAMENT_PLAYER(wallet), JSON.stringify(location));
+    console.log(`[Tournament] Redis mapping saved: ${mask} -> Week ${week} Room ${roomId}`);
 
     // 6. TigerBeetle Audit Log (Parallel, don't block room assignment)
-    // We record this as a "Deposit" directly to the Treasury (or creating a specific record)
-    // to mimic the on-chain event for our off-chain ledger.
+    console.log(`[Tournament] Step 4/4: Recording to TigerBeetle ledger...`);
     import('./db.js').then(async ({ recordDeposit }) => {
         try {
             // 0.001 ETH = 1000000000000000 wei
             const TICKET_PRICE = 1000000000000000n;
             await recordDeposit(wallet, TICKET_PRICE, txHash);
-            const mask = `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
-            console.log(`[Tournament] TigerBeetle audit log created for ${mask}`);
+            console.log(`[Tournament] TigerBeetle: Deposit recorded for ${mask} (${TOURNAMENT_PRICE_ETH} ETH)`);
         } catch (err) {
-            console.error(`[Tournament] TigerBeetle audit failed:`, err);
+            console.error(`[Tournament] TigerBeetle: FAILED to record deposit for ${mask}:`, err);
         }
     });
 
-    console.log(`[Tournament] ${wallet.slice(0, 6)}...${wallet.slice(-4)} joined Week ${week}, Room ${roomId}`);
+    console.log(`[Tournament] PAYMENT SUCCESS: ${mask} joined Week ${week}, Room ${roomId}`);
+    console.log(`========================================\n`);
 
     return { roomId, isNew: true };
 }
