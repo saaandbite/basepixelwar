@@ -17,15 +17,23 @@ const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${st
 
 // Helper to get socket URL (same as useMultiplayer)
 const getServerUrl = () => {
-    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
+    // 1. Dynamic Detection (Best for LAN / Mobile Testing)
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
+
+        // If we are accessing via IP (e.g. 192.168.x.x) or special domain, use it!
+        // We ignored the Env Var here because it often defaults to localhost in build time
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             return `${protocol}//${hostname}:3000`;
         }
     }
-    return undefined;
+
+    // 2. Fallback to Env Var (Production domain or configured localhost)
+    if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
+
+    // 3. Last Resort
+    return 'http://localhost:3000';
 };
 
 export default function TournamentPage() {
@@ -54,17 +62,27 @@ export default function TournamentPage() {
     // Challenge State
     const [incomingChallenge, setIncomingChallenge] = useState<{ challengerWallet: string; tournamentRoomId: string } | null>(null);
     const [isChallengePending, setIsChallengePending] = useState(false); // Waiting for *my* challenge to be accepted
+    const [debugMsg, setDebugMsg] = useState<string>(''); // Temporary debug info
 
     const isJoined = joinedRoomId > 0;
 
     // Fetch Room Data from Backend API (Initial Check)
     const fetchRoomData = useCallback(async () => {
-        if (!address || weekNum === 0) return;
+        if (!address || weekNum === 0) {
+            setDebugMsg(`Wait: Addr=${!!address} Week=${weekNum}`);
+            return;
+        }
 
         try {
-            const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
+            // Use helper to get correct server URL (works for localhost, LAN, and prod)
+            const SERVER_URL = getServerUrl();
+            setDebugMsg(`Fetching: ${SERVER_URL}/api/tournament/room?wallet=${address?.slice(0, 6)}...`);
+
             const res = await fetch(`${SERVER_URL}/api/tournament/room?wallet=${address}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
             const data = await res.json();
+            setDebugMsg(`Success: Room=${data?.location?.roomId}`);
 
             if (data.location) {
                 setJoinedRoomId(data.location.roomId);
@@ -246,7 +264,7 @@ export default function TournamentPage() {
     useEffect(() => {
         if (isConfirmed && hash) {
             const notifyBackend = async () => {
-                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
+                const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL;
                 try {
                     await fetch(`${SERVER_URL}/api/tournament/join`, {
                         method: 'POST',
@@ -423,9 +441,9 @@ export default function TournamentPage() {
                                                         }`}>
                                                         <div className="flex items-center gap-4">
                                                             <div className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${i === 0 ? 'bg-yellow-500 text-black' :
-                                                                    i === 1 ? 'bg-slate-300 text-black' :
-                                                                        i === 2 ? 'bg-amber-600 text-white' :
-                                                                            'bg-slate-700 text-slate-400'
+                                                                i === 1 ? 'bg-slate-300 text-black' :
+                                                                    i === 2 ? 'bg-amber-600 text-white' :
+                                                                        'bg-slate-700 text-slate-400'
                                                                 }`}>
                                                                 {i + 1}
                                                             </div>
@@ -445,8 +463,8 @@ export default function TournamentPage() {
                                                                 onClick={() => handleChallenge(p.wallet)}
                                                                 disabled={!isOnline || isChallengePending}
                                                                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${isOnline
-                                                                        ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 active:scale-95'
-                                                                        : 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                                                                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 active:scale-95'
+                                                                    : 'bg-slate-800 text-slate-600 cursor-not-allowed'
                                                                     }`}
                                                             >
                                                                 {isChallengePending ? (
@@ -502,6 +520,11 @@ export default function TournamentPage() {
                     </div>
                 )}
             </main>
+
+            {/* Debug Footer */}
+            <div className="fixed bottom-0 left-0 w-full bg-black/80 text-xs text-green-400 p-1 text-center font-mono pointer-events-none z-[200]">
+                MOBILE DEBUG: {debugMsg}
+            </div>
         </div>
     );
 }

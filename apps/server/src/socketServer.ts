@@ -24,6 +24,9 @@ let io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, So
 // Payment timeout tracking
 const paymentTimeouts = new Map<string, NodeJS.Timeout>();
 
+// Tournament Lobby Graceful Disconnect Tracking
+const lobbyDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
+
 // ============================================
 // SERVER INITIALIZATION
 // ============================================
@@ -330,6 +333,45 @@ async function handleDisconnect(socket: GameSocket) {
 
     // Remove from queue if they were in it
     await RoomManager.leaveQueue(queueId);
+
+    // [New] Handle Tournament Lobby Disconnect logic (Multi-Tab Support)
+    if (socket.data.tournamentRoomId && socket.data.walletAddress && socket.data.week) {
+        const { week, tournamentRoomId: tRoomId, walletAddress: wAddress } = socket.data;
+
+        // Check if user has other sockets open
+        let remainingSockets = 0;
+        for (const [_, s] of io.sockets.sockets) {
+            if (s.id !== socket.id && s.data.walletAddress === wAddress && s.connected) {
+                remainingSockets++;
+            }
+        }
+
+        if (remainingSockets === 0) {
+            // GRACEFUL DISCONNECT: Wait 15s before marking offline
+            console.log(`[SocketServer] Player ${wAddress} disconnected from Lobby. Starting grace period (15s).`);
+
+            // Clear existing if any (shouldn't happen if we clear on join, but safe)
+            if (lobbyDisconnectTimeouts.has(wAddress)) {
+                clearTimeout(lobbyDisconnectTimeouts.get(wAddress));
+            }
+
+            const timeout = setTimeout(() => {
+                import('./redis.js').then(({ setTournamentLobbyPresence }) => {
+                    console.log(`[SocketServer] Grace period expired for ${wAddress}. Marking offline.`);
+                    setTournamentLobbyPresence(week, tRoomId, wAddress, false);
+                    // Notify others
+                    io.to(`tournament_lobby_${tRoomId}`).emit('lobby_player_update', {
+                        walletAddress: wAddress,
+                        isOnline: false
+                    });
+                    lobbyDisconnectTimeouts.delete(wAddress);
+                });
+            }, 15000); // 15 seconds
+
+            lobbyDisconnectTimeouts.set(wAddress, timeout);
+        }
+    }
+
     socket.data.walletAddress = undefined; // Clear wallet address from socket data
 
     // Check availability for grace period
@@ -690,6 +732,13 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
 
     console.log(`[SocketServer] Player ${normalizedWallet} joining Tournament Lobby ${roomId} (Week ${week})`);
 
+    // GRACEFUL DISCONNECT: Clear any pending timeout for this wallet
+    if (lobbyDisconnectTimeouts.has(normalizedWallet)) {
+        console.log(`[SocketServer] Player ${normalizedWallet} reconnected within grace period. Cancelling offline status.`);
+        clearTimeout(lobbyDisconnectTimeouts.get(normalizedWallet));
+        lobbyDisconnectTimeouts.delete(normalizedWallet);
+    }
+
     // Verify player is actually in this room?
     // Ideally yes, but for now we trust the client or adding a check would be better (TODO)
 
@@ -720,6 +769,11 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
         isOnline: true
     });
 }
+
+// This should be part of the socket.on('disconnect') handler
+// For the purpose of this edit, it's placed here as per instruction's context.
+// In a real application, this would be inside the io.on('connection', (socket) => { ... socket.on('disconnect', () => { ... }) }) block.
+// Floating block removed
 
 function getSocketByWallet(walletAddress: string): GameSocket | undefined {
     let bestSocket: GameSocket | undefined = undefined;
