@@ -417,6 +417,47 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 }
             });
 
+            // ENEMY WEAPON USAGE LOGIC (Mirror of Player Logic)
+            if (!newState.isPvPMode) {
+                (['machineGun', 'shotgun', 'inkBomb'] as WeaponMode[]).forEach((mode) => {
+                    const wState = newState.enemy.weaponStates[mode];
+
+                    // Note: Enemy config might differ? For now assume same as player (WEAPON_MODES[mode])
+                    const wConfig = WEAPON_MODES[mode];
+
+                    if (wState.isOverheated) {
+                        if (now > wState.cooldownEndTime) {
+                            newState.enemy.weaponStates[mode] = {
+                                ...wState,
+                                isOverheated: false,
+                                usage: 0,
+                                cooldownEndTime: 0
+                            };
+                        }
+                    } else {
+                        // Decay if not firing this weapon
+                        // For AI: Logic is "Always firing/ready" until overheat.
+                        // So correct check is: Is this the ACTIVE weapon? If so, don't decay.
+                        const isSelectedWeapon = newState.enemy.weaponMode === mode;
+                        if (!isSelectedWeapon && wState.usage > 0) {
+                            let decayAmount = 0;
+                            if (wConfig.maxDuration < 10) {
+                                // Shot-based (InkBomb) - fast decay
+                                decayAmount = 0.1;
+                            } else {
+                                // Time-based
+                                decayAmount = 16.67;
+                            }
+
+                            newState.enemy.weaponStates[mode] = {
+                                ...wState,
+                                usage: Math.max(0, wState.usage - decayAmount)
+                            };
+                        }
+                    }
+                });
+            }
+
             // Player shooting with INK ECONOMY & USAGE LIMITS
             let currentWeaponMode = newState.player.weaponMode;
             const weaponConfig = WEAPON_MODES[currentWeaponMode];
@@ -425,10 +466,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             let currentWeaponState = newState.player.weaponStates[currentWeaponMode];
             let isWeaponOverheated = currentWeaponState.isOverheated;
 
-            // AUTO-SWITCH LOGIC: Only between Machine Gun and Shotgun (exclude Ink Bomb)
-            if (isWeaponOverheated && currentWeaponMode !== 'inkBomb') {
-                // Try to auto-switch to the other primary weapon
-                const alternateWeapon: WeaponMode = currentWeaponMode === 'machineGun' ? 'shotgun' : 'machineGun';
+            // AUTO-SWITCH LOGIC: Switch on overheat (including after Ink Bomb)
+            if (isWeaponOverheated) {
+                // Try to auto-switch to the other primary weapon (default to machineGun if using inkBomb)
+                const alternateWeapon: WeaponMode = currentWeaponMode === 'shotgun' ? 'machineGun' : 'shotgun';
                 const alternateState = newState.player.weaponStates[alternateWeapon];
                 const alternateConfig = WEAPON_MODES[alternateWeapon];
                 const hasEnoughInkForAlternate = newState.player.isFrenzy || newState.player.ink >= alternateConfig.cost;
@@ -522,23 +563,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 // Enemy AI timing
                 newState.enemy = { ...newState.enemy, moveTimer: (newState.enemy.moveTimer || 0) + 1 };
 
-                // Random weapon switching (every 3-8 seconds)
-                if (!newState.enemy.weaponSwitchTimer) {
-                    newState.enemy.weaponSwitchTimer = 180 + Math.floor(Math.random() * 300); // 3-8 seconds at 60fps
-                }
-                newState.enemy.weaponSwitchTimer--;
-                if (newState.enemy.weaponSwitchTimer <= 0) {
-                    const weapons: WeaponMode[] = ['machineGun', 'shotgun', 'inkBomb'];
-                    const newWeapon: WeaponMode = weapons[Math.floor(Math.random() * weapons.length)]!;
-                    newState.enemy = {
-                        ...newState.enemy,
-                        weaponMode: newWeapon,
-                        weaponSwitchTimer: 180 + Math.floor(Math.random() * 300),
-                    };
-                }
+                // Random weapon switching REMOVED in favor of Sequential Overheat Logic
+                // Enemy will only switch when the current weapon overheats.
 
-                // Random target selection (every 1-3 seconds)
-                if (newState.enemy.moveTimer! > 60 + Math.random() * 120) {
+                // Random target selection (every 2-4 seconds - SLOWER REACTION)
+                if (newState.enemy.moveTimer! > 120 + Math.random() * 120) {
                     // Random position on the grid (player side - bottom half)
                     const tx = Math.random() * (newState.cols * GRID_SIZE);
                     const ty = (newState.rows * GRID_SIZE) * 0.4 + Math.random() * (newState.rows * GRID_SIZE * 0.5);
@@ -550,30 +579,77 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                     newState.enemy.moveTimer = 0;
                 }
 
-                // Smooth rotation (player-like)
-                const rotationSpeed = 0.08;
+                // Smooth rotation (SLOWER - easier to dodge)
+                const rotationSpeed = 0.03;
                 newState.enemy.angle += (newState.enemy.targetAngle! - newState.enemy.angle) * rotationSpeed;
 
                 // Random firing pattern (not constant - like a player)
-                // 70% chance to be "firing" each update cycle
-                const shouldFire = Math.random() < 0.7;
+                // 40% chance to be "firing" each update cycle (LESS AGGRESSIVE)
+                const shouldFire = Math.random() < 0.4;
 
                 if (shouldFire) {
-                    const enemyWeaponConfig = WEAPON_MODES[newState.enemy.weaponMode || 'machineGun'];
-                    const enemyInkCost = newState.enemy.isFrenzy ? 0 : enemyWeaponConfig.cost;
-                    const enemyHasEnoughInk = newState.enemy.isFrenzy || newState.enemy.ink >= enemyInkCost;
+                    const currentEnemyMode = newState.enemy.weaponMode || 'machineGun';
+                    const enemyWeaponConfig = WEAPON_MODES[currentEnemyMode];
+                    const enemyWeaponState = newState.enemy.weaponStates[currentEnemyMode];
 
-                    newState.enemy.cooldown--;
-                    if (newState.enemy.cooldown <= 0 && enemyHasEnoughInk) {
-                        const bullets = createWeaponBullet(newState.enemy, 'red', newState.enemy.weaponMode || 'machineGun');
-                        newState.projectiles = [...newState.projectiles, ...bullets];
+                    // Check if weapon is usable (not overheated)
+                    if (!enemyWeaponState.isOverheated) {
+                        const enemyInkCost = newState.enemy.isFrenzy ? 0 : enemyWeaponConfig.cost;
+                        const enemyHasEnoughInk = newState.enemy.isFrenzy || newState.enemy.ink >= enemyInkCost;
+
+                        newState.enemy.cooldown--;
+                        if (newState.enemy.cooldown <= 0 && enemyHasEnoughInk) {
+                            const bullets = createWeaponBullet(newState.enemy, 'red', currentEnemyMode);
+                            newState.projectiles = [...newState.projectiles, ...bullets];
+
+                            // Track Usage
+                            let usageIncrease = 0;
+                            if (enemyWeaponConfig.maxDuration < 10) {
+                                usageIncrease = 1; // Shot based
+                            } else {
+                                usageIncrease = enemyWeaponConfig.fireRate * 16.67; // Time based
+                            }
+
+                            let newUsage = enemyWeaponState.usage + usageIncrease;
+                            let isOverheated = false;
+                            let cooldownEndTime = 0;
+
+                            if (newUsage >= enemyWeaponConfig.maxDuration) {
+                                isOverheated = true;
+                                newUsage = enemyWeaponConfig.maxDuration;
+                                cooldownEndTime = now + (enemyWeaponConfig.recoveryDuration || 3000);
+                                // Enemy doesn't really play sound for overheat, but we could?
+                            }
+
+                            newState.enemy = {
+                                ...newState.enemy,
+                                cooldown: enemyWeaponConfig.fireRate,
+                                lastFireTime: now,
+                                ink: newState.enemy.ink - enemyInkCost,
+                                weaponStates: {
+                                    ...newState.enemy.weaponStates,
+                                    [currentEnemyMode]: {
+                                        usage: newUsage,
+                                        isOverheated,
+                                        cooldownEndTime: isOverheated ? cooldownEndTime : enemyWeaponState.cooldownEndTime
+                                    }
+                                }
+                            };
+                            action.playSound('shoot');
+                        }
+                    } else {
+                        // Weapon IS Overheated - SEQUENTIAL SWITCH
+                        // Pattern: MachineGun -> Shotgun -> InkBomb -> MachineGun ...
+                        let newWeapon: WeaponMode = 'machineGun';
+                        if (currentEnemyMode === 'machineGun') newWeapon = 'shotgun';
+                        else if (currentEnemyMode === 'shotgun') newWeapon = 'inkBomb';
+                        else if (currentEnemyMode === 'inkBomb') newWeapon = 'machineGun';
 
                         newState.enemy = {
                             ...newState.enemy,
-                            cooldown: enemyWeaponConfig.fireRate,
-                            ink: newState.enemy.ink - enemyInkCost,
+                            weaponMode: newWeapon,
+                            // No timer needed, we switch purely on overheat
                         };
-                        action.playSound('shoot');
                     }
                 } else {
                     // Not firing - just cooldown decay

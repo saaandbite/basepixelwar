@@ -29,15 +29,15 @@ export function PvPGameControls({
     return (
         <div className="flex flex-col gap-2 sm:gap-4 px-3 py-2 sm:p-4 bg-white/50 backdrop-blur-sm rounded-t-3xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t border-white/50">
             {/* Ink Bar */}
-            <div className="flex items-center gap-1.5 sm:gap-3">
-                <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-500 fill-cyan-500" />
-                <div className="relative flex-1 h-2.5 sm:h-4 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+            <div className="flex items-center gap-2">
+                <Droplets className="w-4 h-4 text-cyan-500 fill-cyan-500 shrink-0" />
+                <div className="relative flex-1 h-3 bg-slate-200 rounded-lg overflow-hidden">
                     <div
-                        className={`absolute top-0 left-0 h-full transition-all duration-300 ease-out ${barColor}`}
+                        className={`absolute top-0 left-0 h-full rounded-lg transition-all duration-100 ease-out ${barColor}`}
                         style={{ width: `${inkLevel}%` }}
                     />
                 </div>
-                <span className="font-bold text-slate-600 w-6 sm:w-8 text-right text-xs sm:text-sm">{Math.round(inkLevel)}</span>
+                <span className="font-bold text-slate-600 min-w-[32px] text-right text-xs tabular-nums shrink-0">{Math.round(inkLevel)}</span>
             </div>
 
             {/* Weapon Selector (Shared Component) */}

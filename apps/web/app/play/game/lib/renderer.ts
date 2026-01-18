@@ -297,28 +297,59 @@ export function drawProjectiles(ctx: CanvasRenderingContext2D, projectiles: Proj
         // Size
         const size = isInkBomb ? 12 : isShotgun ? 6 : 6;
 
-        // Glow
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size + 4);
-        gradient.addColorStop(0, bulletColor);
-        gradient.addColorStop(1, `${bulletColor}40`);
+        // Rotation based on velocity
+        const angle = Math.atan2(p.vy, p.vx);
+        ctx.rotate(angle);
 
-        ctx.fillStyle = gradient;
+        // Movement elongation (stretch based on speed)
+        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+        const stretch = 1 + speed * 0.05;
+
+        // Draw Water Drop Shape
         ctx.beginPath();
-        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.fillStyle = bulletColor;
+
+        // Teardrop: Circular front, triangular back
+        // We are at (0,0) rotated towards velocity. 
+        // Front is at positive X, Tail is at negative X.
+        ctx.arc(size * 0.2, 0, size, -Math.PI / 2, Math.PI / 2); // Front curve
+        ctx.lineTo(-size * stretch, 0); // Tail point
+        ctx.closePath();
         ctx.fill();
 
-        // Core
-        ctx.fillStyle = isInkBomb ? '#000000' : '#FFFFFF';
+        // Highlight for "liquid" look
         ctx.beginPath();
-        ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.arc(size * 0.4, -size * 0.3, size * 0.3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bomb Icon/Detail
-        // Draw simple fuse spark instead of emoji
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFDD00';
-        ctx.fill();
+        // White core for normal bullets (like previous style)
+        if (!isInkBomb) {
+            ctx.beginPath();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (isInkBomb) {
+            // Bomb Icon/Detail (Fuse/Spark)
+            ctx.beginPath();
+            ctx.arc(size * 0.4, 0, size * 0.4, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFDD00';
+            ctx.fill();
+
+            // Trail effect (only for bomb for now)
+            ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            for (let i = 1; i <= 3; i++) {
+                ctx.fillStyle = bulletColor;
+                ctx.beginPath();
+                // Simple trail drops
+                ctx.arc(p.x - p.vx * i * 0.5, p.y - p.vy * i * 0.5, size * (1 - i * 0.2), 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
 
         ctx.restore();
     });
@@ -344,11 +375,27 @@ export function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle
         ctx.globalAlpha = alpha;
 
         for (const p of group) {
-            // Simple filled circle instead of expensive gradient
             ctx.fillStyle = p.color;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+
+            // Elongate based on velocity
+            const angle = Math.atan2(p.vy, p.vx);
+            ctx.rotate(angle);
+            const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+            const stretch = 1 + speed * 0.1;
+
             ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, p.size * stretch, p.size * 0.7, 0, 0, Math.PI * 2);
             ctx.fill();
+
+            // Subtle highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(p.size * 0.2, -p.size * 0.2, p.size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
         }
     }
 
@@ -363,13 +410,30 @@ export function drawCannon(
     isPlayer: boolean
 ): void {
     const time = Date.now() / 1000;
+    const timeMs = Date.now();
+
+    // Recoil calculation
+    const timeSinceFire = timeMs - (cannon.lastFireTime || 0);
+    const recoilDuration = 150; // ms
+    const recoilAmount = timeSinceFire < recoilDuration
+        ? (1 - timeSinceFire / recoilDuration) * 12
+        : 0;
+
+    // Squash and stretch
+    const squashAmount = timeSinceFire < recoilDuration
+        ? (1 - timeSinceFire / recoilDuration) * 0.15
+        : 0;
 
     // Idle breathing animation
-    const breatheScale = 1 + Math.sin(time * 2.5) * 0.03;
+    const breatheScale = (1 + Math.sin(time * 2.5) * 0.03) + squashAmount;
     const breatheY = Math.sin(time * 2) * 2;
 
+    // Apply recoil in opposite direction of angle
+    const recoilX = Math.cos(cannon.angle) * -recoilAmount;
+    const recoilY = Math.sin(cannon.angle) * -recoilAmount;
+
     ctx.save();
-    ctx.translate(cannon.x, cannon.y + breatheY);
+    ctx.translate(cannon.x + recoilX, cannon.y + breatheY + recoilY);
 
     // === SHADOW ===
     ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
@@ -379,7 +443,11 @@ export function drawCannon(
 
     // === MAIN BLOB BODY ===
     ctx.save();
-    ctx.scale(breatheScale, breatheScale);
+    // Apply squash/stretch scaling
+    // Squish on fire (scale Y down, scale X up slightly)
+    const scaleX = breatheScale * (1 + squashAmount);
+    const scaleY = breatheScale * (1 - squashAmount * 1.5);
+    ctx.scale(scaleX, scaleY);
 
     // Body gradient (team color)
     const bodyGradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, 28);

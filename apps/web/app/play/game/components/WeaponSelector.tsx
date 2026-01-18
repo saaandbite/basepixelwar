@@ -5,6 +5,7 @@
 import React, { memo } from 'react';
 import { WEAPON_MODES, type WeaponModeType } from '../lib/constants';
 import type { WeaponMode } from '../types';
+import Image from 'next/image';
 
 interface WeaponSelectorProps {
     currentMode: WeaponMode;
@@ -41,37 +42,25 @@ const WeaponIcons: Record<WeaponModeType, (isActive: boolean) => React.ReactNode
         </svg>
     ),
     shotgun: (isActive) => (
-        // Triple droplet spread
-        <svg width="32" height="28" viewBox="0 0 28 24" className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
+        // Single fire/flame
+        <svg width="28" height="28" viewBox="0 0 24 24" className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
             <defs>
-                <linearGradient id="spreadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#FF9B71" />
-                    <stop offset="100%" stopColor="#FF6B35" />
+                <linearGradient id="fireGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                    <stop offset="0%" stopColor="#FF4500" />
+                    <stop offset="50%" stopColor="#FF6B35" />
+                    <stop offset="100%" stopColor="#FFD700" />
                 </linearGradient>
             </defs>
-            {/* Left drop */}
+            {/* Main flame */}
             <path
-                d="M7 6C7 6 4 10 4 12.5C4 14.43 5.57 16 7.5 16C9.43 16 11 14.43 11 12.5C11 10 7 6 7 6Z"
-                fill="url(#spreadGrad)"
-                className={isActive ? 'animate-bounce' : ''}
-                style={{ animationDuration: '0.6s' }}
+                d="M12 2C12 2 6 10 6 14C6 18 8.5 20 12 20C15.5 20 18 18 18 14C18 10 12 2 12 2Z"
+                fill="url(#fireGrad)"
+                className={isActive ? 'animate-pulse' : ''}
             />
-            {/* Center drop (larger) */}
-            <path
-                d="M14 2C14 2 9 9 9 13C9 16.31 11.24 19 14 19C16.76 19 19 16.31 19 13C19 9 14 2 14 2Z"
-                fill="url(#spreadGrad)"
-                className={isActive ? 'animate-bounce' : ''}
-                style={{ animationDuration: '0.5s' }}
-            />
-            {/* Right drop */}
-            <path
-                d="M21 6C21 6 18 10 18 12.5C18 14.43 19.57 16 21.5 16C23.43 16 25 14.43 25 12.5C25 10 21 6 21 6Z"
-                fill="url(#spreadGrad)"
-                className={isActive ? 'animate-bounce' : ''}
-                style={{ animationDuration: '0.7s' }}
-            />
-            {/* Highlights */}
-            <ellipse cx="12" cy="11" rx="1.5" ry="1" fill="rgba(255,255,255,0.4)" />
+            {/* Inner glow */}
+            <ellipse cx="10" cy="13" rx="2" ry="2.5" fill="rgba(255,255,255,0.35)" />
+            {/* Spark */}
+            <circle cx="12" cy="21" r="1" fill="#FFD700" opacity="0.8" />
         </svg>
     ),
     inkBomb: (isActive) => (

@@ -154,6 +154,8 @@ export interface SyncedPlayerState {
         isOverheated: boolean;
         cooldownEndTime: number;
     }>;
+    lastFireTime: number;
+    cooldown: number;
 }
 
 // Particle for visual effects
