@@ -53,13 +53,41 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const chainId = chain?.id ?? null;
     const error = null; // Wagmi handles errors differently, we'll handle inline
 
-    // Connect wallet
+    // Connect wallet - auto-detect best connector
     const connect = useCallback(async () => {
         try {
-            // Use the first available connector (coinbaseWallet from our config)
-            const connector = connectors[0];
-            if (connector) {
-                wagmiConnect({ connector });
+            // Check if we're in a wallet's in-app browser (MetaMask, Coinbase, etc.)
+            const ethereum = typeof window !== 'undefined' ? (window as any).ethereum : null;
+            
+            let selectedConnector = connectors[0]; // Default fallback
+            
+            if (ethereum) {
+                // Detect which wallet we're in
+                const isMetaMask = ethereum.isMetaMask && !ethereum.isCoinbaseWallet;
+                const isCoinbaseWallet = ethereum.isCoinbaseWallet;
+                
+                console.log('[Wallet] Detecting wallet:', { isMetaMask, isCoinbaseWallet, connectors: connectors.map(c => c.name) });
+                
+                if (isMetaMask) {
+                    // Find MetaMask or injected connector
+                    selectedConnector = connectors.find(c => 
+                        c.id === 'metaMask' || c.id === 'injected'
+                    ) || connectors[0];
+                } else if (isCoinbaseWallet) {
+                    // Find Coinbase Wallet connector
+                    selectedConnector = connectors.find(c => 
+                        c.id === 'coinbaseWalletSDK' || c.name.toLowerCase().includes('coinbase')
+                    ) || connectors[0];
+                } else {
+                    // Use injected connector for other wallets
+                    selectedConnector = connectors.find(c => c.id === 'injected') || connectors[0];
+                }
+            }
+            
+            console.log('[Wallet] Using connector:', selectedConnector?.name, selectedConnector?.id);
+            
+            if (selectedConnector) {
+                wagmiConnect({ connector: selectedConnector });
             }
         } catch (err) {
             console.error("Failed to connect wallet:", err);

@@ -131,17 +131,43 @@ export function useMultiplayer() {
                 connectionStatus: 'connected',
                 playerId,
             }));
+
+            // AUTO-REJOIN: If we have a saved room from pending_payment, try to rejoin
+            const savedRoomId = sessionStorage.getItem('pending_payment_room_id');
+            const savedWallet = sessionStorage.getItem('wallet_address');
+            if (savedRoomId && savedWallet) {
+                console.log('[Multiplayer] Auto-rejoining pending_payment room:', savedRoomId);
+                socket.emit('rejoin_game', savedRoomId, savedWallet);
+            }
         });
 
         socket.on('disconnect', () => {
             console.log('[Multiplayer] Disconnected from server');
-            setState(prev => ({
-                ...prev,
-                connectionStatus: 'disconnected',
-                matchmakingStatus: 'idle',
-                room: null,
-                opponent: null,
-            }));
+            setState(prev => {
+                // PRESERVE STATE: If in pending_payment, don't reset everything
+                // This allows reconnection to restore the session
+                if (prev.room?.status === 'pending_payment' || prev.paymentStatus) {
+                    console.log('[Multiplayer] Disconnect during pending_payment - preserving state for reconnect');
+                    // Save room ID to sessionStorage for auto-rejoin on reconnect
+                    if (prev.room?.id) {
+                        sessionStorage.setItem('pending_payment_room_id', prev.room.id);
+                    }
+                    return {
+                        ...prev,
+                        connectionStatus: 'disconnected',
+                        // Keep room, opponent, paymentStatus intact for reconnect!
+                    };
+                }
+                
+                // Normal disconnect - reset state
+                return {
+                    ...prev,
+                    connectionStatus: 'disconnected',
+                    matchmakingStatus: 'idle',
+                    room: null,
+                    opponent: null,
+                };
+            });
         });
 
         socket.on('queue_status', ({ position, totalInQueue }) => {
@@ -188,6 +214,10 @@ export function useMultiplayer() {
         // NEW: Handle pending_payment (match found, waiting for blockchain payment)
         socket.on('pending_payment', ({ roomId, opponent, deadline, isFirstPlayer }) => {
             console.log('[Multiplayer] Match found (pending_payment)!', roomId, opponent);
+            
+            // PERSIST: Save room ID for reconnection (mobile wallet switching)
+            sessionStorage.setItem('pending_payment_room_id', roomId);
+            
             // Determine my team based on opponent's team
             const inferredTeam: 'blue' | 'red' = opponent.team === 'red' ? 'blue' : 'red';
             setState(prev => ({
@@ -224,6 +254,8 @@ export function useMultiplayer() {
         // Handle payment cancelled
         socket.on('payment_cancelled', (reason) => {
             console.log('[Multiplayer] Payment cancelled:', reason);
+            // CLEANUP: Clear persisted room ID
+            sessionStorage.removeItem('pending_payment_room_id');
             setState(prev => ({
                 ...prev,
                 matchmakingStatus: 'queue', // Back to queue
@@ -237,9 +269,26 @@ export function useMultiplayer() {
         // Handle payment timeout
         socket.on('payment_timeout', () => {
             console.log('[Multiplayer] Payment timeout');
+            // CLEANUP: Clear persisted room ID
+            sessionStorage.removeItem('pending_payment_room_id');
             setState(prev => ({
                 ...prev,
                 matchmakingStatus: 'queue', // Back to queue
+                room: null,
+                opponent: null,
+                paymentStatus: null,
+                isFirstPlayer: false,
+            }));
+        });
+
+        // Handle rejoin failed (room no longer exists or player not in room)
+        socket.on('rejoin_failed', () => {
+            console.log('[Multiplayer] Rejoin failed - clearing saved session');
+            // CLEANUP: Clear persisted room ID since rejoin failed
+            sessionStorage.removeItem('pending_payment_room_id');
+            setState(prev => ({
+                ...prev,
+                matchmakingStatus: 'idle',
                 room: null,
                 opponent: null,
                 paymentStatus: null,
@@ -301,6 +350,8 @@ export function useMultiplayer() {
 
         socket.on('game_start', (data) => {
             console.log('[Multiplayer] Game starting!', data);
+            // CLEANUP: Game is starting, clear pending payment session data
+            sessionStorage.removeItem('pending_payment_room_id');
             setState(prev => ({
                 ...prev,
                 matchmakingStatus: 'playing',
@@ -308,6 +359,7 @@ export function useMultiplayer() {
                 opponent: data.opponent,
                 gameConfig: data.config,
                 countdown: 0,
+                paymentStatus: null, // Clear payment status
             }));
         });
 

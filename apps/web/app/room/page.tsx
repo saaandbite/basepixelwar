@@ -71,6 +71,18 @@ export default function RoomPage() {
         return () => disconnectFromServer();
     }, [connectToServer, disconnectFromServer]);
 
+    // Auto-reconnect wallet when returning from wallet app during pending payment
+    useEffect(() => {
+        // If we have pending payment but wallet is disconnected, try to reconnect
+        if (paymentStatus && !isWalletConnected && !isWalletConnecting) {
+            const savedWallet = sessionStorage.getItem('wallet_address');
+            if (savedWallet) {
+                console.log('[RoomPage] Pending payment detected, auto-reconnecting wallet...');
+                connectWallet();
+            }
+        }
+    }, [paymentStatus, isWalletConnected, isWalletConnecting, connectWallet]);
+
     // Redirect to game
     useEffect(() => {
         if (isPlaying) {
@@ -111,6 +123,19 @@ export default function RoomPage() {
     const handlePayToPlay = useCallback(async () => {
         if (!room?.id || !paymentStatus) return;
 
+        // Ensure wallet is connected before attempting payment
+        if (!isWalletConnected) {
+            console.log('[RoomPage] Wallet not connected, connecting first...');
+            await connectWallet();
+            // Give wagmi a moment to update state
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Check again after connect attempt
+            if (!walletAddress) {
+                console.error('[RoomPage] Failed to connect wallet for payment');
+                return;
+            }
+        }
+
         try {
             let txHash: string;
             let onChainGameId: number;
@@ -119,6 +144,8 @@ export default function RoomPage() {
             if (!isFirstPlayer && !existingGameId) {
                 return; // Wait for Player 1
             }
+
+            console.log('[RoomPage] Starting payment...', { existingGameId, isFirstPlayer, walletAddress });
 
             if (existingGameId) {
                 onChainGameId = existingGameId;
@@ -129,11 +156,12 @@ export default function RoomPage() {
                 onChainGameId = result.gameId;
             }
 
+            console.log('[RoomPage] Payment successful:', { txHash, onChainGameId });
             confirmPayment(txHash, onChainGameId);
         } catch (error) {
             console.error('[RoomPage] Payment failed:', error);
         }
-    }, [room?.id, paymentStatus, gameVault, confirmPayment, isFirstPlayer]);
+    }, [room?.id, paymentStatus, gameVault, confirmPayment, isFirstPlayer, isWalletConnected, connectWallet, walletAddress]);
 
     const handleCancelPayment = useCallback(() => {
         cancelPayment();
@@ -206,7 +234,15 @@ export default function RoomPage() {
                         BATTLE LOBBY - SYSTEM v2.0
                     </div>
 
-                    {!isServerConnected ? (
+                    {/* Reconnecting during pending_payment - special UI */}
+                    {!isServerConnected && (paymentStatus || room?.status === 'pending_payment') ? (
+                        <div className="flex flex-col items-center py-16 gap-6">
+                            <Loader2 className="w-16 h-16 text-[var(--pixel-yellow)] animate-spin" />
+                            <p className="text-[var(--pixel-yellow)] text-2xl animate-blink">RECONNECTING...</p>
+                            <p className="text-[var(--pixel-fg)] text-lg opacity-70">Match in progress, please wait...</p>
+                        </div>
+
+                    ) : !isServerConnected ? (
                         <div className="flex flex-col items-center py-16 gap-6">
                             <Loader2 className="w-16 h-16 text-[var(--pixel-blue)] animate-spin" />
                             <p className="text-[var(--pixel-fg)] text-2xl animate-blink">CONNECTING TO SERVER...</p>

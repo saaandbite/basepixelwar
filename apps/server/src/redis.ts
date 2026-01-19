@@ -15,6 +15,7 @@ const KEYS = {
     PLAYER_ROOM: 'player_room:', // player_room:socketId -> roomId
     GRID: 'grid:', // grid:roomId -> JSON grid
     LEADERBOARD: 'leaderboard:', // leaderboard:category -> ZSET
+    PENDING_PAYMENT_DISCONNECT: 'pending_payment_disconnect:', // pending_payment_disconnect:roomId:playerId -> timestamp
     TOURNAMENT_LEADERBOARD: (week: string | number, roomId: string | number) => `tournament:${week}:room:${roomId}:leaderboard`,
     TOURNAMENT_LOBBY_PLAYERS: (week: string | number, roomId: string | number) => `tournament:${week}:room:${roomId}:online`,
     TOURNAMENT_STATS_WINS: 'tournament:stats:wins',
@@ -402,6 +403,73 @@ export async function getPlayerRoom(playerId: string): Promise<string | null> {
 export async function deletePlayerRoom(playerId: string): Promise<void> {
     const r = getRedis();
     await r.del(`${KEYS.PLAYER_ROOM}${playerId}`);
+}
+
+// ============================================
+// PENDING PAYMENT DISCONNECT (Grace Period for Mobile Wallet Switching)
+// ============================================
+
+/**
+ * Mark player as disconnected during pending_payment with grace period
+ * TTL auto-expires the key after grace period
+ */
+export async function setPendingPaymentDisconnect(
+    roomId: string,
+    playerId: string,
+    gracePeriodSeconds: number = 10
+): Promise<void> {
+    const r = getRedis();
+    const key = `${KEYS.PENDING_PAYMENT_DISCONNECT}${roomId}:${playerId}`;
+    await r.set(key, Date.now().toString(), 'EX', gracePeriodSeconds);
+    console.log(`[Redis] Set pending payment disconnect grace period for ${playerId} in room ${roomId} (${gracePeriodSeconds}s)`);
+}
+
+/**
+ * Check if player is in pending payment disconnect grace period
+ */
+export async function isPendingPaymentDisconnected(
+    roomId: string,
+    playerId: string
+): Promise<boolean> {
+    const r = getRedis();
+    const key = `${KEYS.PENDING_PAYMENT_DISCONNECT}${roomId}:${playerId}`;
+    const value = await r.get(key);
+    return value !== null;
+}
+
+/**
+ * Clear pending payment disconnect marker (player reconnected or match cancelled)
+ */
+export async function clearPendingPaymentDisconnect(
+    roomId: string,
+    playerId: string
+): Promise<void> {
+    const r = getRedis();
+    const key = `${KEYS.PENDING_PAYMENT_DISCONNECT}${roomId}:${playerId}`;
+    await r.del(key);
+    console.log(`[Redis] Cleared pending payment disconnect for ${playerId} in room ${roomId}`);
+}
+
+/**
+ * Clear all pending payment disconnects for a room
+ */
+export async function clearAllPendingPaymentDisconnects(roomId: string): Promise<void> {
+    const r = getRedis();
+    // Use SCAN to find all keys matching the pattern
+    const pattern = `${KEYS.PENDING_PAYMENT_DISCONNECT}${roomId}:*`;
+    let cursor = '0';
+    const keysToDelete: string[] = [];
+    
+    do {
+        const [nextCursor, keys] = await r.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keysToDelete.push(...keys);
+    } while (cursor !== '0');
+    
+    if (keysToDelete.length > 0) {
+        await r.del(...keysToDelete);
+        console.log(`[Redis] Cleared ${keysToDelete.length} pending payment disconnects for room ${roomId}`);
+    }
 }
 
 // ============================================

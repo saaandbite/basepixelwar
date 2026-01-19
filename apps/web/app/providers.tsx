@@ -4,20 +4,31 @@ import { ReactNode, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { baseSepolia, base } from 'wagmi/chains';
-import { coinbaseWallet } from 'wagmi/connectors';
+import { coinbaseWallet, metaMask, injected } from 'wagmi/connectors';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { WalletProvider } from './contexts/WalletContext';
 
 // Use Base Sepolia for testnet
 const TARGET_CHAIN = baseSepolia;
 
-// Wagmi config - properly configured for OnchainKit
+// Wagmi config - support multiple wallets including MetaMask
 const wagmiConfig = createConfig({
     chains: [baseSepolia, base],
     connectors: [
+        // Injected connector (auto-detects MetaMask, Coinbase Wallet extension, etc.)
+        injected({
+            shimDisconnect: true,
+        }),
+        // MetaMask specifically
+        metaMask({
+            dappMetadata: {
+                name: 'PixelWar',
+            },
+        }),
+        // Coinbase Wallet (both browser extension and mobile)
         coinbaseWallet({
             appName: 'PixelWar',
-            preference: 'smartWalletOnly', // Use Coinbase Smart Wallet
+            preference: 'all', // Support all Coinbase Wallet types
         }),
     ],
     ssr: true,

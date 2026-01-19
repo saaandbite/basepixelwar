@@ -13,9 +13,13 @@ import type {
 
 import * as RoomManager from './roomManager';
 import * as GameStateManager from './gameStateManager';
+import * as Redis from './redis';
 import { verifyTransaction } from './utils/transaction.js';
 
 const GAME_VAULT_ADDRESS = process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS;
+
+// Grace period for pending payment disconnect (10 seconds for wallet app switching)
+const PENDING_PAYMENT_GRACE_PERIOD_MS = 10000;
 
 type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
@@ -23,6 +27,9 @@ let io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, So
 
 // Payment timeout tracking
 const paymentTimeouts = new Map<string, NodeJS.Timeout>();
+
+// Pending Payment Graceful Disconnect Tracking - local timeout refs (Redis stores state)
+const pendingPaymentDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
 
 // Tournament Lobby Graceful Disconnect Tracking
 const lobbyDisconnectTimeouts = new Map<string, NodeJS.Timeout>();
@@ -393,10 +400,81 @@ async function handleDisconnect(socket: GameSocket) {
             return;
         }
 
-        // If in pending_payment and player disconnects, cancel the match
+        // If in pending_payment and player disconnects, use GRACE PERIOD (Redis-backed)
+        // This handles mobile browser wallet switching (Chrome/Firefox <-> MetaMask app)
         if (room && room.status === 'pending_payment') {
-            console.log(`[SocketServer] Player ${socket.data.playerId} disconnected during pending_payment. Cancelling match.`);
-            await cancelPaymentAndRefund(room.id, 'Opponent disconnected');
+            const playerId = socket.data.playerId!;
+            const gracePeriodKey = `${roomId}:${playerId}`;
+            
+            // Check if player has other active sockets (multi-tab)
+            let hasOtherSockets = false;
+            for (const [_, s] of io.sockets.sockets) {
+                if (s.id !== socket.id && s.data.playerId === playerId && s.connected) {
+                    hasOtherSockets = true;
+                    break;
+                }
+            }
+
+            if (hasOtherSockets) {
+                console.log(`[SocketServer] Player ${playerId} has other active sockets. Not cancelling pending_payment.`);
+                return;
+            }
+
+            // Clear existing local timeout if any
+            if (pendingPaymentDisconnectTimeouts.has(gracePeriodKey)) {
+                clearTimeout(pendingPaymentDisconnectTimeouts.get(gracePeriodKey));
+                pendingPaymentDisconnectTimeouts.delete(gracePeriodKey);
+            }
+
+            console.log(`[SocketServer] Player ${playerId} disconnected during pending_payment. Starting ${PENDING_PAYMENT_GRACE_PERIOD_MS / 1000}s grace period (Redis-backed).`);
+
+            // Store disconnect state in Redis (with TTL auto-expiry)
+            await Redis.setPendingPaymentDisconnect(roomId, playerId, PENDING_PAYMENT_GRACE_PERIOD_MS / 1000);
+
+            // GRACE PERIOD: Local timeout as backup, but Redis is source of truth
+            const timeout = setTimeout(async () => {
+                pendingPaymentDisconnectTimeouts.delete(gracePeriodKey);
+                
+                // Check Redis if still marked as disconnected
+                const stillDisconnected = await Redis.isPendingPaymentDisconnected(roomId, playerId);
+                if (!stillDisconnected) {
+                    console.log(`[SocketServer] Grace period: Redis says ${playerId} already cleared. Skipping cancel.`);
+                    return;
+                }
+                
+                // Re-check room status (might have changed during grace period)
+                const currentRoom = await RoomManager.getRoom(roomId);
+                if (!currentRoom) {
+                    console.log(`[SocketServer] Grace period expired but room ${roomId} no longer exists.`);
+                    await Redis.clearPendingPaymentDisconnect(roomId, playerId);
+                    return;
+                }
+
+                // If room is no longer pending_payment (game started), don't cancel
+                if (currentRoom.status !== 'pending_payment') {
+                    console.log(`[SocketServer] Grace period expired but room ${roomId} is now ${currentRoom.status}. Not cancelling.`);
+                    await Redis.clearPendingPaymentDisconnect(roomId, playerId);
+                    return;
+                }
+
+                // Check if player reconnected during grace period
+                const reconnectedSocket = getSocketByPlayerId(playerId);
+                if (reconnectedSocket && reconnectedSocket.connected) {
+                    console.log(`[SocketServer] Player ${playerId} reconnected during grace period. Not cancelling.`);
+                    // Re-join the room
+                    reconnectedSocket.join(roomId);
+                    reconnectedSocket.data.roomId = roomId;
+                    await Redis.clearPendingPaymentDisconnect(roomId, playerId);
+                    return;
+                }
+
+                // Player did not reconnect, cancel the match
+                console.log(`[SocketServer] Grace period expired. Player ${playerId} did not reconnect. Cancelling match.`);
+                await Redis.clearAllPendingPaymentDisconnects(roomId);
+                await cancelPaymentAndRefund(roomId, 'Opponent disconnected');
+            }, PENDING_PAYMENT_GRACE_PERIOD_MS);
+
+            pendingPaymentDisconnectTimeouts.set(gracePeriodKey, timeout);
             return;
         }
     }
@@ -445,11 +523,41 @@ async function handleRejoinGame(socket: GameSocket, roomId: string, walletAddres
         return;
     }
 
+    // Clear pending payment disconnect grace period if player reconnected (Redis-backed)
+    const gracePeriodKey = `${roomId}:${player.id}`;
+    if (pendingPaymentDisconnectTimeouts.has(gracePeriodKey)) {
+        clearTimeout(pendingPaymentDisconnectTimeouts.get(gracePeriodKey));
+        pendingPaymentDisconnectTimeouts.delete(gracePeriodKey);
+        console.log(`[SocketServer] Cleared local grace period timeout for ${player.id}`);
+    }
+    await Redis.clearPendingPaymentDisconnect(roomId, player.id);
+
     // Update the room's socket mapping (implicitly handled by socket.join)
     socket.join(roomId);
     socket.data.roomId = roomId;
 
     const opponent = room.players.find(p => p.id !== player!.id)!;
+
+    // Special handling for PENDING_PAYMENT rooms (Reconnecting during payment phase)
+    if (room.status === 'pending_payment') {
+        const deadline = room.paymentDeadline || Date.now() + 90000;
+        const isFirstPlayer = room.players[0].id === player.id;
+        
+        // Re-send pending_payment event so client can continue payment flow
+        socket.emit('pending_payment', {
+            roomId: room.id,
+            opponent,
+            deadline,
+            isFirstPlayer,
+        });
+        
+        // Also send current payment status
+        const status = RoomManager.getPaymentStatus(room);
+        socket.emit('payment_status', status);
+        
+        console.log(`[SocketServer] Player ${player.id} reconnected to pending_payment room ${roomId}`);
+        return;
+    }
 
     // Special handling for FINISHED rooms (Rejoining Result Screen)
     if (room.status === 'finished') {
@@ -602,6 +710,17 @@ function clearPaymentTimeout(roomId: string) {
 
 async function cancelPaymentAndRefund(roomId: string, reason: string) {
     clearPaymentTimeout(roomId);
+
+    // Clear all pending payment disconnect grace periods for this room (Redis)
+    await Redis.clearAllPendingPaymentDisconnects(roomId);
+
+    // Also clear any local timeout references
+    for (const [key, timeout] of pendingPaymentDisconnectTimeouts) {
+        if (key.startsWith(roomId + ':')) {
+            clearTimeout(timeout);
+            pendingPaymentDisconnectTimeouts.delete(key);
+        }
+    }
 
     const room = await RoomManager.getRoom(roomId);
     if (!room) return;
