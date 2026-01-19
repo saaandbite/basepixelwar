@@ -287,6 +287,7 @@ a {
       rgba(0, 0, 0, 0.05) 50%,
       rgba(0, 0, 0, 0.05));
   background-size: 100% 4px;
+  pointer-events: none; /* Ensure clicks pass through */
 }
 
 .text-retro {

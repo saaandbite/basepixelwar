@@ -49,8 +49,8 @@ export default function LandingPage() {
       {/* 🚀 NEW: Living Background (Stars & Clouds) */}
       <LivingBackground />
 
-      {/* CRT Scanline Overlay */}
-      <div className="scanline absolute inset-0 z-50 pointer-events-none" />
+      {/* CRT Scanline Overlay - low z-index so it doesn't block clicks */}
+      <div className="scanline absolute inset-0 z-1 pointer-events-none" />
 
       {/* Header */}
       <header className="relative z-10 py-6 bg-transparent">
