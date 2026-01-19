@@ -4,12 +4,21 @@ import { ReactNode, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { baseSepolia, base } from 'wagmi/chains';
-import { coinbaseWallet, metaMask, injected } from 'wagmi/connectors';
+import { coinbaseWallet, metaMask, injected, walletConnect } from 'wagmi/connectors';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { WalletProvider } from './contexts/WalletContext';
 
 // Use Base Sepolia for testnet
 const TARGET_CHAIN = baseSepolia;
+
+// WalletConnect Project ID - Get yours at https://cloud.walletconnect.com/
+// This is required for mobile browser -> wallet app connections
+const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '';
+
+// Debug log for WalletConnect setup
+if (typeof window !== 'undefined') {
+    console.log('[Providers] WalletConnect Project ID:', WALLETCONNECT_PROJECT_ID ? 'SET (' + WALLETCONNECT_PROJECT_ID.substring(0, 8) + '...)' : 'NOT SET');
+}
 
 // Wagmi config - support multiple wallets including MetaMask
 const wagmiConfig = createConfig({
@@ -24,6 +33,17 @@ const wagmiConfig = createConfig({
             dappMetadata: {
                 name: 'PixelWar',
             },
+        }),
+        // WalletConnect - Required for mobile browser to wallet app connections
+        walletConnect({
+            projectId: WALLETCONNECT_PROJECT_ID,
+            metadata: {
+                name: 'PixelWar',
+                description: 'Pixel Battle Game',
+                url: typeof window !== 'undefined' ? window.location.origin : 'https://pixelwar.xyz',
+                icons: ['https://pixelwar.xyz/icon.svg'],
+            },
+            showQrModal: true, // Shows QR modal for desktop, deep links on mobile
         }),
         // Coinbase Wallet (both browser extension and mobile)
         coinbaseWallet({

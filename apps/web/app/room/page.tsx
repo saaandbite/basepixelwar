@@ -119,6 +119,81 @@ export default function RoomPage() {
         }
     }, [matchmakingStatus, opponent, setReady, room?.status, paymentStatus]);
 
+    // Clear pending payment cache when matchmaking resets to idle (timeout, cancel, etc.)
+    useEffect(() => {
+        if (matchmakingStatus === 'idle') {
+            sessionStorage.removeItem('pending_payment_tx');
+        }
+    }, [matchmakingStatus]);
+
+    // Resume pending payment after reconnect (mobile browser wallet switching)
+    useEffect(() => {
+        const resumePendingPayment = async () => {
+            // Check if we have a pending payment that wasn't confirmed
+            const pendingPayment = sessionStorage.getItem('pending_payment_tx');
+            if (!pendingPayment) return;
+            
+            try {
+                const { txHash, onChainGameId, roomId, timestamp } = JSON.parse(pendingPayment);
+                
+                // Skip if txHash is still a placeholder (transaction not sent yet)
+                if (!txHash || txHash === 'pending') {
+                    console.log('[RoomPage] Pending payment has placeholder txHash, skipping...');
+                    return;
+                }
+                
+                // Only resume if it's recent (within 5 minutes) and same room
+                const isRecent = Date.now() - timestamp < 5 * 60 * 1000;
+                const isSameRoom = room?.id === roomId;
+                
+                if (!isRecent || !isSameRoom) {
+                    console.log('[RoomPage] Pending payment expired or different room, clearing...');
+                    sessionStorage.removeItem('pending_payment_tx');
+                    return;
+                }
+                
+                // Check if we already confirmed this payment
+                const myPaymentDone = isFirstPlayer ? paymentStatus?.player1Paid : paymentStatus?.player2Paid;
+                if (myPaymentDone) {
+                    console.log('[RoomPage] Payment already confirmed, clearing pending...');
+                    sessionStorage.removeItem('pending_payment_tx');
+                    return;
+                }
+                
+                console.log('[RoomPage] Resuming pending payment confirmation:', { txHash, onChainGameId });
+                
+                // Verify transaction on-chain before confirming
+                if (typeof window !== 'undefined' && window.ethereum) {
+                    const receipt = await window.ethereum.request({
+                        method: 'eth_getTransactionReceipt',
+                        params: [txHash],
+                    }) as { status: string } | null;
+                    
+                    if (receipt && receipt.status === '0x1') {
+                        console.log('[RoomPage] Transaction confirmed on-chain, notifying server...');
+                        confirmPayment(txHash, onChainGameId);
+                        sessionStorage.removeItem('pending_payment_tx');
+                    } else if (receipt && receipt.status === '0x0') {
+                        console.error('[RoomPage] Transaction failed on-chain');
+                        sessionStorage.removeItem('pending_payment_tx');
+                    } else {
+                        console.log('[RoomPage] Transaction still pending, will retry...');
+                        // Transaction not mined yet, retry in a few seconds
+                        setTimeout(resumePendingPayment, 3000);
+                    }
+                }
+            } catch (error) {
+                console.error('[RoomPage] Error resuming pending payment:', error);
+                sessionStorage.removeItem('pending_payment_tx');
+            }
+        };
+        
+        // Only run when we have room, paymentStatus, and wallet is connected
+        if (room?.id && paymentStatus && isWalletConnected && connectionStatus === 'connected') {
+            resumePendingPayment();
+        }
+    }, [room?.id, paymentStatus, isWalletConnected, connectionStatus, isFirstPlayer, confirmPayment]);
+
     // Payment handlers
     const handlePayToPlay = useCallback(async () => {
         if (!room?.id || !paymentStatus) return;
@@ -128,13 +203,18 @@ export default function RoomPage() {
             console.log('[RoomPage] Wallet not connected, connecting first...');
             await connectWallet();
             // Give wagmi a moment to update state
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 1000));
             // Check again after connect attempt
             if (!walletAddress) {
                 console.error('[RoomPage] Failed to connect wallet for payment');
                 return;
             }
         }
+
+        // Check if we're on mobile browser (not in wallet's browser)
+        const isMobileBrowser = typeof window !== 'undefined' && 
+            /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) &&
+            !(window as any).ethereum;
 
         try {
             let txHash: string;
@@ -145,25 +225,73 @@ export default function RoomPage() {
                 return; // Wait for Player 1
             }
 
-            console.log('[RoomPage] Starting payment...', { existingGameId, isFirstPlayer, walletAddress });
+            console.log('[RoomPage] Starting payment...', { 
+                existingGameId, 
+                isFirstPlayer, 
+                walletAddress,
+                isMobileBrowser 
+            });
+
+            // Save pending payment BEFORE sending transaction (in case browser gets backgrounded)
+            const pendingData = {
+                roomId: room.id,
+                onChainGameId: existingGameId || 0, // Will be updated after createGame
+                timestamp: Date.now(),
+                isFirstPlayer,
+            };
 
             if (existingGameId) {
                 onChainGameId = existingGameId;
+                
+                // Save pending state before wallet opens
+                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
+                    ...pendingData,
+                    onChainGameId,
+                    txHash: 'pending', // Placeholder, will be updated
+                }));
+                
                 txHash = await gameVault.joinGame(onChainGameId);
+                
+                // Update with actual txHash
+                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
+                    ...pendingData,
+                    onChainGameId,
+                    txHash,
+                }));
             } else {
+                // Save pending state before wallet opens
+                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
+                    ...pendingData,
+                    txHash: 'pending',
+                }));
+                
                 const result = await gameVault.createGame(GameMode.OneVsOne);
                 txHash = result.txHash;
                 onChainGameId = result.gameId;
+                
+                // Update with actual txHash and gameId
+                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
+                    ...pendingData,
+                    onChainGameId,
+                    txHash,
+                }));
             }
 
             console.log('[RoomPage] Payment successful:', { txHash, onChainGameId });
             confirmPayment(txHash, onChainGameId);
+            
+            // Clear pending payment after successful confirmation
+            sessionStorage.removeItem('pending_payment_tx');
         } catch (error) {
             console.error('[RoomPage] Payment failed:', error);
+            // Clear pending payment on error
+            sessionStorage.removeItem('pending_payment_tx');
         }
     }, [room?.id, paymentStatus, gameVault, confirmPayment, isFirstPlayer, isWalletConnected, connectWallet, walletAddress]);
 
     const handleCancelPayment = useCallback(() => {
+        // Clear any pending payment cache
+        sessionStorage.removeItem('pending_payment_tx');
         cancelPayment();
     }, [cancelPayment]);
 

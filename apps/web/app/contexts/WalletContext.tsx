@@ -43,7 +43,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
     // Wagmi hooks
-    const { address, isConnected, isConnecting, chain } = useAccount();
+    const { address, isConnected, isConnecting, chain, connector } = useAccount();
     const { connect: wagmiConnect, connectors, isPending: isConnectPending } = useConnect();
     const { disconnect: wagmiDisconnect } = useDisconnect();
     const { switchChain } = useSwitchChain();
@@ -52,6 +52,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     // Derived state
     const chainId = chain?.id ?? null;
     const error = null; // Wagmi handles errors differently, we'll handle inline
+    
+    // Log current connector for debugging
+    console.log('[Wallet] Current state:', { 
+        isConnected, 
+        connector: connector?.id, 
+        connectorName: connector?.name,
+        chainId 
+    });
 
     // Connect wallet - auto-detect best connector
     const connect = useCallback(async () => {
@@ -61,12 +69,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             
             let selectedConnector = connectors[0]; // Default fallback
             
+            // Check if we're on mobile
+            const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            console.log('[Wallet] Detecting environment:', { 
+                isMobile, 
+                hasEthereum: !!ethereum,
+                connectors: connectors.map(c => ({ id: c.id, name: c.name }))
+            });
+            
             if (ethereum) {
                 // Detect which wallet we're in
                 const isMetaMask = ethereum.isMetaMask && !ethereum.isCoinbaseWallet;
                 const isCoinbaseWallet = ethereum.isCoinbaseWallet;
                 
-                console.log('[Wallet] Detecting wallet:', { isMetaMask, isCoinbaseWallet, connectors: connectors.map(c => c.name) });
+                console.log('[Wallet] In-app browser detected:', { isMetaMask, isCoinbaseWallet });
                 
                 if (isMetaMask) {
                     // Find MetaMask or injected connector
@@ -82,6 +99,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                     // Use injected connector for other wallets
                     selectedConnector = connectors.find(c => c.id === 'injected') || connectors[0];
                 }
+            } else if (isMobile) {
+                // Mobile browser WITHOUT injected wallet - use WalletConnect
+                // This will show QR code on desktop or deep link to wallet apps on mobile
+                console.log('[Wallet] Mobile browser detected, using WalletConnect for deep linking');
+                selectedConnector = connectors.find(c => c.id === 'walletConnect') || connectors[0];
+            } else {
+                // Desktop browser without extension - use WalletConnect QR
+                console.log('[Wallet] Desktop browser without wallet, using WalletConnect QR');
+                selectedConnector = connectors.find(c => c.id === 'walletConnect') || connectors[0];
             }
             
             console.log('[Wallet] Using connector:', selectedConnector?.name, selectedConnector?.id);
@@ -118,6 +144,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
             // Ensure we're on the correct chain
             if (chainId !== TARGET_CHAIN_ID) {
+                console.log('[Wallet] Switching to correct chain before tx...');
                 await switchToBase();
             }
 
@@ -125,12 +152,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             // value is expected in hex format like "0x38D7EA4C68000"
             const valueInWei = BigInt(value);
 
+            console.log('[Wallet] Sending transaction:', { to, value: valueInWei.toString(), hasData: !!data });
+
             const txHash = await sendTransactionAsync({
                 to: to as `0x${string}`,
                 value: valueInWei,
                 data: data as `0x${string}` | undefined,
             });
 
+            console.log('[Wallet] Transaction sent:', txHash);
             return txHash;
         },
         [address, chainId, switchToBase, sendTransactionAsync]
