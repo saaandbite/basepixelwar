@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Trophy, Coins } from "lucide-react";
-import styles from "./leaderboard.module.css";
+import { ArrowLeft, Trophy, Coins, Medal, User, Loader2 } from "lucide-react";
 import PlayerProfileModal from "../components/PlayerProfileModal";
 
 interface LeaderboardEntry {
@@ -49,18 +48,23 @@ export default function LeaderboardPage() {
 
     const formatScore = (score: number) => {
         if (type === 'eth') {
-            // Convert wei to ETH
             const eth = score / 1e18;
             return `${eth.toFixed(5)} ETH`;
         }
         return score.toString();
     };
 
+    const getRankColor = (index: number) => {
+        if (index === 0) return 'text-[var(--pixel-yellow)]'; // Gold
+        if (index === 1) return 'text-[var(--pixel-fg)]';      // Silver
+        if (index === 2) return 'text-[#cd7f32]';              // Bronze
+        return 'text-[var(--pixel-blue)]';                     // Others
+    };
+
     return (
-        <div className={styles.container}>
-            <div className={styles.backgroundGrid} />
-            <div className={styles.glowOrb1} />
-            <div className={styles.glowOrb2} />
+        <div className="min-h-screen relative flex flex-col font-terminal text-[24px]">
+            <div className="scanline" />
+            <div className="fixed inset-0 bg-[var(--pixel-bg)] z-0" />
 
             {/* Profile Modal */}
             <PlayerProfileModal
@@ -68,88 +72,121 @@ export default function LeaderboardPage() {
                 onClose={() => setSelectedWallet(null)}
             />
 
-            <main className={styles.main}>
-                {/* Header */}
-                <div className={styles.header}>
-                    <Link href="/" className={styles.backButton}>
-                        <ArrowLeft className="w-5 h-5" />
-                        Back to Home
+            {/* Header */}
+            <header className="relative z-10 p-6 border-b-4 border-[var(--pixel-card-border)] bg-black/90">
+                <div className="container mx-auto flex items-center justify-between">
+                    <Link href="/play" className="flex items-center gap-3 hover:text-[var(--pixel-yellow)] transition-colors">
+                        <ArrowLeft className="w-8 h-8" />
+                        <span className="font-bold">BACK</span>
                     </Link>
 
-                    <h1 className={styles.title}>
-                        <Trophy className={styles.titleIcon} />
-                        Leaderboard
+                    <div className="flex items-center gap-3 text-[var(--pixel-yellow)] font-retro text-base md:text-lg tracking-wider">
+                        <Trophy className="w-6 h-6" />
+                        <span>HALL OF FAME</span>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="relative z-10 container mx-auto px-4 py-12 max-w-5xl">
+
+                {/* Title */}
+                <div className="text-center mb-12">
+                    <h1 className="text-4xl md:text-6xl text-[var(--pixel-yellow)] font-retro mb-4 text-shadow-hard">
+                        TOP PLAYERS
                     </h1>
+                    <p className="text-[var(--pixel-fg)] text-xl md:text-2xl">Who rules the pixel world?</p>
                 </div>
 
                 {/* Tabs */}
-                <div className={styles.tabs}>
+                <div className="flex justify-center gap-6 mb-12">
                     <button
-                        className={`${styles.tab} ${type === 'eth' ? styles.tabActive : ''}`}
                         onClick={() => setType('eth')}
+                        className={`pixel-btn text-xl w-56 ${type === 'eth' ? 'pixel-btn-warning' : 'pixel-btn-outline'}`}
                     >
-                        <Coins className="w-5 h-5" />
-                        Top Prize Winners
+                        <Coins className="inline-block w-6 h-6 mr-3" /> EARNINGS
                     </button>
                     <button
-                        className={`${styles.tab} ${type === 'wins' ? styles.tabActive : ''}`}
                         onClick={() => setType('wins')}
+                        className={`pixel-btn text-xl w-56 ${type === 'wins' ? 'pixel-btn-primary' : 'pixel-btn-outline'}`}
                     >
-                        <Trophy className="w-5 h-5" />
-                        Most Wins
+                        <Trophy className="inline-block w-6 h-6 mr-3" /> VICTORIES
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className={styles.content}>
-                    {loading && (
-                        <div className={styles.loading}>Loading...</div>
-                    )}
+                {/* Arcade Table */}
+                <div className="pixel-box border-4 border-[var(--pixel-fg)] p-0 overflow-hidden bg-[var(--pixel-card-bg)] shadow-2xl rounded-2xl">
 
-                    {error && (
-                        <div className={styles.error}>Error: {error}</div>
-                    )}
+                    {/* Fixed Header */}
+                    <div className="grid grid-cols-12 gap-4 p-6 border-b-4 border-[var(--pixel-fg)] bg-[var(--pixel-card-bg)] text-[var(--pixel-yellow)] font-retro text-sm md:text-base tracking-widest">
+                        <div className="col-span-2 text-center">RANK</div>
+                        <div className="col-span-6">PLAYER</div>
+                        <div className="col-span-4 text-right">SCORE</div>
+                    </div>
 
-                    {!loading && !error && data.length === 0 && (
-                        <div className={styles.empty}>No data yet. Be the first to win!</div>
-                    )}
-
-                    {!loading && !error && data.length > 0 && (
-                        <div className={styles.table}>
-                            <div className={styles.tableHeader}>
-                                <div className={styles.rankCol}>Rank</div>
-                                <div className={styles.playerCol}>Player</div>
-                                <div className={styles.walletCol}>Wallet</div>
-                                <div className={styles.scoreCol}>
-                                    {type === 'eth' ? 'Total Winnings' : 'Wins'}
-                                </div>
+                    {/* Scrollable List */}
+                    <div className="max-h-[60vh] overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                        {loading && (
+                            <div className="py-16 text-center">
+                                <Loader2 className="w-12 h-12 text-[var(--pixel-yellow)] animate-spin mx-auto mb-4" />
+                                <p className="animate-blink text-2xl">LOADING DATA...</p>
                             </div>
+                        )}
 
-                            {data.map((entry, index) => (
+                        {error && (
+                            <div className="py-12 text-center text-[var(--pixel-red)] text-2xl font-bold">
+                                ERROR_CODE: {error}
+                            </div>
+                        )}
+
+                        {!loading && !error && data.length === 0 && (
+                            <div className="py-16 text-center text-[var(--pixel-fg)] opacity-60 text-2xl">
+                                NO RECORDS FOUND
+                            </div>
+                        )}
+
+                        {!loading && !error && data.length > 0 && (
+                            data.map((entry, index) => (
                                 <div
                                     key={entry.wallet}
-                                    className={`${styles.tableRow} cursor-pointer hover:bg-slate-800/50 transition-colors`}
                                     onClick={() => setSelectedWallet(entry.wallet)}
+                                    className="grid grid-cols-12 gap-4 items-center p-4 hover:bg-[var(--pixel-card-border)] cursor-pointer group transition-colors border-b-2 border-dashed border-[var(--pixel-card-border)] last:border-0"
                                 >
-                                    <div className={styles.rankCol}>
-                                        <span className={`${styles.rank} ${index < 3 ? styles[`rank${index + 1}`] : ''}`}>
-                                            #{index + 1}
-                                        </span>
+                                    {/* Rank */}
+                                    <div className={`col-span-2 text-center font-retro text-xl ${getRankColor(index)}`}>
+                                        {index === 0 ? '1ST' : index === 1 ? '2ND' : index === 2 ? '3RD' : `${index + 1}`}
                                     </div>
-                                    <div className={styles.playerCol}>
-                                        <span className={styles.username}>{entry.username}</span>
+
+                                    {/* Player */}
+                                    <div className="col-span-6 flex items-center gap-4 overflow-hidden">
+                                        <div className={`w-12 h-12 flex-shrink-0 bg-[var(--pixel-card-bg)] border-2 border-current flex items-center justify-center ${getRankColor(index)}`}>
+                                            <span className="font-retro text-lg">{entry.username?.slice(0, 1).toUpperCase() || '?'}</span>
+                                        </div>
+                                        <div className="truncate">
+                                            <span className={`block font-bold text-xl group-hover:text-white ${index < 3 ? 'text-white' : 'text-[var(--pixel-fg)]'}`}>
+                                                {entry.username || 'UNKNOWN'}
+                                            </span>
+                                            <span className="text-sm text-[var(--pixel-fg)] opacity-50 font-mono">
+                                                {entry.walletFormatted}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className={styles.walletCol}>
-                                        <span className={styles.wallet}>{entry.walletFormatted}</span>
-                                    </div>
-                                    <div className={styles.scoreCol}>
-                                        <span className={styles.score}>{formatScore(entry.score)}</span>
+
+                                    {/* Score */}
+                                    <div className={`col-span-4 text-right font-retro text-xl ${type === 'eth' ? 'text-[var(--pixel-green)]' : 'text-[var(--pixel-blue)]'}`}>
+                                        {formatScore(entry.score)}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        )}
+                    </div>
                 </div>
+
+                {/* Footer Note */}
+                <div className="text-center mt-8 text-base text-[var(--pixel-fg)] animate-pulse">
+                    TOP 3 PLAYERS GET FEATURED ON LANDING PAGE
+                </div>
+
             </main>
         </div>
     );

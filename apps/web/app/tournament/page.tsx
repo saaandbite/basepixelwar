@@ -5,35 +5,25 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { parseEther, formatEther } from 'viem';
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Address, Avatar, Name, Identity, EthBalance } from '@coinbase/onchainkit/identity';
-import { Loader2, Trophy, Users, AlertCircle, CheckCircle2, Swords, Timer, XCircle, Check } from 'lucide-react';
+import { Loader2, Trophy, Users, AlertCircle, CheckCircle2, Swords, XCircle, ArrowLeft, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
-// ABI for Tournament Contract
 import { TOURNAMENT_ABI } from './abi';
 import PlayerProfileModal from '../components/PlayerProfileModal';
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
 
-// Helper to get socket URL (same as useMultiplayer)
 const getServerUrl = () => {
-    // 1. Dynamic Detection (Best for LAN / Mobile Testing)
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
-
-        // If we are accessing via IP (e.g. 192.168.x.x) or special domain, use it!
-        // We ignored the Env Var here because it often defaults to localhost in build time
         if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             return `${protocol}//${hostname}:3000`;
         }
     }
-
-    // 2. Fallback to Env Var (Production domain or configured localhost)
     if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
-
-    // 3. Last Resort
     return 'http://localhost:3000';
 };
 
@@ -46,14 +36,13 @@ export default function TournamentPage() {
         address: TOURNAMENT_ADDRESS,
         abi: TOURNAMENT_ABI,
         functionName: 'currentWeek',
-        query: { refetchInterval: 10000 } // Refresh every 10s
+        query: { refetchInterval: 10000 }
     });
 
     const weekNum = currentWeek ? Number(currentWeek) : 0;
 
     // Local State
     const [joinedRoomId, setJoinedRoomId] = useState<number>(0);
-    const [isLoadingRoom, setIsLoadingRoom] = useState(false);
     const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
 
     // Lobby State
@@ -63,37 +52,26 @@ export default function TournamentPage() {
 
     // Challenge State
     const [incomingChallenge, setIncomingChallenge] = useState<{ challengerWallet: string; tournamentRoomId: string } | null>(null);
-    const [isChallengePending, setIsChallengePending] = useState(false); // Waiting for *my* challenge to be accepted
-    const [debugMsg, setDebugMsg] = useState<string>(''); // Temporary debug info
+    const [isChallengePending, setIsChallengePending] = useState(false);
 
     const isJoined = joinedRoomId > 0;
 
-    // Fetch Room Data from Backend API (Initial Check)
+    // Fetch Room Data
     const fetchRoomData = useCallback(async () => {
-        if (!address || weekNum === 0) {
-            setDebugMsg(`Wait: Addr=${!!address} Week=${weekNum}`);
-            return;
-        }
+        if (!address || weekNum === 0) return;
 
         try {
-            // Use helper to get correct server URL (works for localhost, LAN, and prod)
             const SERVER_URL = getServerUrl();
-            setDebugMsg(`Fetching: ${SERVER_URL}/api/tournament/room?wallet=${address?.slice(0, 6)}...`);
-
             const res = await fetch(`${SERVER_URL}/api/tournament/room?wallet=${address}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
             const data = await res.json();
-            setDebugMsg(`Success: Room=${data?.location?.roomId}`);
-
             if (data.location) {
                 setJoinedRoomId(data.location.roomId);
-                // We rely on Socket for live player list, but initial fetch gives comprehensive list
                 if (data.players) {
-                    // Initialize leaderboard with all registered players (score 0 if missing)
                     const initialLeaderboard = data.players.map((p: any) => ({
                         wallet: p.walletAddress,
-                        score: 0 // Will be updated by socket
+                        score: 0
                     }));
                     setRoomLeaderboard(initialLeaderboard);
                 }
@@ -105,20 +83,16 @@ export default function TournamentPage() {
         }
     }, [address, weekNum]);
 
-    // Initial Fetch
     useEffect(() => {
         if (address && weekNum > 0) {
             fetchRoomData();
         }
     }, [address, weekNum, fetchRoomData]);
 
-    // ==========================================
-    // SOCKET LOBBY CONNECTION
-    // ==========================================
+    // Socket Connection
     useEffect(() => {
         if (!isJoined || !address || !joinedRoomId || !weekNum) return;
 
-        // Connect to Socket
         const socket = io(getServerUrl(), {
             transports: ['websocket', 'polling'],
             reconnectionAttempts: 5,
@@ -127,8 +101,6 @@ export default function TournamentPage() {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-            console.log('[Tournament] Connected to Lobby Socket');
-            // Join Lobby
             socket.emit('join_tournament_lobby', {
                 week: weekNum,
                 roomId: joinedRoomId.toString(),
@@ -136,42 +108,25 @@ export default function TournamentPage() {
             });
         });
 
-        // Event: Lobby State (Initial)
         socket.on('lobby_state', (data: { onlinePlayers: string[]; leaderboard: { wallet: string; score: number }[] }) => {
-            console.log('[Tournament] Lobby State:', data);
             setOnlinePlayers(new Set(data.onlinePlayers.map(w => w.toLowerCase())));
-
-            // Merge leaderboards safely
-            setRoomLeaderboard(prev => {
-                // If the socket provides a leaderboard, use it. 
-                // But it might only include players who have scored.
-                // We want to overlay scores onto the full list if possible.
-                // For now, simpler approach: Use Socket Data directly if available, else prev.
-
-                // Better approach: Update scores in existing list
-                if (!data.leaderboard) return prev;
-
-                // Create map of scores
+            if (data.leaderboard) {
                 const scoreMap = new Map(data.leaderboard.map(p => [p.wallet.toLowerCase(), p.score]));
-
-                // Update previous list (which has all registered players)
-                const updated = prev.map(p => ({
-                    ...p,
-                    score: scoreMap.get(p.wallet.toLowerCase()) || p.score || 0
-                }));
-
-                // Add any new players from leaderboard that weren't in initial list (unlikely strict tournament but safe)
-                data.leaderboard.forEach(lbPlayer => {
-                    if (!updated.find(p => p.wallet.toLowerCase() === lbPlayer.wallet.toLowerCase())) {
-                        updated.push(lbPlayer);
-                    }
+                setRoomLeaderboard(prev => {
+                    const updated = prev.map(p => ({
+                        ...p,
+                        score: scoreMap.get(p.wallet.toLowerCase()) || p.score || 0
+                    }));
+                    data.leaderboard.forEach(lbPlayer => {
+                        if (!updated.find(p => p.wallet.toLowerCase() === lbPlayer.wallet.toLowerCase())) {
+                            updated.push(lbPlayer);
+                        }
+                    });
+                    return updated;
                 });
-
-                return updated;
-            });
+            }
         });
 
-        // Event: Player Update (Another player online/offline)
         socket.on('lobby_player_update', (data: { walletAddress: string; isOnline: boolean }) => {
             setOnlinePlayers(prev => {
                 const next = new Set(prev);
@@ -182,40 +137,30 @@ export default function TournamentPage() {
             });
         });
 
-        // Event: Leaderboard Update
         socket.on('lobby_leaderboard_update', (data: { wallet: string; score: number }[]) => {
             setRoomLeaderboard(prev => {
                 const scoreMap = new Map(data.map(p => [p.wallet.toLowerCase(), p.score]));
-                const updated = prev.map(p => ({
+                return prev.map(p => ({
                     ...p,
                     score: scoreMap.get(p.wallet.toLowerCase()) ?? p.score ?? 0
                 }));
-                return updated;
             });
         });
 
-        // Event: Challenge Received
         socket.on('challenge_received', (data: { challengerWallet: string; tournamentRoomId: string }) => {
-            console.log("Challenge Received!", data);
-            // Only show if not already busy?
             setIncomingChallenge(data);
         });
 
-        // Event: Challenge Failed
         socket.on('challenge_failed', (data: { reason: string }) => {
-            alert(`Challenge Failed: ${data.reason}`);
+            alert(`CHALLENGE FAILED: ${data.reason}`);
             setIsChallengePending(false);
         });
 
-        // Event: Game Start (Redirect)
         socket.on('game_start', (data: any) => {
-            console.log("Game Start!", data);
-            // Save Session for Game Page
             sessionStorage.setItem('pvp_mode', 'true');
             sessionStorage.setItem('pvp_room_id', data.roomId);
             sessionStorage.setItem('pvp_team', data.yourTeam);
-            sessionStorage.setItem('is_tournament', 'true'); // Flag for game page to know it's tournament
-            // Use router to push
+            sessionStorage.setItem('is_tournament', 'true');
             router.push('/play/game');
         });
 
@@ -224,12 +169,7 @@ export default function TournamentPage() {
         };
     }, [isJoined, address, joinedRoomId, weekNum, router]);
 
-
-    // ==========================================
-    // ACTIONS
-    // ==========================================
-
-    // Send Challenge
+    // Actions
     const handleChallenge = (targetWallet: string) => {
         if (!socketRef.current) return;
         setIsChallengePending(true);
@@ -237,15 +177,11 @@ export default function TournamentPage() {
             targetWallet,
             tournamentRoomId: joinedRoomId.toString()
         });
-
-        // Timeout safeguard
         setTimeout(() => setIsChallengePending(false), 10000);
     };
 
-    // Accept Challenge
     const handleAccept = () => {
         if (!socketRef.current || !incomingChallenge) return;
-
         socketRef.current.emit('accept_challenge', {
             challengerWallet: incomingChallenge.challengerWallet,
             tournamentRoomId: joinedRoomId.toString(),
@@ -256,11 +192,9 @@ export default function TournamentPage() {
 
     const handleDecline = () => {
         setIncomingChallenge(null);
-        // Optional: Emit decline event so sender knows
     };
 
-
-    // Contract stuff remains for Joining
+    // Contract Write
     const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
     const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
@@ -297,8 +231,14 @@ export default function TournamentPage() {
         });
     };
 
+    const truncateWallet = (wallet: string) =>
+        `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+
     return (
-        <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
+        <div className="min-h-screen relative flex flex-col font-terminal text-[24px]">
+            <div className="scanline" />
+            <div className="fixed inset-0 bg-[var(--pixel-bg)] z-0" />
+
             <PlayerProfileModal
                 walletAddress={selectedWallet}
                 onClose={() => setSelectedWallet(null)}
@@ -306,37 +246,29 @@ export default function TournamentPage() {
             />
 
             {/* Header */}
-            <header className="border-b border-white/10 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+            <header className="relative z-10 p-6 border-b-4 border-[var(--pixel-card-border)] bg-black/90">
+                <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href="/" className="flex items-center gap-2 group">
-                            <div className="size-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-xl group-hover:scale-105 transition-transform">P</div>
-                            <span className="font-bold text-lg hidden sm:block">PixelWar</span>
+                        <Link href="/play" className="flex items-center gap-3 hover:text-[var(--pixel-red)] transition-colors">
+                            <ArrowLeft className="w-8 h-8" />
                         </Link>
-                        <div className="h-6 w-px bg-white/10 mx-2" />
-                        <span className="text-sm font-medium text-blue-400 bg-blue-400/10 px-3 py-1 rounded-full border border-blue-400/20">
-                            Tournament Week #{weekNum}
-                        </span>
+                        <div className="flex items-center gap-3 font-retro text-[var(--pixel-red)]">
+                            <Trophy className="w-6 h-6" />
+                            <span className="hidden sm:inline text-lg">TOURNAMENT</span>
+                        </div>
+                        <div className="pixel-badge bg-[var(--pixel-card-bg)] text-[var(--pixel-red)] text-base border-2 border-[var(--pixel-red)]">
+                            WEEK #{weekNum}
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        {isConnected && address && (
-                            <button
-                                onClick={() => setSelectedWallet(address)}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 text-sm font-medium transition-colors"
-                            >
-                                <Trophy className="w-4 h-4 text-yellow-500" />
-                                My Stats
-                            </button>
-                        )}
-
+                    <div className="flex items-center gap-3">
                         <Wallet>
-                            <ConnectWallet className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg transition-colors">
+                            <ConnectWallet className="!font-terminal !text-base !h-10 !min-h-0 !bg-[var(--pixel-red)] !text-white !border-0 hover:!bg-white hover:!text-black">
                                 <Avatar className="h-6 w-6" />
-                                <Name className="ml-2" />
+                                <Name />
                             </ConnectWallet>
-                            <WalletDropdown>
-                                <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+                            <WalletDropdown className="!font-terminal">
+                                <Identity className="px-6 py-4" hasCopyAddressOnClick>
                                     <Avatar />
                                     <Name />
                                     <Address />
@@ -350,191 +282,170 @@ export default function TournamentPage() {
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 py-12">
+            <main className="relative z-10 container mx-auto px-4 py-12 max-w-5xl">
                 {!isConnected ? (
-                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
-                        <div className="size-24 rounded-full bg-slate-800 flex items-center justify-center mb-4 ring-4 ring-slate-800 ring-offset-2 ring-offset-slate-950">
-                            <Trophy className="size-12 text-yellow-500" />
+                    /* Not Connected State */
+                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+                        <div className="w-32 h-32 bg-[var(--pixel-red)] border-4 border-white flex items-center justify-center mb-8 animate-bounce shadow-xl">
+                            <Crown className="w-16 h-16 text-white" />
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-500">
-                            Weekly Championship
+                        <h1 className="text-4xl md:text-6xl font-retro text-white mb-8 text-shadow-hard">
+                            WEEKLY CHAMPIONSHIP
                         </h1>
-                        <p className="text-slate-400 max-w-lg text-lg leading-relaxed">
-                            Compete in 10-player rooms. Top player wins the exclusive <span className="text-yellow-400 font-bold">PixelTrophy NFT</span>. Runner-ups win ETH.
+                        <p className="text-[var(--pixel-fg)] text-2xl max-w-2xl mb-12 leading-relaxed">
+                            Join the arena. Defeat 9 opponents. Win the <span className="text-[var(--pixel-yellow)] animate-blink">GOLDEN TROPHY</span>.
                         </p>
-                        <div className="pt-4">
-                            <p className="text-sm text-slate-500 mb-2">Connect your wallet to enter</p>
+                        <div className="pixel-box border-4 border-white text-xl">
+                            PLEASE CONNECT WALLET TO ENTER
                         </div>
                     </div>
                 ) : (
-                    <div className="max-w-4xl mx-auto space-y-8">
-                        {/* Status Card */}
-                        <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 md:p-8 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none group-hover:bg-blue-500/20 transition-all duration-700" />
+                    /* Connected State */
+                    <div className="space-y-8">
 
-                            <div className="relative z-10">
-                                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                                    <Trophy className="text-yellow-500" />
-                                    Your Status
+                        {!isJoined ? (
+                            <div className="pixel-card border-4 border-[var(--pixel-red)]">
+                                <h2 className="text-3xl font-retro text-[var(--pixel-red)] mb-8 text-center text-shadow-hard">
+                                    QUALIFICATION STAGE
                                 </h2>
 
-                                {!isJoined ? (
-                                    <div className="space-y-6">
-                                        <div className="flex items-start gap-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                                            <AlertCircle className="w-6 h-6 text-blue-400 shrink-0 mt-0.5" />
-                                            <div>
-                                                <h3 className="font-bold text-blue-100">Ready to Join?</h3>
-                                                <p className="text-blue-300/80 text-sm mt-1">
-                                                    Entry Fee: <span className="text-white font-mono">0.001 ETH</span>. You will be placed in a room with 9 other players.
-                                                </p>
-                                            </div>
-                                        </div>
+                                <div className="bg-black border-4 border-[var(--pixel-fg)] p-8 mb-8 text-center">
+                                    <p className="text-[var(--pixel-red)] mb-3 text-lg font-bold">ENTRY FEE</p>
+                                    <p className="font-retro text-5xl text-white mb-6">0.001 ETH</p>
+                                    <p className="text-xl text-[var(--pixel-fg)]">
+                                        PRIZE POOL: 0.009 ETH + NFT
+                                    </p>
+                                </div>
 
-                                        <button
-                                            onClick={handleJoin}
-                                            disabled={isPending || isConfirming}
-                                            className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                        >
-                                            {(isPending || isConfirming) ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" />
-                                                    Processing...
-                                                </>
-                                            ) : (
-                                                "Join Tournament"
-                                            )}
-                                        </button>
-                                        {writeError && (
-                                            <p className="text-red-400 text-sm text-center">{writeError.message}</p>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        <div className="flex items-center justify-between">
-                                            <div className="p-4 bg-slate-800 rounded-xl border border-white/5 w-full mr-4">
-                                                <p className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Room ID</p>
-                                                <p className="text-2xl font-mono font-bold text-white">#{joinedRoomId}</p>
-                                            </div>
-
-                                            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl w-full flex items-center gap-3">
-                                                <CheckCircle2 className="text-green-400 w-10 h-10" />
-                                                <div>
-                                                    <p className="font-bold text-green-100">Lobby Active</p>
-                                                    <p className="text-sm text-green-300/80">Challenge players below to start a match.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <button
+                                    onClick={handleJoin}
+                                    disabled={isPending || isConfirming}
+                                    className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black"
+                                >
+                                    {(isPending || isConfirming) ? (
+                                        <><Loader2 className="animate-spin inline w-6 h-6" /> PROCESSING TX...</>
+                                    ) : (
+                                        "JOIN TOURNAMENT"
+                                    )}
+                                </button>
+                                {writeError && (
+                                    <p className="text-[var(--pixel-red)] mt-6 text-center text-xl font-bold">{writeError.message}</p>
                                 )}
                             </div>
-                        </div>
-
-                        {/* Leaderboard & Lobby Section */}
-                        {isJoined && (
-                            <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 md:p-8">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-xl font-bold flex items-center gap-2">
-                                        <Users className="text-slate-400" />
-                                        Room Lobby
-                                    </h3>
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                        <span className="text-slate-400">{onlinePlayers.size} Online</span>
+                        ) : (
+                            /* Lobby View */
+                            <div className="space-y-8">
+                                {/* Room Info */}
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="pixel-box border-4 border-[var(--pixel-card-border)]">
+                                        <p className="text-[var(--pixel-fg)] text-sm mb-2">ROOM ID</p>
+                                        <p className="font-retro text-4xl">#{joinedRoomId}</p>
+                                    </div>
+                                    <div className="pixel-box border-l-8 border-[var(--pixel-green)]">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="text-[var(--pixel-green)] font-bold text-xl">LOBBY ACTIVE</p>
+                                                <p className="text-base">WAITING FOR CHALLENGERS</p>
+                                            </div>
+                                            <div className="pixel-badge bg-[var(--pixel-green)] text-black animate-pulse text-lg border-2 border-black">
+                                                {onlinePlayers.size} ONLINE
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    {roomLeaderboard.length === 0 ? (
-                                        <div className="p-8 text-center text-slate-500 italic">
-                                            Waiting for players...
-                                        </div>
-                                    ) : (
-                                        roomLeaderboard
-                                            .sort((a, b) => b.score - a.score)
-                                            .map((p, i) => {
-                                                const isMe = p.wallet?.toLowerCase() === address?.toLowerCase();
-                                                const isOnline = onlinePlayers.has(p.wallet?.toLowerCase());
+                                {/* Player List */}
+                                <div className="pixel-card bg-black border-4 border-[var(--pixel-red)]">
+                                    <h3 className="text-[var(--pixel-fg)] mb-6 flex items-center gap-3 text-xl">
+                                        <Users className="w-6 h-6" /> PLAYERS IN ROOM
+                                    </h3>
 
-                                                return (
-                                                    <div key={p.wallet || i} className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${isMe ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-800/50 border-white/5'
-                                                        }`}>
+                                    <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+                                        {roomLeaderboard.length === 0 ? (
+                                            <div className="text-center py-16 text-[var(--pixel-fg)] opacity-50 text-2xl">
+                                                WAITING FOR PLAYERS...
+                                            </div>
+                                        ) : (
+                                            roomLeaderboard
+                                                .sort((a, b) => b.score - a.score)
+                                                .map((p, i) => {
+                                                    const isMe = p.wallet?.toLowerCase() === address?.toLowerCase();
+                                                    const isOnline = onlinePlayers.has(p.wallet?.toLowerCase());
+
+                                                    return (
                                                         <div
-                                                            className="flex items-center gap-4 cursor-pointer hover:opacity-80"
-                                                            onClick={() => setSelectedWallet(p.wallet)}
+                                                            key={p.wallet || i}
+                                                            className={`flex items-center justify-between p-4 border-2 transition-colors ${isMe ? 'bg-[var(--pixel-red)]/20 border-[var(--pixel-red)]' : 'bg-[var(--pixel-bg)] border-[var(--pixel-card-border)]'
+                                                                }`}
                                                         >
-                                                            <div className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold ${i === 0 ? 'bg-yellow-500 text-black' :
-                                                                i === 1 ? 'bg-slate-300 text-black' :
-                                                                    i === 2 ? 'bg-amber-600 text-white' :
-                                                                        'bg-slate-700 text-slate-400'
-                                                                }`}>
-                                                                {i + 1}
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={`font-mono text-sm ${isMe ? 'text-blue-200 font-bold' : 'text-slate-300'}`}>
-                                                                        {p.wallet} {isMe && '(You)'}
-                                                                    </span>
-                                                                    {isOnline && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Online" />}
-                                                                </div>
-                                                                <p className="text-xs text-slate-500 mt-0.5">{p.score} Points</p>
-                                                            </div>
-                                                        </div>
-
-                                                        {!isMe && (
-                                                            <button
-                                                                onClick={() => handleChallenge(p.wallet)}
-                                                                disabled={!isOnline || isChallengePending}
-                                                                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${isOnline
-                                                                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 active:scale-95'
-                                                                    : 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                                                                    }`}
+                                                            <div
+                                                                className="flex items-center gap-4 cursor-pointer group"
+                                                                onClick={() => setSelectedWallet(p.wallet)}
                                                             >
-                                                                {isChallengePending ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    <Swords className="w-4 h-4" />
-                                                                )}
-                                                                Challenge
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })
-                                    )}
+                                                                <div className={`w-10 h-10 flex items-center justify-center font-retro text-lg ${i === 0 ? 'bg-[var(--pixel-yellow)] text-black' : 'bg-[var(--pixel-card-bg)] text-white'
+                                                                    }`}>
+                                                                    {i + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <span className={`font-mono text-xl ${isMe ? 'text-[var(--pixel-red)]' : 'text-white group-hover:text-[var(--pixel-red)]'}`}>
+                                                                            {truncateWallet(p.wallet)}
+                                                                        </span>
+                                                                        {isOnline && <span className="w-3 h-3 bg-[var(--pixel-green)] animate-blink rounded-none" />}
+                                                                    </div>
+                                                                    <p className="text-sm text-[var(--pixel-fg)]">{p.score} PTS</p>
+                                                                </div>
+                                                            </div>
+
+                                                            {!isMe && (
+                                                                <button
+                                                                    onClick={() => handleChallenge(p.wallet)}
+                                                                    disabled={!isOnline || isChallengePending}
+                                                                    className={`pixel-btn !py-2 !px-6 text-lg ${isOnline ? 'pixel-btn-danger' : 'opacity-50 cursor-not-allowed bg-gray-700'}`}
+                                                                >
+                                                                    {isChallengePending ? (
+                                                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                                                    ) : (
+                                                                        "FIGHT"
+                                                                    )}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Challenge Modal */}
+                {/* Challenge Modal - "New Challenger" Style - SCALED UP */}
                 {incomingChallenge && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                        <div className="bg-slate-900 border border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-24 bg-blue-500/10 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm">
+                        <div className="pixel-card w-full max-w-xl bg-[var(--pixel-red)] border-8 border-white animate-bounce-in shadow-[0_0_50px_rgba(239,68,68,0.5)]">
 
-                            <div className="relative text-center">
-                                <div className="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6 ring-4 ring-blue-500/10">
-                                    <Swords className="w-8 h-8 text-blue-400" />
-                                </div>
-
-                                <h3 className="text-2xl font-bold text-white mb-2">Incoming Challenge!</h3>
-                                <p className="text-slate-400 mb-8">
-                                    <span className="font-mono text-blue-300 font-bold">{incomingChallenge.challengerWallet.slice(0, 6)}...{incomingChallenge.challengerWallet.slice(-4)}</span> wants to battle you.
+                            <div className="text-center py-10">
+                                <h3 className="text-4xl font-retro text-black mb-4 animate-blink font-bold">
+                                    ⚠ WARNING ⚠
+                                </h3>
+                                <p className="text-black font-bold text-3xl mb-8">
+                                    NEW CHALLENGER APPROACHING!
                                 </p>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button
-                                        onClick={handleDecline}
-                                        className="py-3 px-4 rounded-xl font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
-                                    >
-                                        Decline
+                                <div className="bg-black border-4 border-white p-6 mb-10 inline-block transform rotate-2 shadow-xl">
+                                    <p className="text-white font-mono text-3xl tracking-widest">
+                                        {truncateWallet(incomingChallenge.challengerWallet)}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6 px-10">
+                                    <button onClick={handleDecline} className="pixel-btn bg-black text-white hover:bg-gray-900 text-2xl py-4 border-4 border-white">
+                                        RUN AWAY
                                     </button>
-                                    <button
-                                        onClick={handleAccept}
-                                        className="py-3 px-4 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 transition shadow-lg shadow-blue-500/25 animate-pulse"
-                                    >
-                                        Accept & Fight
+                                    <button onClick={handleAccept} className="pixel-btn bg-white text-[var(--pixel-red)] hover:bg-gray-100 text-2xl py-4 border-4 border-black animate-pulse font-bold">
+                                        FIGHT!
                                     </button>
                                 </div>
                             </div>

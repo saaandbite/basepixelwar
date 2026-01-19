@@ -1,37 +1,32 @@
-/* Landing Page Styles - Enhanced Color Hierarchy */
-.landingPage {
-  /* Level 1: Primary Colors - Brand Identity */
-  --pink-primary: #FF8BA7;
-  --pink-primary-hover: #FF7B9C;
-  --pink-primary-active: #FF6B8C;
+/* Landing Page Styles - Epic Dark Gaming Theme */
 
-  /* Level 2: Secondary Colors - Supporting Elements */
-  --pink-secondary: #FFC6C6;
-  --pink-light: #FFE5E5;
-  --pink-lightest: #FFFAFA;
+/* ========================================
+   BATTLEGROUND PAGE - Main Container
+   ======================================== */
+.battlegroundPage {
+  /* Neon Gaming Color Palette */
+  --neon-cyan: #00F0FF;
+  --neon-magenta: #FF00F0;
+  --neon-orange: #FF6A00;
+  --neon-yellow: #FFE500;
+  --neon-red: #FF0055;
 
-  /* Level 3: Accent Colors - Functional */
-  --success: #4CAF50;
-  --success-hover: #43A047;
-  --warning: #F59E0B;
-  --error: #E53935;
-  --info: #3B82F6;
+  /* Dark Theme */
+  --dark-void: #0A0A0F;
+  --dark-surface: #12121A;
+  --dark-elevated: #1A1A2E;
+  --dark-border: #2A2A3E;
 
-  /* Level 4: Text Hierarchy - Optimized Contrast */
-  --text-primary: #1F2937;
-  --text-secondary: #4B5563;
-  --text-tertiary: #6B7280;
-  --text-muted: #9CA3AF;
+  /* Text Colors */
+  --text-bright: #FFFFFF;
+  --text-primary: #E5E5EA;
+  --text-secondary: #9999A5;
+  --text-muted: #666670;
 
-  /* Level 5: Background & Surface */
-  --surface-white: #FFFFFF;
-  --surface-overlay: rgba(0, 0, 0, 0.5);
-
-  /* Legacy support (deprecated, use new variables) */
-  --primary: var(--pink-primary);
-  --secondary: var(--pink-secondary);
-  --accent: var(--success);
-  --text-dark: var(--text-primary);
+  /* Success/Warning */
+  --success: #00FF88;
+  --warning: #FFB800;
+  --error: #FF4444;
 
   position: relative;
   min-height: 100vh;
@@ -39,65 +34,118 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #FFE5E5 0%, #FFC6C6 100%);
+  background: linear-gradient(180deg, var(--dark-void) 0%, var(--dark-elevated) 100%);
   overflow: hidden;
   padding: 20px;
 }
 
-/* Background Pattern Effect */
-.backgroundGrid {
+/* ========================================
+   LAYER 1: ANIMATED WAR BACKGROUND
+   ======================================== */
+.warBackground {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Animated Grid Pattern */
+.battleGrid {
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
+    linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: gridPulse 4s ease-in-out infinite;
 }
 
-/* Floating Orbs - Soft Pink */
-.glowOrb1 {
-  position: absolute;
-  top: 15%;
-  left: 5%;
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
-  border-radius: 50%;
-  filter: blur(60px);
-  animation: float 10s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.glowOrb2 {
-  position: absolute;
-  bottom: 15%;
-  right: 5%;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
-  border-radius: 50%;
-  filter: blur(80px);
-  animation: float 12s ease-in-out infinite reverse;
-  pointer-events: none;
-}
-
-@keyframes float {
+@keyframes gridPulse {
 
   0%,
   100% {
-    transform: translate(0, 0);
+    opacity: 0.5;
+    background-size: 50px 50px;
   }
 
   50% {
-    transform: translate(20px, -30px);
+    opacity: 0.8;
+    background-size: 52px 52px;
   }
 }
 
-/* Hero Section */
+/* Territory Glow Effects */
+.territoryGlow {
+  position: absolute;
+  inset: 0;
+}
+
+.territoryGlow::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 0, 85, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: territoryWar 8s ease-in-out infinite;
+}
+
+.territoryGlow::after {
+  content: '';
+  position: absolute;
+  bottom: 20%;
+  right: 10%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: territoryWar 8s ease-in-out infinite reverse;
+}
+
+@keyframes territoryWar {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.6;
+  }
+
+  25% {
+    transform: translate(30px, -20px) scale(1.1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translate(-20px, 30px) scale(0.9);
+    opacity: 0.5;
+  }
+
+  75% {
+    transform: translate(-30px, -10px) scale(1.05);
+    opacity: 0.7;
+  }
+}
+
+/* Scan Lines Effect */
+.scanLines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.1) 2px,
+      rgba(0, 0, 0, 0.1) 4px);
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* ========================================
+   LAYER 2: HERO SECTION & TYPOGRAPHY
+   ======================================== */
 .heroSection {
   position: relative;
   z-index: 1;
@@ -108,58 +156,162 @@
   text-align: center;
 }
 
-/* Title */
 .titleContainer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
+/* Epic Title with Neon Effect */
 .title {
-  font-size: clamp(3rem, 10vw, 5.5rem);
+  font-size: clamp(4rem, 15vw, 8rem);
   font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: -1.5px;
+  line-height: 1;
+  letter-spacing: -2px;
   margin: 0;
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  transition: all 0.2s ease;
 }
 
 .pixel {
-  color: var(--pink-primary);
-  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+  color: var(--neon-cyan);
+  text-shadow:
+    0 0 10px var(--neon-cyan),
+    0 0 30px rgba(0, 240, 255, 0.5),
+    0 0 60px rgba(0, 240, 255, 0.3);
+  transition: all 0.15s ease;
 }
 
 .war {
-  color: var(--text-primary);
-  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+  color: var(--text-bright);
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.5),
+    2px 2px 0 rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
 }
 
+/* ========================================
+   IMPACT ANIMATION - Cannon Shot Effect
+   ======================================== */
+.impacted .pixel {
+  animation: textImpact 0.4s ease-out forwards;
+}
+
+.impacted .war {
+  animation: textImpactSecondary 0.4s ease-out 0.05s forwards;
+}
+
+@keyframes textImpact {
+  0% {
+    color: var(--neon-cyan);
+    text-shadow:
+      0 0 10px var(--neon-cyan),
+      0 0 30px rgba(0, 240, 255, 0.5);
+    transform: translate(0, 0);
+  }
+
+  20% {
+    color: #FFFFFF;
+    text-shadow:
+      0 0 30px #FFFFFF,
+      0 0 60px var(--neon-yellow);
+    transform: translate(-5px, 2px);
+  }
+
+  40% {
+    color: var(--neon-magenta);
+    text-shadow:
+      0 0 20px var(--neon-magenta),
+      0 0 40px rgba(255, 0, 240, 0.6);
+    transform: translate(5px, -2px);
+  }
+
+  60% {
+    transform: translate(-3px, 1px);
+  }
+
+  80% {
+    transform: translate(2px, -1px);
+  }
+
+  100% {
+    color: var(--neon-magenta);
+    text-shadow:
+      0 0 10px var(--neon-magenta),
+      0 0 30px rgba(255, 0, 240, 0.5),
+      0 0 60px rgba(255, 0, 240, 0.3);
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes textImpactSecondary {
+  0% {
+    color: var(--text-bright);
+    transform: translate(0, 0);
+  }
+
+  20% {
+    color: var(--neon-yellow);
+    text-shadow:
+      0 0 20px var(--neon-yellow),
+      0 0 40px rgba(255, 229, 0, 0.5);
+    transform: translate(4px, -2px);
+  }
+
+  40% {
+    color: var(--neon-red);
+    text-shadow:
+      0 0 20px var(--neon-red),
+      0 0 40px rgba(255, 0, 85, 0.5);
+    transform: translate(-4px, 2px);
+  }
+
+  60% {
+    transform: translate(2px, -1px);
+  }
+
+  80% {
+    transform: translate(-1px, 1px);
+  }
+
+  100% {
+    color: var(--neon-red);
+    text-shadow:
+      0 0 10px var(--neon-red),
+      0 0 30px rgba(255, 0, 85, 0.5);
+    transform: translate(0, 0);
+  }
+}
+
+/* Subtitle */
 .subtitle {
-  font-size: clamp(1rem, 2.5vw, 1.3rem);
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
   color: var(--text-secondary);
   font-weight: 600;
   margin: 0;
-  letter-spacing: 0.3px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
-/* Buttons */
+/* ========================================
+   BUTTONS - Gaming Style
+   ======================================== */
 .buttonContainer {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
   justify-content: center;
+  margin-top: 20px;
 }
 
-/* Wallet wrapper to force full width */
 .walletWrapper {
-  width: 250px;
+  width: 260px;
   display: flex;
   justify-content: center;
 }
 
-/* Force all children inside wallet wrapper to be full width */
 .walletWrapper>* {
   width: 100%;
 }
@@ -168,6 +320,7 @@
   width: 100% !important;
 }
 
+/* Base Button Style */
 .startButton,
 .walletButton,
 .walletButtonConnected {
@@ -175,66 +328,113 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 14px 28px;
-  font-size: 0.95rem;
+  padding: 16px 32px;
+  font-size: 1rem;
   font-weight: 700;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: none;
+  border: 2px solid transparent;
   text-decoration: none;
-  width: 250px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  letter-spacing: 0.3px;
+  width: 260px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  position: relative;
+  overflow: hidden;
 }
 
+/* Primary Button - Cyan Neon */
 .startButton {
-  background: var(--pink-primary);
-  color: white;
+  background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-elevated) 100%);
+  color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
+  box-shadow:
+    0 0 20px rgba(0, 240, 255, 0.2),
+    inset 0 0 20px rgba(0, 240, 255, 0.05);
 }
 
 .startButton:hover {
-  background: var(--pink-primary-hover);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(0, 240, 255, 0.05) 100%);
+  box-shadow:
+    0 0 30px rgba(0, 240, 255, 0.4),
+    inset 0 0 30px rgba(0, 240, 255, 0.1);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 139, 167, 0.3);
 }
 
 .startButton:active {
   transform: translateY(1px);
 }
 
+/* Tournament Button - Gold Special */
+.tournamentButton {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 140, 0, 0.1) 100%);
+  color: var(--neon-yellow);
+  border-color: var(--neon-yellow);
+  box-shadow:
+    0 0 20px rgba(255, 215, 0, 0.3),
+    inset 0 0 20px rgba(255, 215, 0, 0.1);
+}
+
+.tournamentButton:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.3) 0%, rgba(255, 140, 0, 0.2) 100%);
+  box-shadow:
+    0 0 40px rgba(255, 215, 0, 0.5),
+    inset 0 0 30px rgba(255, 215, 0, 0.15);
+}
+
+/* Wallet Button - Green */
 .walletButton {
-  background: var(--success);
-  color: white;
+  background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-elevated) 100%);
+  color: var(--success);
+  border-color: var(--success);
+  box-shadow:
+    0 0 20px rgba(0, 255, 136, 0.2),
+    inset 0 0 20px rgba(0, 255, 136, 0.05);
 }
 
 .walletButtonConnected {
-  background: var(--success);
-  color: white;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 255, 136, 0.05) 100%);
+  color: var(--success);
+  border-color: var(--success);
 }
 
 .walletButtonConnected:hover {
-  background: var(--success-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+  box-shadow:
+    0 0 30px rgba(0, 255, 136, 0.4),
+    inset 0 0 30px rgba(0, 255, 136, 0.1);
 }
 
 .walletDot {
-  width: 8px;
-  height: 8px;
-  background: #ffffff;
-  /* White dot on green button */
+  width: 10px;
+  height: 10px;
+  background: var(--success);
   border-radius: 50%;
-  opacity: 0.8;
+  animation: pulse 2s infinite;
 }
 
-/* Error Message */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4);
+  }
+
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 8px rgba(0, 255, 136, 0);
+  }
+}
+
+/* ========================================
+   MESSAGES
+   ======================================== */
 .errorMessage {
-  background: rgba(255, 107, 107, 0.1);
-  border: 2px solid rgba(255, 107, 107, 0.3);
-  color: #e53935;
+  background: rgba(255, 68, 68, 0.1);
+  border: 2px solid rgba(255, 68, 68, 0.4);
+  color: var(--error);
   padding: 14px 24px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 500;
   text-align: center;
@@ -267,17 +467,16 @@
   }
 }
 
-/* Warning Message */
 .warningMessage {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  background: rgba(249, 199, 79, 0.15);
-  border: 2px solid rgba(249, 199, 79, 0.4);
-  color: #f59e0b;
+  background: rgba(255, 184, 0, 0.1);
+  border: 2px solid rgba(255, 184, 0, 0.4);
+  color: var(--warning);
   padding: 14px 24px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 0.95rem;
   font-weight: 500;
   text-align: center;
@@ -286,29 +485,29 @@
 }
 
 .switchButton {
-  background: linear-gradient(135deg, #F9C74F 0%, #F4A261 100%);
-  color: #333333;
+  background: linear-gradient(135deg, var(--warning) 0%, var(--neon-orange) 100%);
+  color: var(--dark-void);
   border: none;
-  padding: 10px 20px;
-  border-radius: 50px;
+  padding: 10px 24px;
+  border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 0 #e5a83d;
 }
 
 .switchButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 0 #e5a83d, 0 10px 20px rgba(249, 199, 79, 0.3);
+  box-shadow: 0 6px 20px rgba(255, 184, 0, 0.4);
 }
 
-/* Connected Info */
+/* ========================================
+   CONNECTED INFO
+   ======================================== */
 .connectedInfo {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
-  margin-top: -16px;
 }
 
 .walletBadge,
@@ -316,83 +515,95 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: var(--pink-light);
-  border: 2px solid var(--pink-secondary);
+  padding: 10px 18px;
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
   border-radius: 20px;
-  color: var(--pink-primary);
+  color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(255, 139, 167, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .networkDot {
   width: 8px;
   height: 8px;
   background: #0052FF;
-  /* Base Blue */
   border-radius: 50%;
+  box-shadow: 0 0 10px #0052FF;
 }
 
-/* Features */
+/* ========================================
+   FEATURES
+   ======================================== */
 .features {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   flex-wrap: wrap;
   justify-content: center;
-  margin-top: 32px;
+  margin-top: 40px;
 }
 
 .featureItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 24px;
-  background: var(--surface-white);
+  padding: 14px 28px;
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
   border-radius: 12px;
   color: var(--text-primary);
   font-weight: 600;
   font-size: 0.95rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
 }
 
 .featureItem:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 139, 167, 0.15);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+  transform: translateY(-3px);
 }
 
 .featureIcon {
   width: 24px;
   height: 24px;
+  color: var(--neon-cyan);
 }
 
-/* Footer */
+/* ========================================
+   FOOTER
+   ======================================== */
 .footer {
   position: relative;
-  margin-top: 48px;
+  margin-top: 60px;
   text-align: center;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
   z-index: 1;
-  max-width: 420px;
+  max-width: 500px;
   width: 100%;
   padding: 0 20px 40px;
+  letter-spacing: 1px;
 }
 
 .footer p {
   margin: 0 auto;
+  padding: 12px 24px;
+  background: var(--dark-surface);
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
 }
 
-/* Responsive */
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
 @media (max-width: 768px) {
-  .landingPage {
+  .battlegroundPage {
     padding: 24px 16px;
     justify-content: flex-start;
-    padding-top: 60px;
+    padding-top: 80px;
   }
 
   .heroSection {
@@ -400,23 +611,24 @@
   }
 
   .titleContainer {
-    gap: 8px;
+    gap: 12px;
   }
 
   .title {
     flex-direction: column;
     gap: 0;
-    font-size: clamp(2.5rem, 12vw, 4rem);
+    font-size: clamp(3rem, 18vw, 5rem);
   }
 
   .subtitle {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
   }
 
   .buttonContainer {
     flex-direction: column;
     width: 100%;
-    max-width: 280px;
+    max-width: 300px;
     gap: 12px;
   }
 
@@ -426,28 +638,18 @@
     width: 100% !important;
     min-width: auto;
     padding: 14px 24px;
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
 
   .walletWrapper {
     width: 100% !important;
-    min-width: auto;
-  }
-
-  .connectedInfo {
-    margin-top: -8px;
-  }
-
-  .chainBadge {
-    padding: 6px 12px;
-    font-size: 0.75rem;
   }
 
   .features {
-    gap: 10px;
+    gap: 12px;
     flex-direction: column;
     width: 100%;
-    max-width: 280px;
+    max-width: 300px;
   }
 
   .featureItem {
@@ -457,30 +659,53 @@
     justify-content: center;
   }
 
-  .footer {
-    max-width: 280px;
+  .territoryGlow::before,
+  .territoryGlow::after {
+    width: 250px;
+    height: 250px;
   }
 }
 
-/* Extra small screens */
-@media (max-width: 380px) {
-  .landingPage {
+@media (max-width: 480px) {
+  .battlegroundPage {
     padding: 16px 12px;
-    padding-top: 40px;
+    padding-top: 60px;
   }
 
   .title {
-    font-size: 2.2rem;
+    font-size: 2.8rem;
   }
 
   .buttonContainer {
-    max-width: 260px;
+    max-width: 280px;
   }
 
   .startButton,
   .walletButton,
   .walletButtonConnected {
     padding: 12px 20px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
+}
+
+/* ========================================
+   LEGACY SUPPORT - Old Pink Theme Classes
+   These classes now redirect to new battleground styles
+   ======================================== */
+.landingPage {
+  /* Legacy class - use battlegroundPage directly */
+  visibility: inherit;
+}
+
+.backgroundGrid {
+  /* Legacy class - use battleGrid directly */
+  visibility: inherit;
+}
+
+.glowOrb1 {
+  display: none;
+}
+
+.glowOrb2 {
+  display: none;
 }

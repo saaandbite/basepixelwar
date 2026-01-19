@@ -11,6 +11,7 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     transpilePackages: ["@repo/ui"],
+    reactStrictMode: false,
     turbopack: {
         root: path.join(__dirname, '../../'),
     },

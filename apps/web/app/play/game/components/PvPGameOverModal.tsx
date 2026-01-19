@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, Flag, Home, Target, Swords, Ban, Coins, ExternalLink, Check } from 'lucide-react';
+import { Trophy, Flag, Home, Target, Swords, Ban, Coins, ExternalLink, Check, Zap, Crown } from 'lucide-react';
 
 interface PvPGameOverModalProps {
     myTeam: 'blue' | 'red';
@@ -33,7 +33,6 @@ const useCountUp = (end: number, duration: number = 1000, delay: number = 0) => 
             }
 
             const animationProgress = Math.min((progress - delay) / duration, 1);
-            // Ease out quart
             const ease = 1 - Math.pow(1 - animationProgress, 4);
 
             setCount(Math.floor(end * ease));
@@ -71,43 +70,38 @@ export function PvPGameOverModal({
         setIsVisible(true);
     }, []);
 
-    // Theme Configuration - Saweria Style
-    // Theme Configuration - High Contrast
+    // Theme Configuration - MODERN RETRO (Rounded & Pop)
     const theme = isWinner ? {
-        gradient: 'from-pink-500 to-pink-600',
-        bgGradient: 'from-pink-50 to-white',
-        borderColor: 'border-pink-200',
-        textColor: 'text-pink-600',
+        color: 'text-[var(--pixel-pink)]', // Pink for Codédex Vibe
+        borderColor: 'border-[var(--pixel-pink)]',
+        bg: 'bg-[#1a1a2e]', // Deep Space Blue
         icon: Trophy,
-        title: 'VICTORY!',
-        subtext: 'You Conquered The Arena!',
-        badge: 'Domination Achieved',
-        badgeStyles: 'bg-pink-100 text-pink-700'
+        title: 'GREAT WIN!',
+        subtext: 'WELL SERVED!',
+        badge: 'VICTOR',
+        badgeBg: 'bg-[var(--pixel-pink)] text-white'
     } : isDraw ? {
-        gradient: 'from-slate-500 to-slate-600',
-        bgGradient: 'from-slate-50 to-white',
-        borderColor: 'border-slate-200',
-        textColor: 'text-slate-600',
+        color: 'text-[var(--pixel-fg)]',
+        borderColor: 'border-[var(--pixel-fg)]',
+        bg: 'bg-[#1a1a2e]',
         icon: Ban,
-        title: 'DRAW',
-        subtext: 'A Perfectly Matched Battle!',
-        badge: 'Stalemate',
-        badgeStyles: 'bg-slate-100 text-slate-700'
+        title: 'DRAW GAME',
+        subtext: 'PERFECTLY BALANCED',
+        badge: 'STALEMATE',
+        badgeBg: 'bg-[var(--pixel-fg)] text-black'
     } : {
-        gradient: 'from-red-500 to-red-600',
-        bgGradient: 'from-red-50 to-white',
-        borderColor: 'border-red-200',
-        textColor: 'text-red-600',
+        color: 'text-gray-400',
+        borderColor: 'border-gray-600',
+        bg: 'bg-[#1a1a2e]',
         icon: Swords,
         title: 'DEFEAT',
-        subtext: 'Better Luck Next Time!',
-        badge: 'Match Completed',
-        badgeStyles: 'bg-red-100 text-red-700'
+        subtext: 'BETTER LUCK NEXT TIME',
+        badge: 'FALLEN',
+        badgeBg: 'bg-gray-600 text-white'
     };
 
     // Animated Values
     const displayedScore = useCountUp(myScore, 1500, 200);
-    // Fallback stats if not provided (should be provided by logic)
     const totalTiles = stats?.totalTilesCaptured || 0;
     const currentTiles = stats?.currentTilesOwned || Math.round((myScore / 100) * (26 * 44));
 
@@ -115,175 +109,144 @@ export function PvPGameOverModal({
     const displayedCaptured = useCountUp(totalTiles, 1500, 600);
 
     return (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center overflow-hidden">
-            {/* Background Backdrop */}
+        <div className="absolute inset-0 z-[100] flex items-center justify-center overflow-hidden font-terminal">
+            {/* Dark Overlay with Blur */}
             <div
-                className={`absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+                className={`absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
             />
 
-            {/* Confetti Particles (CSS only, simplified) */}
+            {/* Confetti Particles (Winner Only) */}
             {isWinner && (
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {[...Array(20)].map((_, i) => (
+                    {[...Array(30)].map((_, i) => (
                         <div
                             key={i}
-                            className="absolute w-2 h-2 rounded-full animate-confetti"
+                            className="absolute w-3 h-3 bg-white animate-confetti rounded-full" // Rounded confetti
                             style={{
-                                backgroundColor: ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32'][i % 4],
                                 left: `${Math.random() * 100}%`,
                                 top: '-20px',
                                 animationDelay: `${Math.random() * 2}s`,
-                                animationDuration: `${3 + Math.random() * 2}s`
+                                animationDuration: `${2 + Math.random() * 2}s`,
+                                backgroundColor: ['#f472b6', '#2979FF', '#FFD600'][i % 3]
                             }}
                         />
                     ))}
                 </div>
             )}
 
-            {/* Main Card */}
+            {/* Main Modern Pixel Card - ROUNDED */}
             <div
                 className={`
-                    relative bg-white/95 backdrop-blur-xl rounded-3xl p-3 sm:p-6 max-w-sm w-full mx-4 shadow-2xl border-4 ${theme.borderColor}
-                    transform transition-all duration-700 cubic-bezier(0.34, 1.56, 0.64, 1)
-                    max-h-[90vh] overflow-y-auto scrollbar-hide
-                    ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-75 translate-y-10 opacity-0'}
+                    relative ${theme.bg} p-6 sm:p-8 w-full max-w-[340px] sm:max-w-md mx-4 
+                    border-4 border-white rounded-[2rem]
+                    shadow-[0px_20px_40px_-5px_rgba(0,0,0,0.6)]
+                    transform transition-all duration-500
+                    max-h-[85vh] overflow-y-auto overflow-x-hidden
+                    ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-90 translate-y-10 opacity-0'}
                 `}
             >
-                {/* Result Icon with Shine Effect */}
-                {/* Result Icon with Shine Effect */}
-                <div className="relative flex justify-center mb-2 sm:mb-4">
-                    <div className={`relative z-10 p-2 sm:p-3 rounded-full bg-gradient-to-br ${theme.bgGradient} shadow-inner`}>
-                        <theme.icon className={`w-8 h-8 sm:w-12 sm:h-12 ${theme.textColor}`} strokeWidth={1.5} />
-                    </div>
-                    {/* Pulsing Glow behind icon */}
-                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 sm:w-20 sm:h-20 rounded-full bg-gradient-to-r ${theme.gradient} blur-xl opacity-20 animate-pulse`} />
-                </div>
+                <div className="text-center">
 
-                {/* Title & Subtext */}
-                {/* Title & Subtext */}
-                <div className="text-center mb-3 sm:mb-6">
-                    <h1 className={`text-h2 font-black bg-clip-text text-transparent bg-gradient-to-r ${theme.gradient} mb-2 tracking-tight`}>
+                    {/* Icon Circle - Floating & Glowing */}
+                    <div className="relative flex justify-center mb-3 sm:mb-6">
+                        <div className={`
+                            relative z-10 w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center 
+                            rounded-full border-4 ${theme.borderColor} bg-[var(--pixel-bg)]
+                            animate-float shadow-xl
+                        `}>
+                            <theme.icon className={`w-8 h-8 sm:w-12 sm:h-12 ${theme.color}`} strokeWidth={2} />
+                        </div>
+                        {/* Glow */}
+                        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-xl animate-pulse`} />
+                    </div>
+
+                    {/* Title - Press Start 2P */}
+                    <h1 className={`font-retro text-2xl sm:text-5xl mb-1 sm:mb-3 ${theme.color} drop-shadow-md leading-tight`}>
                         {theme.title}
                     </h1>
-                    <p className={`font-bold text-sm tracking-wide uppercase mb-3 text-slate-600`}>
+
+                    <p className="font-bold text-xs sm:text-lg tracking-widest uppercase mb-3 sm:mb-6 text-white/80 leading-none">
                         {theme.subtext}
                     </p>
 
-                    {/* Badge - High Contrast Pill */}
+                    {/* Badge Pill */}
                     <div className={`
-                        inline-block px-4 py-1.5 rounded-full text-sm font-bold tracking-wider uppercase
-                        ${theme.badgeStyles}
+                        inline-block px-4 sm:px-6 py-1 sm:py-2 mb-4 sm:mb-8 text-xs sm:text-lg font-bold tracking-widest uppercase 
+                        rounded-full border-2 border-white/20
+                        ${theme.badgeBg}
+                        animate-bounce-in
                     `}>
                         {theme.badge}
                     </div>
-                </div>
 
-                {/* Dominant Score Display */}
-                {/* Dominant Score Display */}
-                {/* Dominant Score Display */}
-                <div className="flex flex-col items-center mb-6 sm:mb-8">
-                    <div className="flex items-baseline gap-1">
-                        <span className={`text-7xl sm:text-8xl font-black tabular-nums tracking-tighter ${theme.textColor}`}>
-                            {displayedScore}
+                    {/* Big Percentage Score - Clean & White */}
+                    <div className="flex flex-col items-center mb-4 sm:mb-8 bg-black/20 rounded-2xl p-2 sm:p-4 border border-white/10">
+                        <div className="flex items-baseline justify-center">
+                            <span className={`font-retro text-4xl sm:text-7xl text-white drop-shadow-lg`}>
+                                {displayedScore}
+                            </span>
+                            <span className={`font-retro text-xl sm:text-4xl text-white/50 ml-2`}>%</span>
+                        </div>
+                        <span className="text-white/60 text-[10px] sm:text-sm uppercase tracking-[0.3em] mt-1">
+                            CONTROL RATE
                         </span>
-                        <span className={`text-3xl font-bold ${theme.textColor} opacity-80`}>%</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-600 uppercase tracking-widest mt-1">Total Team Area</span>
-                </div>
-
-                {/* Statistics Row - Simplified/Clean */}
-                <div className="flex items-center justify-center gap-6 sm:gap-8 mb-6 sm:mb-8 px-4">
-                    <div className="flex items-center gap-2">
-                        <div className={`${isWinner ? 'text-blue-600' : 'text-slate-500'}`}>
-                            <Flag size={18} className="sm:w-5 sm:h-5" strokeWidth={2.5} />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-600 uppercase tracking-wide">Territory</span>
-                            <span className="font-black text-slate-800 text-xl leading-none">{displayedTiles}</span>
-                        </div>
                     </div>
 
-                    <div className="w-px h-10 bg-slate-300"></div>
-
-                    <div className="flex items-center gap-2">
-                        <div className={`${isWinner ? 'text-amber-600' : 'text-slate-500'}`}>
-                            <Target size={18} className="sm:w-5 sm:h-5" strokeWidth={2.5} />
+                    {/* Stats Row - Clean Pills */}
+                    <div className="flex justify-center gap-2 sm:gap-4 mb-4 sm:mb-8">
+                        <div className="flex-1 bg-white/5 rounded-xl p-2 sm:p-3 border border-white/10">
+                            <div className="flex items-center justify-center gap-2 mb-1 text-[var(--pixel-yellow)]">
+                                <Zap size={12} className="sm:w-4 sm:h-4" />
+                                <span className="font-bold text-[10px] sm:text-xs uppercase">Combo</span>
+                            </div>
+                            <span className="font-retro text-base sm:text-xl text-white">x97</span>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-600 uppercase tracking-wide">Captured</span>
-                            <span className="font-black text-slate-800 text-xl leading-none">{displayedCaptured}</span>
+
+                        <div className="flex-1 bg-white/5 rounded-xl p-2 sm:p-3 border border-white/10">
+                            <div className="flex items-center justify-center gap-2 mb-1 text-[var(--pixel-blue)]">
+                                <Flag size={12} className="sm:w-4 sm:h-4" />
+                                <span className="font-bold text-[10px] sm:text-xs uppercase">Captures</span>
+                            </div>
+                            <span className="font-retro text-base sm:text-xl text-white">{displayedCaptured}</span>
                         </div>
                     </div>
-                </div>
 
-                {/* Claim Reward Section (Winner Only) */}
-                {isWinner && !isTournament && (
-                    <div className="mb-3">
-                        {!claimed ? (
-                            <button
-                                onClick={() => setClaimed(true)}
-                                className="w-full bg-gradient-to-r from-saweria-pink to-saweria-pink-light hover:from-saweria-pink-dark hover:to-saweria-pink text-white font-bold py-3 rounded-full shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
-                            >
-                                <Coins size={16} className="group-hover:rotate-12 transition-transform" />
-                                <span>CLAIM REWARD</span>
-                            </button>
-                        ) : (
-                            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl p-3 sm:p-4 animate-fade-in-up">
-                                {/* Header */}
-                                <div className="flex items-center justify-center gap-2 mb-3">
-                                    <div className="p-1.5 bg-emerald-100 rounded-full">
-                                        <Coins size={16} className="text-emerald-600" />
+                    {/* Actions */}
+                    <div className="space-y-2 sm:space-y-4">
+                        {isWinner && !isTournament && (
+                            <div className="mb-2 sm:mb-4">
+                                {!claimed ? (
+                                    <button
+                                        onClick={() => setClaimed(true)}
+                                        className="pixel-btn pixel-btn-primary w-full text-sm sm:text-lg !rounded-xl shadow-lg hover:shadow-xl transition-all py-2.5 sm:py-3"
+                                    >
+                                        <Coins size={16} className="inline mr-2 sm:w-5 sm:h-5" />
+                                        CLAIM REWARD
+                                    </button>
+                                ) : (
+                                    <div className="border border-[var(--pixel-green)] bg-[var(--pixel-green)]/10 p-2 sm:p-4 rounded-xl">
+                                        <div className="text-[var(--pixel-green)] font-bold text-sm sm:text-lg mb-0.5 sm:mb-2 flex items-center justify-center gap-2">
+                                            <Check size={16} className="sm:w-6 sm:h-6" />
+                                            <span>REWARD CLAIMED!</span>
+                                        </div>
+                                        <div className="text-white/80 text-[10px] sm:text-sm">
+                                            SENT: <span className="text-[var(--pixel-green)] font-bold">0.00198 ETH</span>
+                                        </div>
                                     </div>
-                                    <span className="font-bold text-emerald-700 text-sm tracking-wide">REWARD CLAIMED!</span>
-                                </div>
-
-                                {/* Breakdown */}
-                                <div className="space-y-2 text-xs">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-slate-600">Total Pool</span>
-                                        <span className="font-semibold text-slate-800">0.002 ETH</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-slate-600">Platform Fee (1%)</span>
-                                        <span className="font-semibold text-red-500">-0.00002 ETH</span>
-                                    </div>
-                                    <div className="border-t border-emerald-200 my-2"></div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold text-emerald-800">Your Reward</span>
-                                        <span className="font-black text-emerald-600 text-lg">0.00198 ETH</span>
-                                    </div>
-                                </div>
-
-                                {/* Success indicator with Basescan link */}
-                                <div className="mt-4 text-center space-y-1">
-                                    <div className="text-xs text-emerald-700 font-semibold flex items-center justify-center gap-1">
-                                        <Check size={12} /> Sent to your wallet
-                                    </div>
-                                    {settlementTxHash && (
-                                        <a
-                                            href={`https://sepolia.basescan.org/tx/${settlementTxHash}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors hover:underline group/link"
-                                        >
-                                            <span>View Transaction on Basescan</span>
-                                            <ExternalLink size={12} className="group-hover/link:translate-x-0.5 transition-transform" />
-                                        </a>
-                                    )}
-                                </div>
+                                )}
                             </div>
                         )}
-                    </div>
-                )}
 
-                {/* Exit Button */}
-                <button
-                    onClick={onExit}
-                    className="w-full bg-white border-2 border-saweria-coral hover:border-saweria-pink text-text-main hover:text-saweria-pink font-bold py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group text-sm"
-                >
-                    <Home size={16} className="group-hover:-translate-y-0.5 transition-transform" />
-                    <span>{isTournament ? 'BACK TO TOURNAMENT' : 'EXIT TO LOBBY'}</span>
-                </button>
+                        <button
+                            onClick={onExit}
+                            className="pixel-btn pixel-btn-outline w-full text-sm sm:text-lg !rounded-xl hover:bg-white/10 py-2.5 sm:py-3"
+                        >
+                            <Home size={16} className="inline mr-2 mb-1 sm:w-5 sm:h-5" />
+                            {isTournament ? 'TOURNAMENT LOBBY' : 'EXIT TO LOBBY'}
+                        </button>
+                    </div>
+
+                </div>
             </div>
 
             <style jsx>{`
@@ -293,13 +256,6 @@ export function PvPGameOverModal({
                 }
                 .animate-confetti {
                     animation: confetti 4s ease-out forwards;
-                }
-                @keyframes fade-in-up {
-                    from { transform: translateY(10px); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-                .animate-fade-in-up {
-                    animation: fade-in-up 0.5s ease-out forwards;
                 }
             `}</style>
         </div>
