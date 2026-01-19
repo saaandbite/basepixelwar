@@ -5,6 +5,7 @@ import { updateRoomStatus } from './roomManager';
 import * as Redis from './redis';
 import { transferPrizeFromVault } from './db';
 import * as TournamentService from './tournamentService';
+import * as GlobalLeaderboardService from './services/globalLeaderboardService';
 
 // PvP Cannon state
 export interface PvPCannon {
@@ -1043,59 +1044,25 @@ async function endGame(roomId: string) {
     // Update RoomManager status to prevent early cleanup
     await RoomManager.updateRoomStatus(roomId, 'finished');
 
-    // === STRICT LOGIC SEPARATION ===
-    if (state.gameType === 'tournament') {
-        await handleTournamentEnd(roomId, state, winner);
-    } else {
-        await handleStandardEnd(roomId, state, winner);
-    }
+    // === ALL GAMES USE STANDARD FLOW ===
+    // Tournament players use regular 1vs1 - their tournament points are calculated
+    // WITHIN handleStandardEnd based on their registration status
+    await handleStandardEnd(roomId, state, winner);
 
-    console.log(`[GameStateManager] Game ended for room ${roomId} (Type: ${state.gameType})`);
+    console.log(`[GameStateManager] Game ended for room ${roomId}`);
 }
 
-// === TOURNAMENT END LOGIC (ISOLATED) ===
-async function handleTournamentEnd(roomId: string, state: PvPGameState, winner: 'blue' | 'red' | 'draw') {
-    const room = await RoomManager.getRoom(roomId);
-    const r = Redis.getRedis();
-
-    // Double check if this is indeed a tournament match via Redis mapping
-    const tournamentDataJson = await r.get(`game_to_tournament:${roomId}`);
-    if (!tournamentDataJson) {
-        console.error(`[Tournament] Critical: Game ${roomId} marked as tournament but no mapping found!`);
-        return;
-    }
-
-    const tData = JSON.parse(tournamentDataJson) as { week: number; tournamentRoomId: string };
-    console.log(`[TournamentService] Match Ended: ${roomId} (Week ${tData.week}, Room ${tData.tournamentRoomId})`);
-
-    // DELEGATE TO SERVICE
-    if (winner !== 'draw') {
-        const winnerTeam = winner;
-        const winnerPlayer = room?.players.find(p => p.team === winnerTeam);
-        const loserPlayer = room?.players.find(p => p.team !== winnerTeam);
-
-        await TournamentService.processMatchResult(
-            ioInstance!,
-            tData.tournamentRoomId,
-            tData.week,
-            winnerPlayer?.walletAddress,
-            loserPlayer?.walletAddress
-        );
-    } else {
-        console.log(`[TournamentService] Match Draw - No points awarded via Service`);
-    }
-
-    // Clean the mapping key
-    await r.del(`game_to_tournament:${roomId}`);
-
-    // Cleanup room data
-    cleanupRoom(roomId);
-}
-
-// === STANDARD GAME END LOGIC (ISOLATED) ===
+// === GAME END LOGIC ===
+// All games (regular 1vs1) go through this flow
+// Tournament points are calculated based on player registration status
 async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'blue' | 'red' | 'draw') {
     const room = await RoomManager.getRoom(roomId);
     const io = ioInstance!; // Safe here
+    const r = Redis.getRedis();
+
+    // Get winner and loser wallets
+    const winnerPlayer = winner !== 'draw' ? room?.players.find(p => p.team === winner) : undefined;
+    const loserPlayer = winner !== 'draw' ? room?.players.find(p => p.team !== winner) : undefined;
 
     if (room && room.onChainGameId) {
         console.log(`\n==================================================`);
@@ -1104,7 +1071,6 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
 
         if (winner !== 'draw') {
             const winnerTeam = winner;
-            const winnerPlayer = room.players.find(p => p.team === winnerTeam);
 
             console.log(`[StandardGame] Winner Team: ${winnerTeam.toUpperCase()}`);
             console.log(`[StandardGame] Winner Name: ${winnerPlayer?.name}`);
@@ -1153,12 +1119,124 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
         }
     }
 
-    // Update Global Leaderboard (Standard only)
+    // === UPDATE LEADERBOARDS ===
+    // KONSEP:
+    // 1. Global Leaderboard: SELALU di-update untuk SEMUA player
+    // 2. Tournament Leaderboard: TAMBAHAN jika player adalah peserta tournament
+    //    - Setiap player diperiksa INDEPENDEN (tidak harus lawan sesama tournament)
+    //    - Point tournament ditambahkan berdasarkan hasil match
+    
     if (room && room.players.length === 2) {
+        const player1Wallet = room.players[0]?.walletAddress;
+        const player2Wallet = room.players[1]?.walletAddress;
+        const prizeAmount = 1980000000000000n; // 0.00198 ETH
+
+        // === 1. ALWAYS UPDATE GLOBAL LEADERBOARD ===
+        console.log(`[StandardGame] Updating GLOBAL LEADERBOARD for all players`);
+        
         if (winner !== 'draw') {
-            const winnerWallet = room.players.find(p => p.team === winner)?.walletAddress;
-            if (winnerWallet) {
-                await Redis.updateLeaderboard('wins', winnerWallet, 1);
+            await GlobalLeaderboardService.processStandardMatchResult(
+                io,
+                winnerPlayer?.walletAddress,
+                loserPlayer?.walletAddress,
+                prizeAmount
+            );
+        } else {
+            await GlobalLeaderboardService.processDrawResult(
+                io,
+                player1Wallet,
+                player2Wallet
+            );
+        }
+
+        // === 2. ADDITIONALLY UPDATE TOURNAMENT LEADERBOARD (if applicable) ===
+        // Check each player independently - they don't need to be in same room
+        
+        // Check Player 1 (Blue team)
+        if (player1Wallet) {
+            const p1TournamentData = await r.get(`tournament:player:${player1Wallet.toLowerCase()}`);
+            if (p1TournamentData) {
+                try {
+                    const tData = JSON.parse(p1TournamentData);
+                    const p1Team = room.players[0]?.team;
+                    
+                    // Determine if Player 1 won, lost, or draw
+                    let p1Points = 0;
+                    if (winner === 'draw') {
+                        p1Points = 1; // Draw: +1 point
+                    } else if (winner === p1Team) {
+                        p1Points = 3; // Win: +3 points
+                    } else {
+                        p1Points = 1; // Loss: +1 point (participation)
+                    }
+
+                    console.log(`[Tournament] Player 1 (${player1Wallet.slice(0,8)}...) is in Tournament Week ${tData.week} Room ${tData.roomId}`);
+                    console.log(`[Tournament] Awarding +${p1Points} points (${winner === p1Team ? 'WIN' : winner === 'draw' ? 'DRAW' : 'LOSS'})`);
+                    
+                    // Update tournament leaderboard
+                    const newScore = await Redis.updateTournamentScore(
+                        tData.week, 
+                        tData.roomId.toString(), 
+                        player1Wallet, 
+                        p1Points
+                    );
+                    
+                    // If won, also update tournament lifetime wins
+                    if (winner === p1Team) {
+                        await Redis.updateTournamentStats('wins', player1Wallet, 1);
+                    }
+
+                    // Broadcast leaderboard update to tournament lobby
+                    const leaderboard = await Redis.getTournamentLeaderboard(tData.week, tData.roomId.toString());
+                    io.to(`tournament_lobby_${tData.roomId}`).emit('lobby_leaderboard_update', leaderboard);
+                    
+                } catch (e) {
+                    console.error(`[Tournament] Error processing P1 tournament update:`, e);
+                }
+            }
+        }
+
+        // Check Player 2 (Red team)
+        if (player2Wallet) {
+            const p2TournamentData = await r.get(`tournament:player:${player2Wallet.toLowerCase()}`);
+            if (p2TournamentData) {
+                try {
+                    const tData = JSON.parse(p2TournamentData);
+                    const p2Team = room.players[1]?.team;
+                    
+                    // Determine if Player 2 won, lost, or draw
+                    let p2Points = 0;
+                    if (winner === 'draw') {
+                        p2Points = 1; // Draw: +1 point
+                    } else if (winner === p2Team) {
+                        p2Points = 3; // Win: +3 points
+                    } else {
+                        p2Points = 1; // Loss: +1 point (participation)
+                    }
+
+                    console.log(`[Tournament] Player 2 (${player2Wallet.slice(0,8)}...) is in Tournament Week ${tData.week} Room ${tData.roomId}`);
+                    console.log(`[Tournament] Awarding +${p2Points} points (${winner === p2Team ? 'WIN' : winner === 'draw' ? 'DRAW' : 'LOSS'})`);
+                    
+                    // Update tournament leaderboard
+                    const newScore = await Redis.updateTournamentScore(
+                        tData.week, 
+                        tData.roomId.toString(), 
+                        player2Wallet, 
+                        p2Points
+                    );
+                    
+                    // If won, also update tournament lifetime wins
+                    if (winner === p2Team) {
+                        await Redis.updateTournamentStats('wins', player2Wallet, 1);
+                    }
+
+                    // Broadcast leaderboard update to tournament lobby
+                    const leaderboard = await Redis.getTournamentLeaderboard(tData.week, tData.roomId.toString());
+                    io.to(`tournament_lobby_${tData.roomId}`).emit('lobby_leaderboard_update', leaderboard);
+                    
+                } catch (e) {
+                    console.error(`[Tournament] Error processing P2 tournament update:`, e);
+                }
             }
         }
     }

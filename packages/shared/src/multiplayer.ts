@@ -63,6 +63,11 @@ export type ClientToServerEvents = {
     'challenge_player': (data: { targetWallet: string; tournamentRoomId: string }) => void;
     'accept_challenge': (data: { challengerWallet: string; tournamentRoomId: string; week: number }) => void;
     'lobby_heartbeat': (data: { week: number; roomId: string }) => void;
+
+    // Global Leaderboard
+    'get_global_leaderboard': (data: { category: 'points' | 'wins' | 'earnings'; limit?: number }) => void;
+    'get_player_global_stats': (walletAddress: string) => void;
+    'check_tournament_status': (data: { walletAddress: string; week: number }) => void;
 };
 
 export interface PlayerInput {
@@ -120,6 +125,13 @@ export type ServerToClientEvents = {
     'challenge_received': (data: { challengerWallet: string; tournamentRoomId: string }) => void;
     'challenge_failed': (data: { reason: string }) => void;
     'lobby_join_failed': (data: { reason: 'NOT_REGISTERED' | 'ROOM_MISMATCH' }) => void;
+
+    // Global Leaderboard
+    'global_leaderboard': (data: GlobalLeaderboardResponse) => void;
+    'global_leaderboard_update': (data: GlobalLeaderboardUpdate) => void;
+    'player_global_stats': (data: PlayerGlobalStatsResponse) => void;
+    'tournament_status': (data: TournamentStatusResponse) => void;
+    'error': (data: { message: string }) => void;
 };
 
 export interface GameStartData {
@@ -264,6 +276,55 @@ export interface SettlementResult {
     winnerTeam?: 'blue' | 'red';
     winnerAddress?: string;
     error?: string;
+}
+
+// ============================================
+// GLOBAL LEADERBOARD TYPES
+// ============================================
+
+export interface LeaderboardEntry {
+    wallet: string;
+    score: number;
+    rank: number;
+}
+
+export interface GlobalPlayerStats {
+    totalWins: number;
+    totalLosses: number;
+    totalPoints: number;
+    currentStreak: number;
+    bestStreak: number;
+    totalEarnings: number;
+    lastMatchAt: number;
+}
+
+export interface GlobalLeaderboardResponse {
+    category: 'points' | 'wins' | 'earnings';
+    entries: LeaderboardEntry[];
+    updatedAt: number;
+}
+
+export interface GlobalLeaderboardUpdate {
+    points?: LeaderboardEntry[];
+    wins?: LeaderboardEntry[];
+    updatedAt: number;
+}
+
+export interface PlayerGlobalStatsResponse {
+    walletAddress: string;
+    stats: GlobalPlayerStats | null;
+    ranks: {
+        pointsRank: number | null;
+        winsRank: number | null;
+        earningsRank: number | null;
+    };
+    updatedAt: number;
+}
+
+export interface TournamentStatusResponse {
+    walletAddress: string;
+    week: number;
+    isRegistered: boolean;
 }
 
 // ============================================

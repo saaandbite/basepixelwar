@@ -91,6 +91,14 @@ function handleConnection(socket: GameSocket) {
     socket.on('accept_challenge', (data: { challengerWallet: string; tournamentRoomId: string; week: number }) => handleAcceptChallenge(socket, data));
     socket.on('lobby_heartbeat', (data: { week: number; roomId: string }) => handleLobbyHeartbeat(socket, data));
 
+    // Global Leaderboard Events
+    socket.on('get_global_leaderboard', (data: { category: 'points' | 'wins' | 'earnings'; limit?: number }) => 
+        handleGetGlobalLeaderboard(socket, data.category, data.limit));
+    socket.on('get_player_global_stats', (walletAddress: string) => 
+        handleGetPlayerGlobalStats(socket, walletAddress));
+    socket.on('check_tournament_status', (data: { walletAddress: string; week: number }) => 
+        handleCheckTournamentStatus(socket, data.walletAddress, data.week));
+
 }
 
 // Helper to get the ID used in Redis queue (wallet address preferred for deduplication)
@@ -909,6 +917,63 @@ async function handleLobbyHeartbeat(socket: GameSocket, data: { week: number; ro
     // Update presence timestamp
     const { setTournamentLobbyPresence } = await import('./redis.js');
     await setTournamentLobbyPresence(week, roomId, walletAddress, true);
+}
+
+// ============================================
+// GLOBAL LEADERBOARD HANDLERS
+// ============================================
+
+async function handleGetGlobalLeaderboard(socket: GameSocket, category: 'points' | 'wins' | 'earnings', limit: number = 10) {
+    const GlobalLeaderboard = await import('./services/globalLeaderboardService.js');
+    
+    try {
+        const leaderboard = await GlobalLeaderboard.getLeaderboard(category, limit);
+        socket.emit('global_leaderboard', {
+            category,
+            entries: leaderboard,
+            updatedAt: Date.now()
+        });
+    } catch (error) {
+        console.error(`[SocketServer] Error fetching global leaderboard:`, error);
+        socket.emit('error', { message: 'Failed to fetch leaderboard' });
+    }
+}
+
+async function handleGetPlayerGlobalStats(socket: GameSocket, walletAddress: string) {
+    const GlobalLeaderboard = await import('./services/globalLeaderboardService.js');
+    
+    try {
+        const [stats, ranks] = await Promise.all([
+            GlobalLeaderboard.getPlayerGlobalStats(walletAddress),
+            GlobalLeaderboard.getPlayerRanks(walletAddress)
+        ]);
+
+        socket.emit('player_global_stats', {
+            walletAddress,
+            stats,
+            ranks,
+            updatedAt: Date.now()
+        });
+    } catch (error) {
+        console.error(`[SocketServer] Error fetching player stats:`, error);
+        socket.emit('error', { message: 'Failed to fetch player stats' });
+    }
+}
+
+async function handleCheckTournamentStatus(socket: GameSocket, walletAddress: string, week: number) {
+    const GlobalLeaderboard = await import('./services/globalLeaderboardService.js');
+    
+    try {
+        const isInTournament = await GlobalLeaderboard.isInTournament(walletAddress, week);
+        socket.emit('tournament_status', {
+            walletAddress,
+            week,
+            isRegistered: isInTournament
+        });
+    } catch (error) {
+        console.error(`[SocketServer] Error checking tournament status:`, error);
+        socket.emit('error', { message: 'Failed to check tournament status' });
+    }
 }
 
 
