@@ -29,12 +29,12 @@ const TESTING_DATE = '2026-01-20';
 
 export const CURRENT_TOURNAMENT_SCHEDULE: TournamentSchedule = {
     week: 1,
-    // Registration: From now until 14:00 WIB
+    // Registration: until 15:15 WIB
     registrationStart: new Date(`${TESTING_DATE}T00:00:00+07:00`),
-    registrationEnd: new Date(`${TESTING_DATE}T14:00:00+07:00`),
-    // Point Collection: 14:01 to 14:15 WIB
-    pointCollectionStart: new Date(`${TESTING_DATE}T14:01:00+07:00`),
-    pointCollectionEnd: new Date(`${TESTING_DATE}T14:15:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T15:15:00+07:00`),
+    // Point Collection: 15:15 - 15:35 WIB (20 minutes)
+    pointCollectionStart: new Date(`${TESTING_DATE}T15:15:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T15:35:00+07:00`),
 };
 
 /**
