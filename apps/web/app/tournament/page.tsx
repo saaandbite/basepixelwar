@@ -449,12 +449,15 @@ export default function TournamentPage() {
 
                                 {/* Start Game Button */}
                                 {isPointCollectionActive ? (
-                                    <Link
-                                        href="/room"
+                                    <button
+                                        onClick={() => {
+                                            sessionStorage.setItem('is_tournament', 'true');
+                                            router.push('/room');
+                                        }}
                                         className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black text-center block animate-pulse"
                                     >
                                         🎮 START GAME
-                                    </Link>
+                                    </button>
                                 ) : (
                                     <div className="pixel-btn bg-gray-700 text-gray-400 w-full text-2xl py-6 border-4 border-gray-600 text-center cursor-not-allowed">
                                         ⏳ WAITING FOR TOURNAMENT TO START
