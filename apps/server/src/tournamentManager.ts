@@ -1,6 +1,7 @@
 import { getRedis } from './redis';
 import { recordDeposit } from './db';
 import { verifyTransaction } from './utils/transaction.js';
+import { isRegistrationOpen, getTournamentStatus } from './tournamentConfig.js';
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS;
 const TOURNAMENT_PRICE_ETH = '0.001';
@@ -28,12 +29,13 @@ export interface PlayerLocation {
  * Register a player joining the tournament
  * 
  * Logic:
- * 1. Verify Transaction (On-Chain)
- * 2. Check if already joined.
- * 3. Increment global player counter for the week.
- * 4. Calculate Room ID.
- * 5. Add to Redis List for that Request.
- * 6. Map Player -> Room.
+ * 1. Check if registration is open (TIME PHASE CHECK)
+ * 2. Verify Transaction (On-Chain)
+ * 3. Check if already joined.
+ * 4. Increment global player counter for the week.
+ * 5. Calculate Room ID.
+ * 6. Add to Redis List for that Request.
+ * 7. Map Player -> Room.
  */
 export async function joinTournament(
     walletAddress: string,
@@ -48,8 +50,18 @@ export async function joinTournament(
     console.log(`========================================`);
     console.log(`[Tournament] Week: ${week}, TxHash: ${txHash.slice(0, 10)}...`);
 
-    // 0. Security Check - On-Chain Verification
-    console.log(`[Tournament] Step 1/4: Verifying transaction on-chain...`);
+    // 0. TIME PHASE CHECK - Registration must be open
+    console.log(`[Tournament] Step 0/5: Checking registration phase...`);
+    if (!isRegistrationOpen()) {
+        const status = getTournamentStatus();
+        console.error(`[Tournament] REGISTRATION CLOSED: Current phase is '${status.phase}'`);
+        console.error(`[Tournament] Registration ends at: ${status.schedule.registrationEnd}`);
+        throw new Error(`Registration is closed. Current phase: ${status.phase}. Next: ${status.nextPhaseName} in ${status.countdown}s`);
+    }
+    console.log(`[Tournament] Step 0/5: Registration is OPEN`);
+
+    // 1. Security Check - On-Chain Verification
+    console.log(`[Tournament] Step 1/5: Verifying transaction on-chain...`);
     const isValid = await verifyTransaction({
         txHash,
         sender: walletAddress,
@@ -62,12 +74,12 @@ export async function joinTournament(
         console.error(`[Tournament] TxHash: ${txHash}`);
         throw new Error('Invalid Transaction: Verification failed on-chain');
     }
-    console.log(`[Tournament] Step 1/4: On-chain verification PASSED`);
+    console.log(`[Tournament] Step 1/5: On-chain verification PASSED`);
 
     const r = getRedis();
 
-    // 1. Check if already joined
-    console.log(`[Tournament] Step 2/4: Checking duplicate registration...`);
+    // 2. Check if already joined
+    console.log(`[Tournament] Step 2/5: Checking duplicate registration...`);
     const existing = await r.get(KEYS.TOURNAMENT_PLAYER(wallet));
     if (existing) {
         const data = JSON.parse(existing) as PlayerLocation;
@@ -78,10 +90,10 @@ export async function joinTournament(
             return { roomId: data.roomId, isNew: false };
         }
     }
-    console.log(`[Tournament] Step 2/4: New player confirmed`);
+    console.log(`[Tournament] Step 2/5: New player confirmed`);
 
-    // 2. Increment counter to determine room
-    console.log(`[Tournament] Step 3/4: Assigning room...`);
+    // 3. Increment counter to determine room
+    console.log(`[Tournament] Step 3/5: Assigning room...`);
     const count = await r.incr(KEYS.TOURNAMENT_COUNTER(week));
 
     // 3. Calculate Room ID (1-based)

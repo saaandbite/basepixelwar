@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { parseEther, formatEther } from 'viem';
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Address, Avatar, Name, Identity, EthBalance } from '@coinbase/onchainkit/identity';
-import { Loader2, Trophy, Users, AlertCircle, CheckCircle2, Swords, XCircle, ArrowLeft, Crown } from 'lucide-react';
+import { Loader2, Trophy, Users, ArrowLeft, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
@@ -50,11 +50,37 @@ export default function TournamentPage() {
     const [roomLeaderboard, setRoomLeaderboard] = useState<{ wallet: string; score: number }[]>([]);
     const [onlinePlayers, setOnlinePlayers] = useState<Set<string>>(new Set());
 
-    // Challenge State
-    const [incomingChallenge, setIncomingChallenge] = useState<{ challengerWallet: string; tournamentRoomId: string } | null>(null);
-    const [isChallengePending, setIsChallengePending] = useState(false);
+    // Tournament Phase State
+    const [tournamentStatus, setTournamentStatus] = useState<{
+        phase: 'registration' | 'point_collection' | 'ended' | 'upcoming';
+        countdown: number;
+        nextPhaseName: string;
+        week: number;
+    } | null>(null);
 
     const isJoined = joinedRoomId > 0;
+    const isRegistrationOpen = tournamentStatus?.phase === 'registration';
+    const isPointCollectionActive = tournamentStatus?.phase === 'point_collection';
+
+    // Fetch Tournament Status
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch(`${getServerUrl()}/api/tournament/status`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setTournamentStatus(data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch tournament status:', err);
+            }
+        };
+
+        fetchStatus();
+        // Refresh every second for countdown
+        const interval = setInterval(fetchStatus, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Fetch Room Data
     const fetchRoomData = useCallback(async () => {
@@ -147,52 +173,12 @@ export default function TournamentPage() {
             });
         });
 
-        socket.on('challenge_received', (data: { challengerWallet: string; tournamentRoomId: string }) => {
-            setIncomingChallenge(data);
-        });
-
-        socket.on('challenge_failed', (data: { reason: string }) => {
-            alert(`CHALLENGE FAILED: ${data.reason}`);
-            setIsChallengePending(false);
-        });
-
-        socket.on('game_start', (data: any) => {
-            sessionStorage.setItem('pvp_mode', 'true');
-            sessionStorage.setItem('pvp_room_id', data.roomId);
-            sessionStorage.setItem('pvp_team', data.yourTeam);
-            sessionStorage.setItem('is_tournament', 'true');
-            router.push('/play/game');
-        });
-
         return () => {
             socket.disconnect();
         };
     }, [isJoined, address, joinedRoomId, weekNum, router]);
 
-    // Actions
-    const handleChallenge = (targetWallet: string) => {
-        if (!socketRef.current) return;
-        setIsChallengePending(true);
-        socketRef.current.emit('challenge_player', {
-            targetWallet,
-            tournamentRoomId: joinedRoomId.toString()
-        });
-        setTimeout(() => setIsChallengePending(false), 10000);
-    };
 
-    const handleAccept = () => {
-        if (!socketRef.current || !incomingChallenge) return;
-        socketRef.current.emit('accept_challenge', {
-            challengerWallet: incomingChallenge.challengerWallet,
-            tournamentRoomId: joinedRoomId.toString(),
-            week: weekNum
-        });
-        setIncomingChallenge(null);
-    };
-
-    const handleDecline = () => {
-        setIncomingChallenge(null);
-    };
 
     // Contract Write
     const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
@@ -309,6 +295,33 @@ export default function TournamentPage() {
                                     QUALIFICATION STAGE
                                 </h2>
 
+                                {/* Tournament Phase Status */}
+                                {tournamentStatus && (
+                                    <div className={`mb-6 p-4 border-4 text-center ${tournamentStatus.phase === 'registration'
+                                        ? 'bg-[var(--pixel-green)]/20 border-[var(--pixel-green)]'
+                                        : tournamentStatus.phase === 'point_collection'
+                                            ? 'bg-[var(--pixel-yellow)]/20 border-[var(--pixel-yellow)]'
+                                            : 'bg-gray-800 border-gray-600'
+                                        }`}>
+                                        <p className="text-sm mb-2 text-[var(--pixel-fg)]">CURRENT PHASE</p>
+                                        <p className={`font-retro text-2xl mb-2 ${tournamentStatus.phase === 'registration' ? 'text-[var(--pixel-green)]' :
+                                            tournamentStatus.phase === 'point_collection' ? 'text-[var(--pixel-yellow)]' :
+                                                'text-gray-400'
+                                            }`}>
+                                            {tournamentStatus.phase === 'registration' && '🎟️ REGISTRATION OPEN'}
+                                            {tournamentStatus.phase === 'point_collection' && '⚔️ TOURNAMENT ACTIVE'}
+                                            {tournamentStatus.phase === 'ended' && '🏁 TOURNAMENT ENDED'}
+                                            {tournamentStatus.phase === 'upcoming' && '⏳ COMING SOON'}
+                                        </p>
+                                        <p className="text-lg">
+                                            {tournamentStatus.nextPhaseName}: {' '}
+                                            <span className="font-mono text-white">
+                                                {Math.floor(tournamentStatus.countdown / 60)}:{String(tournamentStatus.countdown % 60).padStart(2, '0')}
+                                            </span>
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="bg-black border-4 border-[var(--pixel-fg)] p-8 mb-8 text-center">
                                     <p className="text-[var(--pixel-red)] mb-3 text-lg font-bold">ENTRY FEE</p>
                                     <p className="font-retro text-5xl text-white mb-6">0.001 ETH</p>
@@ -319,11 +332,18 @@ export default function TournamentPage() {
 
                                 <button
                                     onClick={handleJoin}
-                                    disabled={isPending || isConfirming}
-                                    className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black"
+                                    disabled={isPending || isConfirming || !isRegistrationOpen}
+                                    className={`pixel-btn w-full text-2xl py-6 border-4 border-black ${isRegistrationOpen
+                                        ? 'pixel-btn-danger'
+                                        : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                        }`}
                                 >
                                     {(isPending || isConfirming) ? (
                                         <><Loader2 className="animate-spin inline w-6 h-6" /> PROCESSING TX...</>
+                                    ) : !isRegistrationOpen ? (
+                                        tournamentStatus?.phase === 'point_collection'
+                                            ? "⚔️ TOURNAMENT IN PROGRESS"
+                                            : "🔒 REGISTRATION CLOSED"
                                     ) : (
                                         "JOIN TOURNAMENT"
                                     )}
@@ -335,6 +355,25 @@ export default function TournamentPage() {
                         ) : (
                             /* Lobby View */
                             <div className="space-y-8">
+                                {/* Tournament Phase Banner */}
+                                {tournamentStatus && (
+                                    <div className={`p-4 border-4 text-center animate-pulse ${isPointCollectionActive
+                                        ? 'bg-[var(--pixel-yellow)]/20 border-[var(--pixel-yellow)]'
+                                        : 'bg-[var(--pixel-green)]/20 border-[var(--pixel-green)]'
+                                        }`}>
+                                        <p className={`font-retro text-2xl ${isPointCollectionActive ? 'text-[var(--pixel-yellow)]' : 'text-[var(--pixel-green)]'
+                                            }`}>
+                                            {isPointCollectionActive ? '⚔️ TOURNAMENT ACTIVE - POINTS COUNT!' : '🎟️ REGISTRATION PHASE'}
+                                        </p>
+                                        <p className="text-lg mt-2">
+                                            {tournamentStatus.nextPhaseName}: {' '}
+                                            <span className="font-mono text-white font-bold">
+                                                {Math.floor(tournamentStatus.countdown / 60)}:{String(tournamentStatus.countdown % 60).padStart(2, '0')}
+                                            </span>
+                                        </p>
+                                    </div>
+                                )}
+
                                 {/* Room Info */}
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div className="pixel-box border-4 border-[var(--pixel-card-border)]">
@@ -396,62 +435,27 @@ export default function TournamentPage() {
                                                                     <p className="text-sm text-[var(--pixel-fg)]">{p.score} PTS</p>
                                                                 </div>
                                                             </div>
-
-                                                            {!isMe && (
-                                                                <button
-                                                                    onClick={() => handleChallenge(p.wallet)}
-                                                                    disabled={!isOnline || isChallengePending}
-                                                                    className={`pixel-btn !py-2 !px-6 text-lg ${isOnline ? 'pixel-btn-danger' : 'opacity-50 cursor-not-allowed bg-gray-700'}`}
-                                                                >
-                                                                    {isChallengePending ? (
-                                                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                                                    ) : (
-                                                                        "FIGHT"
-                                                                    )}
-                                                                </button>
-                                                            )}
                                                         </div>
                                                     );
                                                 })
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Play 1vs1 Button - Points collected from regular games */}
+                                {isPointCollectionActive && (
+                                    <Link
+                                        href="/play"
+                                        className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black text-center block"
+                                    >
+                                        ⚔️ PLAY 1vs1 TO EARN POINTS
+                                    </Link>
+                                )}
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Challenge Modal - "New Challenger" Style - SCALED UP */}
-                {incomingChallenge && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 backdrop-blur-sm">
-                        <div className="pixel-card w-full max-w-xl bg-[var(--pixel-red)] border-8 border-white animate-bounce-in shadow-[0_0_50px_rgba(239,68,68,0.5)]">
-
-                            <div className="text-center py-10">
-                                <h3 className="text-4xl font-retro text-black mb-4 animate-blink font-bold">
-                                    ⚠ WARNING ⚠
-                                </h3>
-                                <p className="text-black font-bold text-3xl mb-8">
-                                    NEW CHALLENGER APPROACHING!
-                                </p>
-
-                                <div className="bg-black border-4 border-white p-6 mb-10 inline-block transform rotate-2 shadow-xl">
-                                    <p className="text-white font-mono text-3xl tracking-widest">
-                                        {truncateWallet(incomingChallenge.challengerWallet)}
-                                    </p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-6 px-10">
-                                    <button onClick={handleDecline} className="pixel-btn bg-black text-white hover:bg-gray-900 text-2xl py-4 border-4 border-white">
-                                        RUN AWAY
-                                    </button>
-                                    <button onClick={handleAccept} className="pixel-btn bg-white text-[var(--pixel-red)] hover:bg-gray-100 text-2xl py-4 border-4 border-black animate-pulse font-bold">
-                                        FIGHT!
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </main>
         </div>
     );

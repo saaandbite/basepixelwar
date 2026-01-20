@@ -262,6 +262,25 @@ async function main() {
       return;
     }
 
+    // Tournament Status Endpoint
+    if (req.method === 'GET' && req.url === '/api/tournament/status') {
+      try {
+        const { getTournamentStatus } = await import('./tournamentConfig.js');
+        const status = getTournamentStatus();
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify(status));
+      } catch (error: any) {
+        console.error('[Server] Tournament status error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
     // Global CORS preflight handler
     if (req.method === 'OPTIONS') {
       res.writeHead(204, {
