@@ -357,20 +357,25 @@ export default function TournamentPage() {
                             <div className="space-y-8">
                                 {/* Tournament Phase Banner */}
                                 {tournamentStatus && (
-                                    <div className={`p-4 border-4 text-center animate-pulse ${isPointCollectionActive
+                                    <div className={`p-4 border-4 text-center ${isPointCollectionActive
                                         ? 'bg-[var(--pixel-yellow)]/20 border-[var(--pixel-yellow)]'
                                         : 'bg-[var(--pixel-green)]/20 border-[var(--pixel-green)]'
                                         }`}>
                                         <p className={`font-retro text-2xl ${isPointCollectionActive ? 'text-[var(--pixel-yellow)]' : 'text-[var(--pixel-green)]'
                                             }`}>
-                                            {isPointCollectionActive ? '⚔️ TOURNAMENT ACTIVE - POINTS COUNT!' : '🎟️ REGISTRATION PHASE'}
+                                            {isPointCollectionActive ? '⚔️ TOURNAMENT ACTIVE - EARN POINTS!' : '✅ REGISTERED'}
                                         </p>
                                         <p className="text-lg mt-2">
-                                            {tournamentStatus.nextPhaseName}: {' '}
+                                            {isRegistrationOpen ? 'Tournament starts in' : tournamentStatus.nextPhaseName}: {' '}
                                             <span className="font-mono text-white font-bold">
                                                 {Math.floor(tournamentStatus.countdown / 60)}:{String(tournamentStatus.countdown % 60).padStart(2, '0')}
                                             </span>
                                         </p>
+                                        {isRegistrationOpen && (
+                                            <p className="text-sm mt-2 text-[var(--pixel-fg)] opacity-70">
+                                                Waiting for other players to join...
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 
@@ -393,10 +398,10 @@ export default function TournamentPage() {
                                     </div>
                                 </div>
 
-                                {/* Player List */}
+                                {/* Room Leaderboard */}
                                 <div className="pixel-card bg-black border-4 border-[var(--pixel-red)]">
                                     <h3 className="text-[var(--pixel-fg)] mb-6 flex items-center gap-3 text-xl">
-                                        <Users className="w-6 h-6" /> PLAYERS IN ROOM
+                                        <Trophy className="w-6 h-6 text-[var(--pixel-yellow)]" /> ROOM LEADERBOARD
                                     </h3>
 
                                     <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
@@ -442,14 +447,18 @@ export default function TournamentPage() {
                                     </div>
                                 </div>
 
-                                {/* Play 1vs1 Button - Points collected from regular games */}
-                                {isPointCollectionActive && (
+                                {/* Start Game Button */}
+                                {isPointCollectionActive ? (
                                     <Link
-                                        href="/play"
-                                        className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black text-center block"
+                                        href="/room"
+                                        className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black text-center block animate-pulse"
                                     >
-                                        ⚔️ PLAY 1vs1 TO EARN POINTS
+                                        🎮 START GAME
                                     </Link>
+                                ) : (
+                                    <div className="pixel-btn bg-gray-700 text-gray-400 w-full text-2xl py-6 border-4 border-gray-600 text-center cursor-not-allowed">
+                                        ⏳ WAITING FOR TOURNAMENT TO START
+                                    </div>
                                 )}
                             </div>
                         )}

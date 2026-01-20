@@ -24,17 +24,18 @@ export interface TournamentSchedule {
 // Change these values for production
 // ============================================
 
-// Testing: 20 January 2026
+// Testing: 20-21 January 2026
 const TESTING_DATE = '2026-01-20';
+const NEXT_DAY = '2026-01-21';
 
 export const CURRENT_TOURNAMENT_SCHEDULE: TournamentSchedule = {
     week: 1,
-    // Registration: until 15:15 WIB
-    registrationStart: new Date(`${TESTING_DATE}T00:00:00+07:00`),
-    registrationEnd: new Date(`${TESTING_DATE}T15:15:00+07:00`),
-    // Point Collection: 15:15 - 15:35 WIB (20 minutes)
-    pointCollectionStart: new Date(`${TESTING_DATE}T15:15:00+07:00`),
-    pointCollectionEnd: new Date(`${TESTING_DATE}T15:35:00+07:00`),
+    // Registration: 16:00 - 21:00 WIB
+    registrationStart: new Date(`${TESTING_DATE}T16:00:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T21:00:00+07:00`),
+    // Point Collection: 21:01 - 12:00 next day WIB
+    pointCollectionStart: new Date(`${TESTING_DATE}T21:01:00+07:00`),
+    pointCollectionEnd: new Date(`${NEXT_DAY}T12:00:00+07:00`),
 };
 
 /**
