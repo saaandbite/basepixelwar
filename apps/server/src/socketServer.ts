@@ -99,11 +99,11 @@ function handleConnection(socket: GameSocket) {
     socket.on('lobby_heartbeat', (data: { week: number; roomId: string }) => handleLobbyHeartbeat(socket, data));
 
     // Global Leaderboard Events
-    socket.on('get_global_leaderboard', (data: { category: 'points' | 'wins' | 'earnings'; limit?: number }) => 
+    socket.on('get_global_leaderboard', (data: { category: 'points' | 'wins' | 'earnings'; limit?: number }) =>
         handleGetGlobalLeaderboard(socket, data.category, data.limit));
-    socket.on('get_player_global_stats', (walletAddress: string) => 
+    socket.on('get_player_global_stats', (walletAddress: string) =>
         handleGetPlayerGlobalStats(socket, walletAddress));
-    socket.on('check_tournament_status', (data: { walletAddress: string; week: number }) => 
+    socket.on('check_tournament_status', (data: { walletAddress: string; week: number }) =>
         handleCheckTournamentStatus(socket, data.walletAddress, data.week));
 
 }
@@ -405,7 +405,7 @@ async function handleDisconnect(socket: GameSocket) {
         if (room && room.status === 'pending_payment') {
             const playerId = socket.data.playerId!;
             const gracePeriodKey = `${roomId}:${playerId}`;
-            
+
             // Check if player has other active sockets (multi-tab)
             let hasOtherSockets = false;
             for (const [_, s] of io.sockets.sockets) {
@@ -434,14 +434,14 @@ async function handleDisconnect(socket: GameSocket) {
             // GRACE PERIOD: Local timeout as backup, but Redis is source of truth
             const timeout = setTimeout(async () => {
                 pendingPaymentDisconnectTimeouts.delete(gracePeriodKey);
-                
+
                 // Check Redis if still marked as disconnected
                 const stillDisconnected = await Redis.isPendingPaymentDisconnected(roomId, playerId);
                 if (!stillDisconnected) {
                     console.log(`[SocketServer] Grace period: Redis says ${playerId} already cleared. Skipping cancel.`);
                     return;
                 }
-                
+
                 // Re-check room status (might have changed during grace period)
                 const currentRoom = await RoomManager.getRoom(roomId);
                 if (!currentRoom) {
@@ -542,7 +542,7 @@ async function handleRejoinGame(socket: GameSocket, roomId: string, walletAddres
     if (room.status === 'pending_payment') {
         const deadline = room.paymentDeadline || Date.now() + 90000;
         const isFirstPlayer = room.players[0].id === player.id;
-        
+
         // Re-send pending_payment event so client can continue payment flow
         socket.emit('pending_payment', {
             roomId: room.id,
@@ -550,11 +550,11 @@ async function handleRejoinGame(socket: GameSocket, roomId: string, walletAddres
             deadline,
             isFirstPlayer,
         });
-        
+
         // Also send current payment status
         const status = RoomManager.getPaymentStatus(room);
         socket.emit('payment_status', status);
-        
+
         console.log(`[SocketServer] Player ${player.id} reconnected to pending_payment room ${roomId}`);
         return;
     }
@@ -616,9 +616,24 @@ async function handlePaymentConfirmed(
     socket: GameSocket,
     data: { txHash: string; onChainGameId: number }
 ) {
-    const roomId = socket.data.roomId;
+    let roomId = socket.data.roomId;
+
+    // If roomId not set (reconnection scenario), try to find the room
+    if (!roomId && socket.data.walletAddress) {
+        console.log('[Payment] No roomId set, searching for room by wallet:', socket.data.walletAddress);
+
+        // Try to find room where this wallet is a player in pending_payment status
+        const foundRoom = await RoomManager.findRoomByWalletAddress(socket.data.walletAddress);
+        if (foundRoom && foundRoom.status === 'pending_payment') {
+            roomId = foundRoom.id;
+            socket.data.roomId = roomId;
+            socket.join(roomId);
+            console.log(`[Payment] Found and rejoined room ${roomId} via wallet lookup`);
+        }
+    }
+
     if (!roomId) {
-        console.log('[Payment] No roomId for payment confirmation');
+        console.log('[Payment] No roomId for payment confirmation - could not find room');
         return;
     }
 
@@ -626,7 +641,7 @@ async function handlePaymentConfirmed(
     const isValid = await verifyTransaction({
         txHash: data.txHash,
         sender: socket.data.walletAddress || '', // Ensure wallet is known
-        amount: '0.0001', // Standard game fee (Must match contract)
+        amount: '0.001', // Standard game fee = 0.001 ETH (Must match BID_AMOUNT_WEI in useGameVault.ts)
         toAddress: GAME_VAULT_ADDRESS
     });
 
@@ -1044,7 +1059,7 @@ async function handleLobbyHeartbeat(socket: GameSocket, data: { week: number; ro
 
 async function handleGetGlobalLeaderboard(socket: GameSocket, category: 'points' | 'wins' | 'earnings', limit: number = 10) {
     const GlobalLeaderboard = await import('./services/globalLeaderboardService.js');
-    
+
     try {
         const leaderboard = await GlobalLeaderboard.getLeaderboard(category, limit);
         socket.emit('global_leaderboard', {
@@ -1060,7 +1075,7 @@ async function handleGetGlobalLeaderboard(socket: GameSocket, category: 'points'
 
 async function handleGetPlayerGlobalStats(socket: GameSocket, walletAddress: string) {
     const GlobalLeaderboard = await import('./services/globalLeaderboardService.js');
-    
+
     try {
         const [stats, ranks] = await Promise.all([
             GlobalLeaderboard.getPlayerGlobalStats(walletAddress),
@@ -1081,7 +1096,7 @@ async function handleGetPlayerGlobalStats(socket: GameSocket, walletAddress: str
 
 async function handleCheckTournamentStatus(socket: GameSocket, walletAddress: string, week: number) {
     const GlobalLeaderboard = await import('./services/globalLeaderboardService.js');
-    
+
     try {
         const isInTournament = await GlobalLeaderboard.isInTournament(walletAddress, week);
         socket.emit('tournament_status', {

@@ -138,6 +138,23 @@ export function useMultiplayer() {
             if (savedRoomId && savedWallet) {
                 console.log('[Multiplayer] Auto-rejoining pending_payment room:', savedRoomId);
                 socket.emit('rejoin_game', savedRoomId, savedWallet);
+
+                // Also send pending payment confirmation if we have one
+                const pendingPaymentTx = sessionStorage.getItem('pending_payment_tx');
+                if (pendingPaymentTx) {
+                    try {
+                        const { txHash, onChainGameId } = JSON.parse(pendingPaymentTx);
+                        if (txHash && txHash !== 'pending' && onChainGameId) {
+                            console.log('[Multiplayer] Sending pending payment confirmation after rejoin:', txHash);
+                            // Delay to let server process rejoin first
+                            setTimeout(() => {
+                                socket.emit('payment_confirmed', { txHash, onChainGameId });
+                            }, 1500);
+                        }
+                    } catch (e) {
+                        console.error('[Multiplayer] Failed to parse pending payment:', e);
+                    }
+                }
             }
         });
 
@@ -158,7 +175,7 @@ export function useMultiplayer() {
                         // Keep room, opponent, paymentStatus intact for reconnect!
                     };
                 }
-                
+
                 // Normal disconnect - reset state
                 return {
                     ...prev,
@@ -214,10 +231,10 @@ export function useMultiplayer() {
         // NEW: Handle pending_payment (match found, waiting for blockchain payment)
         socket.on('pending_payment', ({ roomId, opponent, deadline, isFirstPlayer }) => {
             console.log('[Multiplayer] Match found (pending_payment)!', roomId, opponent);
-            
+
             // PERSIST: Save room ID for reconnection (mobile wallet switching)
             sessionStorage.setItem('pending_payment_room_id', roomId);
-            
+
             // Determine my team based on opponent's team
             const inferredTeam: 'blue' | 'red' = opponent.team === 'red' ? 'blue' : 'red';
             setState(prev => ({

@@ -166,6 +166,26 @@ export async function getPlayerRoom(playerId: string): Promise<GameRoom | null> 
     return Redis.getRoom<GameRoom>(roomId);
 }
 
+// Find room by wallet address (useful for reconnection scenarios)
+export async function findRoomByWalletAddress(walletAddress: string): Promise<GameRoom | null> {
+    // Wallet addresses are stored lowercase as player IDs
+    const normalizedWallet = walletAddress.toLowerCase();
+
+    // First try direct lookup (wallet is player ID)
+    const roomId = await Redis.getPlayerRoom(normalizedWallet);
+    if (roomId) {
+        const room = await Redis.getRoom<GameRoom>(roomId);
+        if (room) {
+            console.log(`[RoomManager] Found room ${roomId} for wallet ${normalizedWallet}`);
+            return room;
+        }
+    }
+
+    // Wallet not found as direct player ID
+    console.log(`[RoomManager] No room found for wallet ${normalizedWallet}`);
+    return null;
+}
+
 export async function setPlayerReady(playerId: string, ready: boolean): Promise<GameRoom | null> {
     const room = await getPlayerRoom(playerId);
     if (!room) return null;

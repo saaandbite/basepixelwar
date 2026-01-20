@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { usePublicClient } from "wagmi";
 import { useWallet, TARGET_CHAIN_ID, isCorrectChain } from "../contexts/WalletContext";
 
 // ============ Types ============
@@ -74,6 +75,7 @@ function encodeUint256(value: number | bigint): string {
 
 export function useGameVault(): UseGameVaultReturn {
     const { address, chainId, sendTransaction, switchToBase } = useWallet();
+    const publicClient = usePublicClient();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastTxHash, setLastTxHash] = useState<string | null>(null);
@@ -85,36 +87,26 @@ export function useGameVault(): UseGameVaultReturn {
         }
     }, [chainId, switchToBase]);
 
-    // Wait for transaction receipt
+    // Wait for transaction receipt using wagmi's publicClient
+    // This works on both desktop (injected wallets) and mobile (WalletConnect)
     const waitForReceipt = useCallback(async (txHash: string): Promise<any> => {
-        if (!window.ethereum) throw new Error("No ethereum provider");
+        if (!publicClient) throw new Error("No public client available");
 
         console.log("[GameVault] Waiting for receipt:", txHash);
 
-        let attempts = 0;
-        const maxAttempts = 30; // 30 * 2s = 60s timeout
+        try {
+            const receipt = await publicClient.waitForTransactionReceipt({
+                hash: txHash as `0x${string}`,
+                timeout: 60_000, // 60 second timeout
+            });
 
-        while (attempts < maxAttempts) {
-            try {
-                const receipt = await window.ethereum.request({
-                    method: "eth_getTransactionReceipt",
-                    params: [txHash],
-                });
-
-                if (receipt) {
-                    console.log("[GameVault] Receipt found:", receipt);
-                    return receipt;
-                }
-            } catch (e) {
-                console.warn("[GameVault] Error fetching receipt:", e);
-            }
-
-            await new Promise(r => setTimeout(r, 2000));
-            attempts++;
+            console.log("[GameVault] Receipt found:", receipt);
+            return receipt;
+        } catch (e) {
+            console.error("[GameVault] Error waiting for receipt:", e);
+            throw new Error("Transaction confirmation timeout");
         }
-
-        throw new Error("Transaction confirmation timeout");
-    }, []);
+    }, [publicClient]);
 
     // Create a new game
     const createGame = useCallback(
