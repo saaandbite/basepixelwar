@@ -93,9 +93,8 @@ function handleConnection(socket: GameSocket) {
 
     // Tournament Lobby Events
     socket.on('join_tournament_lobby', (data: { week: number; roomId: string; walletAddress: string }) => handleJoinTournamentLobby(socket, data));
-    socket.on('challenge_player', (data: { targetWallet: string; tournamentRoomId: string }) => handleChallengePlayer(socket, data));
-    socket.on('challenge_player', (data: { targetWallet: string; tournamentRoomId: string }) => handleChallengePlayer(socket, data));
-    socket.on('accept_challenge', (data: { challengerWallet: string; tournamentRoomId: string; week: number }) => handleAcceptChallenge(socket, data));
+
+
     socket.on('lobby_heartbeat', (data: { week: number; roomId: string }) => handleLobbyHeartbeat(socket, data));
 
     // Global Leaderboard Events
@@ -935,112 +934,7 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
 // In a real application, this would be inside the io.on('connection', (socket) => { ... socket.on('disconnect', () => { ... }) }) block.
 // Floating block removed
 
-function getSocketByWallet(walletAddress: string): GameSocket | undefined {
-    let bestSocket: GameSocket | undefined = undefined;
-    const target = walletAddress.toLowerCase();
 
-    for (const [_, socket] of io.sockets.sockets) {
-        if (socket.data.walletAddress?.toLowerCase() === target && socket.connected) {
-            bestSocket = socket;
-            break;
-        }
-    }
-    return bestSocket;
-}
-
-async function handleChallengePlayer(socket: GameSocket, data: { targetWallet: string; tournamentRoomId: string }) {
-    const { targetWallet, tournamentRoomId } = data;
-    const challengerWallet = socket.data.walletAddress;
-
-    if (!challengerWallet) return;
-
-    console.log(`[SocketServer] Challenge: ${challengerWallet} -> ${targetWallet} in Room ${tournamentRoomId}`);
-
-    const targetSocket = getSocketByWallet(targetWallet);
-    if (targetSocket) {
-        targetSocket.emit('challenge_received', {
-            challengerWallet,
-            tournamentRoomId
-        });
-    } else {
-        socket.emit('challenge_failed', { reason: 'Player offline' });
-    }
-}
-
-async function handleAcceptChallenge(socket: GameSocket, data: { challengerWallet: string; tournamentRoomId: string; week: number }) {
-    // 1. Validate
-    const acceptorWallet = socket.data.walletAddress;
-    if (!acceptorWallet) return;
-
-    const challengerWallet = data.challengerWallet;
-    const challengerSocket = getSocketByWallet(challengerWallet);
-
-    if (!challengerSocket) {
-        socket.emit('challenge_failed', { reason: 'Challenger no longer available' });
-        return;
-    }
-
-    // 2. Create Match
-    // We need to construct PvPPlayer objects
-    const p1: PvPPlayer = {
-        id: challengerWallet, // Use wallet as ID for tournament games
-        name: `Player ${challengerWallet.slice(0, 4)}`,
-        walletAddress: challengerWallet,
-        team: 'blue',
-        ready: true
-    };
-
-    const p2: PvPPlayer = {
-        id: acceptorWallet,
-        name: `Player ${acceptorWallet.slice(0, 4)}`,
-        walletAddress: acceptorWallet,
-        team: 'red',
-        ready: true
-    };
-
-    const room = await RoomManager.createTournamentMatch(p1, p2, data.tournamentRoomId, data.week);
-
-    // 3. Move players to game
-    challengerSocket.join(room.id);
-    socket.join(room.id);
-
-    challengerSocket.data.roomId = room.id;
-    socket.data.roomId = room.id;
-
-    // 4. Start Game Immediately (Skip payment)
-    const gameConfig: GameStartData['config'] = {
-        duration: 90,
-        gridCols: 26,
-        gridRows: 44,
-        canvasWidth: 390,
-        canvasHeight: 660,
-    };
-
-    // Emit game_start to P1
-    challengerSocket.emit('game_start', {
-        roomId: room.id,
-        yourTeam: 'blue',
-        opponent: p2,
-        config: gameConfig,
-        startTime: Date.now()
-    });
-
-    // Emit game_start to P2 (Acceptor)
-    socket.emit('game_start', {
-        roomId: room.id,
-        yourTeam: 'red',
-        opponent: p1,
-        config: gameConfig,
-        startTime: Date.now()
-    });
-
-    // Start Engine
-    // Start Engine
-    GameStateManager.createGameState(room.id, 'tournament');
-    GameStateManager.startGameLoop(room.id);
-
-    console.log(`[SocketServer] Tournament Match Started: ${room.id}`);
-}
 
 async function handleLobbyHeartbeat(socket: GameSocket, data: { week: number; roomId: string }) {
     const { week, roomId } = data;

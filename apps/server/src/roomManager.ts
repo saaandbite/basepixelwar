@@ -40,39 +40,7 @@ export async function createRoom(creator: PvPPlayer): Promise<GameRoom> {
     return room;
 }
 
-export async function createTournamentMatch(p1: PvPPlayer, p2: PvPPlayer, tournamentRoomId: string, week: number): Promise<GameRoom> {
-    const roomId = generateRoomId();
 
-    const room: GameRoom = {
-        id: roomId,
-        players: [
-            { ...p1, team: 'blue', ready: true },
-            { ...p2, team: 'red', ready: true }
-        ],
-        status: 'playing', // Start immediately
-        createdAt: Date.now(),
-        gameStartedAt: Date.now(),
-        // Tournament metadata (using any typed field or augmenting if possible, 
-        // for now we trust the caller to track the relation or we can piggyback on generic fields if they exist)
-        // Ideally GameRoom interface should have 'metadata' or 'tournamentId'
-    };
-
-    // We will store tournament info in a separate Redis key mapping if GameRoom type is strict
-    // Or we rely on the fact that we can cast or extend at runtime if it's just JSON in Redis.
-    // For safety, let's keep it simple.
-
-    // Create room in Redis
-    await Redis.setRoom(roomId, room);
-    await Redis.setPlayerRoom(p1.id, roomId);
-    await Redis.setPlayerRoom(p2.id, roomId);
-
-    // Map this game room to the tournament room for lookup later
-    const r = Redis.getRedis();
-    await r.set(`game_to_tournament:${roomId}`, JSON.stringify({ week, tournamentRoomId }));
-
-    console.log(`[RoomManager] Tournament Match ${roomId} created: ${p1.name} vs ${p2.name} (Ref: ${tournamentRoomId})`);
-    return room;
-}
 
 
 export async function joinRoom(roomId: string, player: PvPPlayer): Promise<GameRoom | null> {

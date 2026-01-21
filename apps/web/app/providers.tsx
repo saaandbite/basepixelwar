@@ -23,7 +23,7 @@ if (typeof window !== 'undefined') {
 // Wagmi config - support multiple wallets including MetaMask
 const wagmiConfig = createConfig({
     chains: [baseSepolia, base],
-    connectors: [
+    connectors: typeof window !== 'undefined' ? [
         // Injected connector (auto-detects MetaMask, Coinbase Wallet extension, etc.)
         injected({
             shimDisconnect: true,
@@ -40,7 +40,7 @@ const wagmiConfig = createConfig({
             metadata: {
                 name: 'PixelWar',
                 description: 'Pixel Battle Game',
-                url: typeof window !== 'undefined' ? window.location.origin : 'https://pixelwar.xyz',
+                url: window.location.origin,
                 icons: ['https://pixelwar.xyz/icon.svg'],
             },
             showQrModal: true, // Shows QR modal for desktop, deep links on mobile
@@ -50,7 +50,7 @@ const wagmiConfig = createConfig({
             appName: 'PixelWar',
             preference: 'all', // Support all Coinbase Wallet types
         }),
-    ],
+    ] : [],
     ssr: true,
     transports: {
         [baseSepolia.id]: http(),

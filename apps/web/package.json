@@ -13,6 +13,7 @@
   "dependencies": {
     "@coinbase/onchainkit": "^1.1.2",
     "@repo/shared": "workspace:*",
+    "@repo/contracts": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.16",
     "@walletconnect/ethereum-provider": "^2.23.3",

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useReadContract } from 'wagmi';
-import { TOURNAMENT_ABI } from '../tournament/abi';
+import { TOURNAMENT_ABI } from '@repo/contracts';
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
 

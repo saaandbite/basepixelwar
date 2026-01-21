@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@repo/shared": "workspace:*",
+    "@repo/contracts": "workspace:*",
     "dotenv": "^16.4.1",
     "ioredis": "^5.9.1",
     "socket.io": "^4.7.4",

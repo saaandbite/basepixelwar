@@ -21,10 +21,13 @@ export function PvPGamePage() {
     const [weaponMode, setWeaponMode] = useState<'machineGun' | 'shotgun' | 'inkBomb'>('machineGun');
     const [justUsedInkBomb, setJustUsedInkBomb] = useState(false);
     const [isTournament, setIsTournament] = useState(false);
+    const [weekNumber, setWeekNumber] = useState<number | undefined>(undefined);
 
     // Connect and join queue on mount
     useEffect(() => {
         setIsTournament(sessionStorage.getItem('is_tournament') === 'true');
+        const storedWeek = sessionStorage.getItem('tournament_week');
+        if (storedWeek) setWeekNumber(parseInt(storedWeek, 10));
         pvp.connect();
 
         // Check for session storage data from /room page (commented out for persistence)
@@ -486,6 +489,7 @@ export function PvPGamePage() {
                             settlementTxHash={pvp.settlementTxHash}
                             onExit={handleExit}
                             isTournament={isTournament}
+                            weekNumber={weekNumber}
                         />
                     )}
                 </div>

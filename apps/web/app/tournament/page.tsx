@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
-import { TOURNAMENT_ABI } from './abi';
+import { TOURNAMENT_ABI } from '@repo/contracts';
 import PlayerProfileModal from '../components/PlayerProfileModal';
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
@@ -39,7 +39,7 @@ export default function TournamentPage() {
         query: { refetchInterval: 10000 }
     });
 
-    const weekNum = currentWeek ? Number(currentWeek) : 0;
+    const weekNum = currentWeek ? Number(currentWeek as any) : 0;
 
     // Local State
     const [joinedRoomId, setJoinedRoomId] = useState<number>(0);
@@ -92,7 +92,8 @@ export default function TournamentPage() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
             const data = await res.json();
-            if (data.location) {
+            // Critical Fix: Only consider joined if the server record matches the CURRENT week
+            if (data.location && data.location.week === weekNum) {
                 setJoinedRoomId(data.location.roomId);
                 if (data.players) {
                     const initialLeaderboard = data.players.map((p: any) => ({
@@ -452,6 +453,7 @@ export default function TournamentPage() {
                                     <button
                                         onClick={() => {
                                             sessionStorage.setItem('is_tournament', 'true');
+                                            sessionStorage.setItem('tournament_week', weekNum.toString());
                                             router.push('/room');
                                         }}
                                         className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black text-center block animate-pulse"

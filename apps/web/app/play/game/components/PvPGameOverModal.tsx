@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, Flag, Home, Target, Swords, Ban, Coins, ExternalLink, Check, Zap, Crown } from 'lucide-react';
+import { Trophy, Flag, Home, Target, Swords, Ban, Coins, ExternalLink, Check, Zap, Crown, Loader2 } from 'lucide-react';
+import { useClaimTrophy } from '../../../hooks/useClaimTrophy';
 
 interface PvPGameOverModalProps {
     myTeam: 'blue' | 'red';
@@ -13,6 +14,7 @@ interface PvPGameOverModalProps {
     settlementTxHash?: string | null;
     onExit: () => void;
     isTournament?: boolean;
+    weekNumber?: number; // Required for tournament NFT claim
 }
 
 // Simple CountUp Hook
@@ -57,6 +59,7 @@ export function PvPGameOverModal({
     settlementTxHash,
     onExit,
     isTournament = false,
+    weekNumber,
 }: PvPGameOverModalProps) {
     const myScore = myTeam === 'blue' ? scores.blue : scores.red;
     const enemyScore = myTeam === 'blue' ? scores.red : scores.blue;
@@ -64,7 +67,18 @@ export function PvPGameOverModal({
     const isDraw = myScore === enemyScore;
 
     const [isVisible, setIsVisible] = useState(false);
-    const [claimed, setClaimed] = useState(false);
+
+    // NFT Claim Hook for tournament games
+    const {
+        canClaim,
+        hasClaimed,
+        claim,
+        isPending,
+        isConfirming,
+        isSuccess,
+        error: claimError,
+        txHash,
+    } = useClaimTrophy(isTournament ? weekNumber : undefined);
 
     useEffect(() => {
         setIsVisible(true);
@@ -213,27 +227,68 @@ export function PvPGameOverModal({
 
                     {/* Actions */}
                     <div className="space-y-2 sm:space-y-4">
-                        {isWinner && !isTournament && (
+                        {/* Tournament NFT Claim Button */}
+                        {isWinner && isTournament && canClaim && !hasClaimed && !isSuccess && (
                             <div className="mb-2 sm:mb-4">
-                                {!claimed ? (
-                                    <button
-                                        onClick={() => setClaimed(true)}
-                                        className="pixel-btn pixel-btn-primary w-full text-sm sm:text-lg !rounded-xl shadow-lg hover:shadow-xl transition-all py-2.5 sm:py-3"
-                                    >
-                                        <Coins size={16} className="inline mr-2 sm:w-5 sm:h-5" />
-                                        CLAIM REWARD
-                                    </button>
-                                ) : (
-                                    <div className="border border-[var(--pixel-green)] bg-[var(--pixel-green)]/10 p-2 sm:p-4 rounded-xl">
-                                        <div className="text-[var(--pixel-green)] font-bold text-sm sm:text-lg mb-0.5 sm:mb-2 flex items-center justify-center gap-2">
-                                            <Check size={16} className="sm:w-6 sm:h-6" />
-                                            <span>REWARD CLAIMED!</span>
-                                        </div>
-                                        <div className="text-white/80 text-[10px] sm:text-sm">
-                                            SENT: <span className="text-[var(--pixel-green)] font-bold">0.00198 ETH</span>
-                                        </div>
-                                    </div>
+                                <button
+                                    onClick={claim}
+                                    disabled={isPending || isConfirming}
+                                    className="pixel-btn pixel-btn-primary w-full text-sm sm:text-lg !rounded-xl shadow-lg hover:shadow-xl transition-all py-2.5 sm:py-3 disabled:opacity-50"
+                                >
+                                    {isPending || isConfirming ? (
+                                        <>
+                                            <Loader2 size={16} className="inline mr-2 sm:w-5 sm:h-5 animate-spin" />
+                                            {isPending ? 'CONFIRM IN WALLET...' : 'MINTING...'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Trophy size={16} className="inline mr-2 sm:w-5 sm:h-5" />
+                                            CLAIM NFT TROPHY
+                                        </>
+                                    )}
+                                </button>
+                                {claimError && (
+                                    <p className="text-red-400 text-xs mt-2 text-center">
+                                        {claimError.message.slice(0, 50)}...
+                                    </p>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Tournament Claim Success */}
+                        {isWinner && isTournament && (hasClaimed || isSuccess) && (
+                            <div className="mb-2 sm:mb-4">
+                                <div className="border border-[var(--pixel-green)] bg-[var(--pixel-green)]/10 p-2 sm:p-4 rounded-xl">
+                                    <div className="text-[var(--pixel-green)] font-bold text-sm sm:text-lg mb-0.5 sm:mb-2 flex items-center justify-center gap-2">
+                                        <Check size={16} className="sm:w-6 sm:h-6" />
+                                        <span>NFT TROPHY CLAIMED!</span>
+                                    </div>
+                                    {txHash && (
+                                        <a
+                                            href={`https://sepolia.basescan.org/tx/${txHash}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[var(--pixel-blue)] text-[10px] sm:text-xs underline flex items-center justify-center gap-1"
+                                        >
+                                            View on BaseScan <ExternalLink size={10} />
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Standard PvP ETH Reward (auto-claimed by contract) */}
+                        {isWinner && !isTournament && settlementTxHash && (
+                            <div className="mb-2 sm:mb-4">
+                                <div className="border border-[var(--pixel-green)] bg-[var(--pixel-green)]/10 p-2 sm:p-4 rounded-xl">
+                                    <div className="text-[var(--pixel-green)] font-bold text-sm sm:text-lg mb-0.5 sm:mb-2 flex items-center justify-center gap-2">
+                                        <Check size={16} className="sm:w-6 sm:h-6" />
+                                        <span>REWARD SENT!</span>
+                                    </div>
+                                    <div className="text-white/80 text-[10px] sm:text-sm">
+                                        PRIZE: <span className="text-[var(--pixel-green)] font-bold">0.00198 ETH</span>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

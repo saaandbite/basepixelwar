@@ -11,70 +11,14 @@ dotenv.config();
 
 const RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
+
 // Allow overriding GameVault address from env, or fallback to known deployment
 const GAME_VAULT_ADDRESS = process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS as `0x${string}`;
 
+import { GAME_VAULT_ABI, TOURNAMENT_ABI } from '@repo/contracts';
+
 // ABI definition
-// Copied from packages/contracts/src/GameVaultABI.json
-const GAME_VAULT_ABI = [
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "gameId",
-                "type": "uint256"
-            }
-        ],
-        "name": "startGame",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "gameId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "winner",
-                "type": "address"
-            }
-        ],
-        "name": "finalizeGame1vs1",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "gameId",
-                "type": "uint256"
-            }
-        ],
-        "name": "cancelGame",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "backendSigner",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-] as const;
+
 
 export class ContractService {
     private client: any;
@@ -263,7 +207,7 @@ export class ContractService {
             console.log(`[ContractService] Adding score for ${playerAddress} to Tournament ${tournamentAddress}...`);
 
             // Imported ABI
-            const { TOURNAMENT_ABI } = await import('./tournamentAbi.js');
+            // const { TOURNAMENT_ABI } = await import('./tournamentAbi.js');
 
             const tournamentContract = getContract({
                 address: tournamentAddress,
