@@ -489,7 +489,6 @@ export function PvPGamePage() {
                             settlementTxHash={pvp.settlementTxHash}
                             onExit={handleExit}
                             isTournament={isTournament}
-                            weekNumber={weekNumber}
                         />
                     )}
                 </div>

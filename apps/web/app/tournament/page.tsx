@@ -12,6 +12,7 @@ import { io, Socket } from 'socket.io-client';
 
 import { TOURNAMENT_ABI } from '@repo/contracts';
 import PlayerProfileModal from '../components/PlayerProfileModal';
+import { useClaimTrophy } from '../hooks/useClaimTrophy';
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
 
@@ -220,6 +221,25 @@ export default function TournamentPage() {
 
     const truncateWallet = (wallet: string) =>
         `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+
+    // === TROPHY CLAIM LOGIC ===
+    const isTournamentEnded = tournamentStatus?.phase === 'ended';
+    // Determine if I am the winner (Rank 1 in leaderboard)
+    const sortedLeaderboard = [...roomLeaderboard].sort((a, b) => b.score - a.score);
+    const topPlayer = sortedLeaderboard[0];
+    const isRoomWinner = topPlayer && address && topPlayer.wallet.toLowerCase() === address.toLowerCase();
+
+    // Use Claim Hook (only enabled if tournament ended)
+    const {
+        claim,
+        isPending: isClaimPending,
+        isConfirming: isClaimConfirming,
+        isSuccess: isClaimSuccess,
+        hasClaimed,
+        error: claimError
+    } = useClaimTrophy(isTournamentEnded ? weekNum : undefined);
+
+    const canShowClaimButton = isTournamentEnded && isRoomWinner && !hasClaimed;
 
     return (
         <div className="min-h-screen relative flex flex-col font-terminal text-[24px]">
@@ -463,6 +483,52 @@ export default function TournamentPage() {
                                 ) : (
                                     <div className="pixel-btn bg-gray-700 text-gray-400 w-full text-2xl py-6 border-4 border-gray-600 text-center cursor-not-allowed">
                                         ⏳ WAITING FOR TOURNAMENT TO START
+                                    </div>
+                                )}
+
+                                {/* CLAIM TROPHY BUTTON (Only for Winner after Tournament End) */}
+                                {isTournamentEnded && (
+                                    <div className="mt-8">
+                                        {canShowClaimButton ? (
+                                            <div className="animate-bounce-in">
+                                                <div className="text-center mb-4 text-[var(--pixel-yellow)] font-bold text-xl animate-pulse">
+                                                    🏆 CONGRATULATIONS! YOU ARE THE ROOM CHAMPION!
+                                                </div>
+                                                <button
+                                                    onClick={claim}
+                                                    disabled={isClaimPending || isClaimConfirming}
+                                                    className="pixel-btn bg-[var(--pixel-yellow)] text-black w-full text-2xl py-6 border-4 border-white text-center shadow-[0_0_20px_rgba(255,215,0,0.5)] hover:scale-[1.02] transition-transform"
+                                                >
+                                                    {isClaimPending || isClaimConfirming ? (
+                                                        <><Loader2 className="animate-spin inline w-6 h-6 mr-2" /> MINTING TROPHY...</>
+                                                    ) : (
+                                                        "🏆 CLAIM YOUR CHAMPION TROPHY"
+                                                    )}
+                                                </button>
+                                                {claimError && (
+                                                    <p className="text-[var(--pixel-red)] mt-3 text-center font-bold">
+                                                        {claimError.message.slice(0, 60)}...
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : hasClaimed ? (
+                                            <div className="pixel-box bg-[var(--pixel-green)]/20 border-[var(--pixel-green)] text-center py-6">
+                                                <div className="text-[var(--pixel-green)] text-2xl font-retro mb-2 flex items-center justify-center gap-3">
+                                                    <Trophy className="w-8 h-8" /> TROPHY CLAIMED
+                                                </div>
+                                                <p className="text-white">You have secured your legacy for Week #{weekNum}!</p>
+                                            </div>
+                                        ) : isRoomWinner ? (
+                                            // Winner but maybe claim check failed or just checking
+                                            <div className="text-center text-gray-500 py-4">
+                                                Validating victory status...
+                                            </div>
+                                        ) : (
+                                            <div className="pixel-box bg-gray-800 border-gray-600 text-center py-6">
+                                                <p className="text-gray-400 text-xl font-retro">TOURNAMENT ENDED</p>
+                                                <p className="text-gray-500 mt-2">Better luck next week!</p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
