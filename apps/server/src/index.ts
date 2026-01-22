@@ -9,6 +9,7 @@ import path from 'path';
 import os from 'os';
 import { initRedis, closeRedis, isRedisConnected, getLeaderboard } from './redis';
 import { initTigerBeetle, closeTigerBeetle } from './db';
+import { initTournamentScheduler } from './tournamentScheduler';
 
 // Setup timestamped logging
 const originalLog = console.log;
@@ -73,6 +74,10 @@ async function main() {
       console.error('═══════════════════════════════════════════════════════════════');
     }
   });
+
+  // Initialize tournament scheduler for automatic week transitions
+  // This enables players to claim rewards after tournament ends
+  initTournamentScheduler();
 
   const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 
@@ -275,6 +280,102 @@ async function main() {
         res.end(JSON.stringify(status));
       } catch (error: any) {
         console.error('[Server] Tournament status error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
+    // Tournament Sync Endpoint - Recover player data from smart contract
+    if (req.method === 'GET' && req.url && req.url.startsWith('/api/tournament/sync')) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const wallet = url.searchParams.get('wallet');
+      const weekParam = url.searchParams.get('week');
+
+      if (!wallet) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing wallet parameter' }));
+        return;
+      }
+
+      const maskWallet = `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+      console.log(`[Server] Sync Request: Wallet=${maskWallet}, Week=${weekParam || 'auto'}`);
+
+      try {
+        const { contractService } = await import('./contractService.js');
+        const { getRedis } = await import('./redis.js');
+
+        // Get week from param or from smart contract
+        let week: number;
+        if (weekParam) {
+          week = Number(weekParam);
+        } else {
+          const chainWeek = await contractService.getCurrentWeekFromChain();
+          if (!chainWeek) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Could not get current week from chain' }));
+            return;
+          }
+          week = chainWeek;
+        }
+
+        // Read player info from smart contract
+        const playerInfo = await contractService.getPlayerInfoFromChain(wallet, week);
+
+        if (!playerInfo || playerInfo.roomId === 0) {
+          console.log(`[Server] Sync: Player ${maskWallet} not found on-chain for Week ${week}`);
+          res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({
+            error: 'Player not registered on-chain for this week',
+            week,
+            wallet: maskWallet
+          }));
+          return;
+        }
+
+        // Save to Redis
+        const r = getRedis();
+        const TOURNAMENT_PLAYER_KEY = `tournament:player:${wallet.toLowerCase()}`;
+        const location = { week, roomId: playerInfo.roomId };
+        await r.set(TOURNAMENT_PLAYER_KEY, JSON.stringify(location));
+
+        // Also add to room list if not exists
+        const TOURNAMENT_ROOM_KEY = `tournament:${week}:room:${playerInfo.roomId}`;
+        const existingPlayers = await r.lrange(TOURNAMENT_ROOM_KEY, 0, -1);
+        const alreadyInRoom = existingPlayers.some(p => {
+          try {
+            const parsed = JSON.parse(p);
+            return parsed.walletAddress?.toLowerCase() === wallet.toLowerCase();
+          } catch { return false; }
+        });
+
+        if (!alreadyInRoom) {
+          const playerEntry = {
+            walletAddress: wallet.toLowerCase(),
+            joinedAt: Date.now(),
+            txHash: 'synced-from-chain'
+          };
+          await r.rpush(TOURNAMENT_ROOM_KEY, JSON.stringify(playerEntry));
+          console.log(`[Server] Sync: Added ${maskWallet} to Room ${playerInfo.roomId} list`);
+        }
+
+        console.log(`[Server] Sync SUCCESS: ${maskWallet} -> Week ${week} Room ${playerInfo.roomId}`);
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify({
+          success: true,
+          synced: true,
+          week,
+          roomId: playerInfo.roomId,
+          score: playerInfo.score,
+          hasClaimed: playerInfo.hasClaimed
+        }));
+
+      } catch (error: any) {
+        console.error('[Server] Tournament sync error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: error.message }));
       }

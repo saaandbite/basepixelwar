@@ -83,7 +83,7 @@ export default function TournamentPage() {
         return () => clearInterval(interval);
     }, []);
 
-    // Fetch Room Data
+    // Fetch Room Data (with auto-sync from chain if missing)
     const fetchRoomData = useCallback(async () => {
         if (!address || weekNum === 0) return;
 
@@ -104,7 +104,33 @@ export default function TournamentPage() {
                     setRoomLeaderboard(initialLeaderboard);
                 }
             } else {
-                setJoinedRoomId(0);
+                // AUTO-SYNC: Try to recover data from smart contract
+                console.log('[Tournament] Data not in Redis, attempting sync from chain...');
+                const syncRes = await fetch(`${SERVER_URL}/api/tournament/sync?wallet=${address}&week=${weekNum}`);
+
+                if (syncRes.ok) {
+                    const syncData = await syncRes.json();
+                    if (syncData.success && syncData.roomId > 0) {
+                        console.log(`[Tournament] Sync successful! Room: ${syncData.roomId}`);
+                        setJoinedRoomId(syncData.roomId);
+                        // Fetch room players after sync
+                        const playersRes = await fetch(`${SERVER_URL}/api/tournament/room?wallet=${address}`);
+                        if (playersRes.ok) {
+                            const playersData = await playersRes.json();
+                            if (playersData.players) {
+                                const leaderboard = playersData.players.map((p: any) => ({
+                                    wallet: p.walletAddress,
+                                    score: 0
+                                }));
+                                setRoomLeaderboard(leaderboard);
+                            }
+                        }
+                    } else {
+                        setJoinedRoomId(0);
+                    }
+                } else {
+                    setJoinedRoomId(0);
+                }
             }
         } catch (err) {
             console.error("Failed to fetch room data:", err);
@@ -224,10 +250,14 @@ export default function TournamentPage() {
 
     // === TROPHY CLAIM LOGIC ===
     const isTournamentEnded = tournamentStatus?.phase === 'ended';
-    // Determine if I am the winner (Rank 1 in leaderboard)
+
+    // Determine player's rank in the room leaderboard
     const sortedLeaderboard = [...roomLeaderboard].sort((a, b) => b.score - a.score);
-    const topPlayer = sortedLeaderboard[0];
-    const isRoomWinner = topPlayer && address && topPlayer.wallet.toLowerCase() === address.toLowerCase();
+    const myRank = address
+        ? sortedLeaderboard.findIndex(p => p.wallet.toLowerCase() === address.toLowerCase()) + 1
+        : 0;
+    const isTop3 = myRank >= 1 && myRank <= 3;
+    const isRoomWinner = myRank === 1;
 
     // Use Claim Hook (only enabled if tournament ended)
     const {
@@ -239,7 +269,8 @@ export default function TournamentPage() {
         error: claimError
     } = useClaimTrophy(isTournamentEnded ? weekNum : undefined);
 
-    const canShowClaimButton = isTournamentEnded && isRoomWinner && !hasClaimed;
+    // Show claim button for top 3 players (1st = NFT, 2nd/3rd = ETH)
+    const canShowClaimButton = isTournamentEnded && isTop3 && !hasClaimed;
 
     return (
         <div className="min-h-screen relative flex flex-col font-terminal text-[24px]">
@@ -492,7 +523,9 @@ export default function TournamentPage() {
                                         {canShowClaimButton ? (
                                             <div className="animate-bounce-in">
                                                 <div className="text-center mb-4 text-[var(--pixel-yellow)] font-bold text-xl animate-pulse">
-                                                    🏆 CONGRATULATIONS! YOU ARE THE ROOM CHAMPION!
+                                                    {myRank === 1 && '🏆 CONGRATULATIONS! YOU ARE THE ROOM CHAMPION!'}
+                                                    {myRank === 2 && '🥈 CONGRATULATIONS! YOU PLACED 2ND!'}
+                                                    {myRank === 3 && '🥉 CONGRATULATIONS! YOU PLACED 3RD!'}
                                                 </div>
                                                 <button
                                                     onClick={claim}
@@ -502,7 +535,9 @@ export default function TournamentPage() {
                                                     {isClaimPending || isClaimConfirming ? (
                                                         <><Loader2 className="animate-spin inline w-6 h-6 mr-2" /> MINTING TROPHY...</>
                                                     ) : (
-                                                        "🏆 CLAIM YOUR CHAMPION TROPHY"
+                                                        myRank === 1
+                                                            ? "🏆 CLAIM YOUR CHAMPION TROPHY"
+                                                            : `💰 CLAIM YOUR ${myRank === 2 ? '2ND' : '3RD'} PLACE PRIZE`
                                                     )}
                                                 </button>
                                                 {claimError && (

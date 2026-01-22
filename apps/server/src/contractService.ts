@@ -223,6 +223,126 @@ export class ContractService {
             return null;
         }
     }
+
+    /**
+     * Start a new week in the Tournament contract
+     * This increments currentWeek, allowing players from the previous week to claim rewards
+     * IMPORTANT: This function requires the backend wallet to be the owner of the Tournament contract
+     */
+    async startNewWeek(): Promise<string | null> {
+        if (!this.isConfigured) {
+            console.error('[ContractService] Cannot start new week: ContractService not configured');
+            return null;
+        }
+
+        if (!process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS) {
+            console.log('[ContractService] Tournament Address not set. Cannot start new week.');
+            return null;
+        }
+
+        try {
+            const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+            console.log(`[ContractService] Starting new week on Tournament contract ${tournamentAddress}...`);
+
+            const tournamentContract = getContract({
+                address: tournamentAddress,
+                abi: TOURNAMENT_ABI,
+                client: this.client
+            }) as any;
+
+            const hash = await tournamentContract.write.startNewWeek();
+            console.log(`[ContractService] startNewWeek tx sent: ${hash}`);
+
+            // Wait for confirmation
+            const result = await this.waitForTransaction(hash);
+            if (!result.success) {
+                console.error(`[ContractService] startNewWeek FAILED: ${result.error}`);
+                return null;
+            }
+
+            console.log(`[ContractService] ✅ New week started successfully!`);
+            return hash;
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to start new week:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
+
+    /**
+     * Sync player data from smart contract to recover missing Redis data
+     * Reads playerInfo(week, address) from the Tournament contract
+     */
+    async getPlayerInfoFromChain(playerAddress: string, week: number): Promise<{
+        score: number;
+        roomId: number;
+        hasClaimed: boolean;
+    } | null> {
+        if (!this.isConfigured) {
+            console.error('[ContractService] Cannot get player info: ContractService not configured');
+            return null;
+        }
+
+        if (!process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS) {
+            console.log('[ContractService] Tournament Address not set.');
+            return null;
+        }
+
+        try {
+            const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+
+            const tournamentContract = getContract({
+                address: tournamentAddress,
+                abi: TOURNAMENT_ABI,
+                client: this.client
+            }) as any;
+
+            const result = await tournamentContract.read.playerInfo([
+                BigInt(week),
+                playerAddress as `0x${string}`
+            ]);
+
+            // result is a tuple: [score, roomId, hasClaimed]
+            const score = Number(result[0]);
+            const roomId = Number(result[1]);
+            const hasClaimed = Boolean(result[2]);
+
+            console.log(`[ContractService] Player ${playerAddress.slice(0, 8)}... Week ${week}: Score=${score}, Room=${roomId}, Claimed=${hasClaimed}`);
+
+            return { score, roomId, hasClaimed };
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to get player info:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
+
+    /**
+     * Get current week from smart contract
+     */
+    async getCurrentWeekFromChain(): Promise<number | null> {
+        if (!this.isConfigured) {
+            return null;
+        }
+
+        if (!process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS) {
+            return null;
+        }
+
+        try {
+            const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+
+            const tournamentContract = getContract({
+                address: tournamentAddress,
+                abi: TOURNAMENT_ABI,
+                client: this.client
+            }) as any;
+
+            const week = await tournamentContract.read.currentWeek();
+            return Number(week);
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to get current week:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
 }
 
 export const contractService = new ContractService();
