@@ -5,7 +5,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { parseEther, formatEther } from 'viem';
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Address, Avatar, Name, Identity, EthBalance } from '@coinbase/onchainkit/identity';
-import { Loader2, Trophy, Users, ArrowLeft, Crown } from 'lucide-react';
+import { Loader2, Trophy, Users, ArrowLeft, Crown, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
@@ -300,6 +300,16 @@ export default function TournamentPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {/* Profile Button - Opens ProfileModal with claim functionality */}
+                        {isConnected && address && (
+                            <button
+                                onClick={() => setSelectedWallet(address)}
+                                className="p-2 bg-[var(--pixel-card-bg)] border-2 border-[var(--pixel-fg)] hover:border-[var(--pixel-yellow)] hover:bg-[var(--pixel-yellow)]/20 rounded-lg transition-colors"
+                                title="My Profile"
+                            >
+                                <User className="w-5 h-5" />
+                            </button>
+                        )}
                         <Wallet>
                             <ConnectWallet className="!font-terminal !text-base !h-10 !min-h-0 !bg-[var(--pixel-red)] !text-white !border-0 hover:!bg-white hover:!text-black">
                                 <Avatar className="h-6 w-6" />

@@ -1192,6 +1192,11 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
                     // If won, also update tournament lifetime wins
                     if (winner === p1Team) {
                         await Redis.updateTournamentStats('wins', player1Wallet, 1);
+                        // CRITICAL: Update contract score for claim eligibility
+                        console.log(`[Tournament] Syncing score to contract for ${player1Wallet.slice(0, 8)}...`);
+                        contractService.addTournamentScore(player1Wallet).catch((e: Error) => {
+                            console.error(`[Tournament] Contract score update failed for P1:`, e);
+                        });
                     }
 
                     // Broadcast leaderboard update to tournament lobby
@@ -1236,6 +1241,11 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
                     // If won, also update tournament lifetime wins
                     if (winner === p2Team) {
                         await Redis.updateTournamentStats('wins', player2Wallet, 1);
+                        // CRITICAL: Update contract score for claim eligibility
+                        console.log(`[Tournament] Syncing score to contract for ${player2Wallet.slice(0, 8)}...`);
+                        contractService.addTournamentScore(player2Wallet).catch((e: Error) => {
+                            console.error(`[Tournament] Contract score update failed for P2:`, e);
+                        });
                     }
 
                     // Broadcast leaderboard update to tournament lobby
