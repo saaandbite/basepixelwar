@@ -269,6 +269,67 @@ export class ContractService {
     }
 
     /**
+     * Batch update player scores on-chain when tournament ends
+     * @param players Array of player wallet addresses
+     * @param scores Array of score values (must match players array length)
+     */
+    async setPlayerScoreBatch(players: string[], scores: number[]): Promise<string | null> {
+        if (!this.isConfigured) {
+            console.error('[ContractService] Cannot set scores: ContractService not configured');
+            return null;
+        }
+
+        if (!process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS) {
+            console.log('[ContractService] Tournament Address not set.');
+            return null;
+        }
+
+        if (players.length !== scores.length) {
+            console.error('[ContractService] Players and scores arrays must have same length');
+            return null;
+        }
+
+        if (players.length === 0) {
+            console.log('[ContractService] No players to update scores for');
+            return null;
+        }
+
+        try {
+            const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+            console.log(`[ContractService] ========================================`);
+            console.log(`[ContractService] Setting scores for ${players.length} players on Tournament contract...`);
+            console.log(`[ContractService] ========================================`);
+
+            const tournamentContract = getContract({
+                address: tournamentAddress,
+                abi: TOURNAMENT_ABI,
+                client: this.client
+            }) as any;
+
+            // Convert addresses and scores to proper format
+            const playerAddresses = players.map(p => p as `0x${string}`);
+            const scoresBigInt = scores.map(s => BigInt(s));
+
+            const hash = await tournamentContract.write.setPlayerScoreBatch([playerAddresses, scoresBigInt]);
+            console.log(`[ContractService] setPlayerScoreBatch tx sent: ${hash}`);
+
+            // Wait for confirmation
+            const result = await this.waitForTransaction(hash);
+
+            if (!result.success) {
+                console.error(`[ContractService] setPlayerScoreBatch tx failed: ${result.error}`);
+                return null;
+            }
+
+            console.log(`[ContractService] ✅ Scores updated for ${players.length} players!`);
+            return hash;
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to set player scores:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
+
+    /**
      * Sync player data from smart contract to recover missing Redis data
      * Reads playerInfo(week, address) from the Tournament contract
      */
