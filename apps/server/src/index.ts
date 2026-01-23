@@ -267,6 +267,52 @@ async function main() {
       return;
     }
 
+    // Tournament Rooms List Endpoint - Get all rooms for a week
+    if (req.method === 'GET' && req.url && req.url.startsWith('/api/tournament/rooms')) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const weekParam = url.searchParams.get('week');
+
+      try {
+        const { getTournamentStatus } = await import('./tournamentConfig.js');
+        const { getRedis } = await import('./redis.js');
+        const r = getRedis();
+
+        // Use week from param or from current tournament
+        const week = weekParam ? Number(weekParam) : getTournamentStatus().week;
+
+        // Get total player count for the week
+        const playerCountKey = `tournament:${week}:player_count`;
+        const totalPlayers = Number(await r.get(playerCountKey) || 0);
+        const totalRooms = totalPlayers > 0 ? Math.ceil(totalPlayers / 10) : 0;
+
+        // Build room list with player counts
+        const rooms: { roomId: number; playerCount: number }[] = [];
+        for (let roomId = 1; roomId <= totalRooms; roomId++) {
+          const roomKey = `tournament:${week}:room:${roomId}`;
+          const playerCount = await r.llen(roomKey);
+          rooms.push({ roomId, playerCount });
+        }
+
+        console.log(`[Server] Tournament Rooms: Week ${week}, ${totalRooms} rooms, ${totalPlayers} players`);
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify({
+          week,
+          totalPlayers,
+          totalRooms,
+          rooms
+        }));
+      } catch (error: any) {
+        console.error('[Server] Tournament rooms error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
     // Tournament Status Endpoint
     if (req.method === 'GET' && req.url === '/api/tournament/status') {
       try {
