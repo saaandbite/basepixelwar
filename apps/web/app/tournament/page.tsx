@@ -32,15 +32,15 @@ export default function TournamentPage() {
     const { address, isConnected } = useAccount();
     const router = useRouter();
 
-    // Contract Reads
-    const { data: currentWeek } = useReadContract({
+    // Contract Reads - used for claiming (needs on-chain week for claimReward validation)
+    const { data: onChainWeek } = useReadContract({
         address: TOURNAMENT_ADDRESS,
         abi: TOURNAMENT_ABI,
         functionName: 'currentWeek',
         query: { refetchInterval: 10000 }
     });
 
-    const weekNum = currentWeek ? Number(currentWeek as any) : 0;
+    const onChainWeekNum = onChainWeek ? Number(onChainWeek as any) : 0;
 
     // Local State
     const [joinedRoomId, setJoinedRoomId] = useState<number>(0);
@@ -58,6 +58,10 @@ export default function TournamentPage() {
         nextPhaseName: string;
         week: number;
     } | null>(null);
+
+    // Use server's tournament week for display and room data (stays consistent even after startNewWeek)
+    // On-chain week is only needed for claim validation (weekNumber < currentWeek on-chain)
+    const tournamentWeek = tournamentStatus?.week ?? 0;
 
     const isJoined = joinedRoomId > 0;
     const isRegistrationOpen = tournamentStatus?.phase === 'registration';
@@ -85,7 +89,7 @@ export default function TournamentPage() {
 
     // Fetch Room Data (with auto-sync from chain if missing)
     const fetchRoomData = useCallback(async () => {
-        if (!address || weekNum === 0) return;
+        if (!address || tournamentWeek === 0) return;
 
         try {
             const SERVER_URL = getServerUrl();
@@ -93,8 +97,8 @@ export default function TournamentPage() {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
             const data = await res.json();
-            // Critical Fix: Only consider joined if the server record matches the CURRENT week
-            if (data.location && data.location.week === weekNum) {
+            // Use server's tournamentWeek for consistency (not on-chain week which increments after tournament ends)
+            if (data.location && data.location.week === tournamentWeek) {
                 setJoinedRoomId(data.location.roomId);
                 if (data.players) {
                     const initialLeaderboard = data.players.map((p: any) => ({
@@ -104,9 +108,9 @@ export default function TournamentPage() {
                     setRoomLeaderboard(initialLeaderboard);
                 }
             } else {
-                // AUTO-SYNC: Try to recover data from smart contract
-                console.log('[Tournament] Data not in Redis, attempting sync from chain...');
-                const syncRes = await fetch(`${SERVER_URL}/api/tournament/sync?wallet=${address}&week=${weekNum}`);
+                // AUTO-SYNC: Try to recover data from smart contract (use server week)
+                console.log(`[Tournament] Data not in Redis for week ${tournamentWeek}, attempting sync from chain...`);
+                const syncRes = await fetch(`${SERVER_URL}/api/tournament/sync?wallet=${address}&week=${tournamentWeek}`);
 
                 if (syncRes.ok) {
                     const syncData = await syncRes.json();
@@ -135,17 +139,17 @@ export default function TournamentPage() {
         } catch (err) {
             console.error("Failed to fetch room data:", err);
         }
-    }, [address, weekNum]);
+    }, [address, tournamentWeek]);
 
     useEffect(() => {
-        if (address && weekNum > 0) {
+        if (address && tournamentWeek > 0) {
             fetchRoomData();
         }
-    }, [address, weekNum, fetchRoomData]);
+    }, [address, tournamentWeek, fetchRoomData]);
 
     // Socket Connection
     useEffect(() => {
-        if (!isJoined || !address || !joinedRoomId || !weekNum) return;
+        if (!isJoined || !address || !joinedRoomId || !tournamentWeek) return;
 
         const socket = io(getServerUrl(), {
             transports: ['websocket', 'polling'],
@@ -156,7 +160,7 @@ export default function TournamentPage() {
 
         socket.on('connect', () => {
             socket.emit('join_tournament_lobby', {
-                week: weekNum,
+                week: tournamentWeek,
                 roomId: joinedRoomId.toString(),
                 walletAddress: address
             });
@@ -204,7 +208,7 @@ export default function TournamentPage() {
         return () => {
             socket.disconnect();
         };
-    }, [isJoined, address, joinedRoomId, weekNum, router]);
+    }, [isJoined, address, joinedRoomId, tournamentWeek, router]);
 
 
 
@@ -222,7 +226,7 @@ export default function TournamentPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             walletAddress: address,
-                            week: weekNum,
+                            week: tournamentWeek,
                             txHash: hash
                         })
                     });
@@ -233,7 +237,7 @@ export default function TournamentPage() {
             };
             notifyBackend();
         }
-    }, [isConfirmed, hash, address, weekNum, fetchRoomData]);
+    }, [isConfirmed, hash, address, tournamentWeek, fetchRoomData]);
 
     const handleJoin = () => {
         if (!TOURNAMENT_ADDRESS) return alert('Tournament Contract Address missing!');
@@ -267,7 +271,9 @@ export default function TournamentPage() {
         isSuccess: isClaimSuccess,
         hasClaimed,
         error: claimError
-    } = useClaimTrophy(isTournamentEnded ? weekNum : undefined);
+        // For claiming, we need the PREVIOUS week number since on-chain week has been incremented
+        // claimReward requires weekNumber < currentWeek, so we use (onChainWeekNum - 1) which equals tournamentWeek
+    } = useClaimTrophy(isTournamentEnded ? tournamentWeek : undefined);
 
     // Show claim button for top 3 players (1st = NFT, 2nd/3rd = ETH)
     const canShowClaimButton = isTournamentEnded && isTop3 && !hasClaimed;
@@ -295,7 +301,7 @@ export default function TournamentPage() {
                             <span className="hidden sm:inline text-lg">TOURNAMENT</span>
                         </div>
                         <div className="pixel-badge bg-[var(--pixel-card-bg)] text-[var(--pixel-red)] text-base border-2 border-[var(--pixel-red)]">
-                            WEEK #{weekNum}
+                            WEEK #{tournamentWeek}
                         </div>
                     </div>
 
@@ -511,7 +517,7 @@ export default function TournamentPage() {
                                     <button
                                         onClick={() => {
                                             sessionStorage.setItem('is_tournament', 'true');
-                                            sessionStorage.setItem('tournament_week', weekNum.toString());
+                                            sessionStorage.setItem('tournament_week', tournamentWeek.toString());
                                             router.push('/room');
                                         }}
                                         className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black text-center block animate-pulse"
@@ -558,7 +564,7 @@ export default function TournamentPage() {
                                                 <div className="text-[var(--pixel-green)] text-2xl font-retro mb-2 flex items-center justify-center gap-3">
                                                     <Trophy className="w-8 h-8" /> TROPHY CLAIMED
                                                 </div>
-                                                <p className="text-white">You have secured your legacy for Week #{weekNum}!</p>
+                                                <p className="text-white">You have secured your legacy for Week #{tournamentWeek}!</p>
                                             </div>
                                         ) : isRoomWinner ? (
                                             // Winner but maybe claim check failed or just checking

@@ -18,11 +18,15 @@ let lastKnownPhase: TournamentPhase | null = null;
 // Mutex to prevent concurrent calls
 let isTransitioning = false;
 
+// Track if scores have been synced for the current tournament week
+let scoresSyncedForWeek: number | null = null;
+
 /**
  * Sync all tournament scores from Redis to smart contract
  * Collects scores from all rooms and submits in batches
+ * PUBLIC: Can be called manually via API endpoint
  */
-async function syncAllScoresToChain(week: number): Promise<void> {
+export async function syncAllScoresToChain(week: number): Promise<boolean> {
     try {
         const r = getRedis();
 
@@ -31,13 +35,25 @@ async function syncAllScoresToChain(week: number): Promise<void> {
         const playerCountStr = await r.get(playerCountKey);
         const playerCount = playerCountStr ? parseInt(playerCountStr) : 0;
 
+        console.log(`[TournamentScheduler] Debugging Score Sync: Week=${week} PlayerCount=${playerCount}`);
+
         if (playerCount === 0) {
-            console.log(`[TournamentScheduler] No players found for Week ${week}`);
-            return;
+            console.log(`[TournamentScheduler] No players joined tournament Week ${week} (Redis key: ${playerCountKey} is empty/0)`);
+            
+            // EMERGENCY FALLBACK: Check leaderboard directly if counter is broken
+            console.log(`[TournamentScheduler] ⚠️ Checking room leaderboards directly as fallback...`);
+            const leaderboard = await getTournamentLeaderboard(week, "1"); // Try room 1
+            if (leaderboard.length > 0) {
+                console.log(`[TournamentScheduler] ⚠️ Fallback found ${leaderboard.length} players in Room 1! Proceeding with sync.`);
+                // Force proceed with at least 1 room
+            } else {
+                return false;
+            }
         }
 
         const PLAYERS_PER_ROOM = 10;
-        const totalRooms = Math.ceil(playerCount / PLAYERS_PER_ROOM);
+        // Use max(1, ...) to ensure we at least check Room 1 if playerCount fallback logic is used
+        const totalRooms = Math.max(1, Math.ceil(playerCount / PLAYERS_PER_ROOM));
 
         console.log(`[TournamentScheduler] Found ${playerCount} players in ${totalRooms} rooms`);
 
@@ -46,6 +62,7 @@ async function syncAllScoresToChain(week: number): Promise<void> {
         const allScores: number[] = [];
 
         for (let roomId = 1; roomId <= totalRooms; roomId++) {
+            // FIX: Always use string-based lookup for reliability
             const leaderboard = await getTournamentLeaderboard(week, roomId.toString());
 
             if (leaderboard.length > 0) {
@@ -55,18 +72,25 @@ async function syncAllScoresToChain(week: number): Promise<void> {
                     allPlayers.push(entry.wallet);
                     allScores.push(entry.score);
                 }
+            } else {
+                 console.log(`[TournamentScheduler] Room ${roomId} is empty or no scores recorded.`);
             }
         }
 
         if (allPlayers.length === 0) {
             console.log(`[TournamentScheduler] No scores to sync`);
-            return;
+            // WARNING: returning false here might be correct if no one played, 
+            // but we should still proceed to start new week. 
+            // In the current logic, checkAndTransition proceeds regardless of this return value for step 2.
+            return false;
         }
 
         console.log(`[TournamentScheduler] Syncing ${allPlayers.length} players' scores to chain...`);
 
         // Send in batches of 100 (contract limit)
         const BATCH_SIZE = 100;
+        let allSuccess = true;
+
         for (let i = 0; i < allPlayers.length; i += BATCH_SIZE) {
             const batchPlayers = allPlayers.slice(i, i + BATCH_SIZE);
             const batchScores = allScores.slice(i, i + BATCH_SIZE);
@@ -79,14 +103,20 @@ async function syncAllScoresToChain(week: number): Promise<void> {
                 console.log(`[TournamentScheduler] Batch synced! TX: ${txHash}`);
             } else {
                 console.error(`[TournamentScheduler] Batch sync failed!`);
+                allSuccess = false;
             }
         }
 
-        console.log(`[TournamentScheduler] ✅ All scores synced to chain!`);
+        if (allSuccess) {
+            console.log(`[TournamentScheduler] ✅ All scores synced to chain!`);
+            scoresSyncedForWeek = week;
+            return true;
+        }
+        return false;
 
     } catch (error) {
         console.error(`[TournamentScheduler] Error syncing scores to chain:`, error);
-        throw error;
+        return false;
     }
 }
 
@@ -94,7 +124,7 @@ async function syncAllScoresToChain(week: number): Promise<void> {
  * Initialize the tournament scheduler
  * Checks every 5 seconds if the tournament has ended and triggers week transition
  */
-export function initTournamentScheduler(): void {
+export async function initTournamentScheduler(): Promise<void> {
     console.log('[TournamentScheduler] ========================================');
     console.log('[TournamentScheduler] Tournament Scheduler Initialized');
     console.log('[TournamentScheduler] ========================================');
@@ -102,10 +132,26 @@ export function initTournamentScheduler(): void {
     // Initial status check
     const status = getTournamentStatus();
     console.log(`[TournamentScheduler] Current Phase: ${status.phase}`);
-    console.log(`[TournamentScheduler] Current Week: ${status.week}`);
+    console.log(`[TournamentScheduler] Config Week: ${status.week}`);
     console.log(`[TournamentScheduler] Next: ${status.nextPhaseName} in ${status.countdown}s`);
 
     lastKnownPhase = status.phase;
+
+    // Check on-chain week to determine if transition already happened
+    // This prevents duplicate startNewWeek() calls after server restart
+    try {
+        const onChainWeek = await contractService.getCurrentWeekFromChain();
+        console.log(`[TournamentScheduler] On-chain Week: ${onChainWeek}`);
+
+        if (onChainWeek !== null && onChainWeek > status.week) {
+            // On-chain week is already ahead - transition was done in a previous run
+            console.log(`[TournamentScheduler] On-chain week (${onChainWeek}) > config week (${status.week})`);
+            console.log(`[TournamentScheduler] Setting weekTransitionDone = true (already transitioned)`);
+            weekTransitionDone = true;
+        }
+    } catch (error) {
+        console.error('[TournamentScheduler] Failed to check on-chain week:', error);
+    }
 
     // Check every 5 seconds
     setInterval(async () => {

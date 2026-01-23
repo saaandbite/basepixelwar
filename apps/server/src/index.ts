@@ -77,7 +77,7 @@ async function main() {
 
   // Initialize tournament scheduler for automatic week transitions
   // This enables players to claim rewards after tournament ends
-  initTournamentScheduler();
+  await initTournamentScheduler();
 
   const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 
@@ -376,6 +376,42 @@ async function main() {
 
       } catch (error: any) {
         console.error('[Server] Tournament sync error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
+    // Manual Score Sync Endpoint - Force sync tournament scores to blockchain
+    // POST /api/tournament/force-sync?week=1
+    if (req.method === 'POST' && req.url && req.url.startsWith('/api/tournament/force-sync')) {
+      const urlObj = new URL(req.url, `http://${req.headers.host}`);
+      const weekParam = urlObj.searchParams.get('week');
+
+      if (!weekParam) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing week parameter' }));
+        return;
+      }
+
+      const week = Number(weekParam);
+      console.log(`[Server] Manual score sync requested for Week ${week}`);
+
+      try {
+        const { syncAllScoresToChain } = await import('./tournamentScheduler.js');
+        const success = await syncAllScoresToChain(week);
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify({
+          success,
+          week,
+          message: success ? 'Scores synced to blockchain successfully!' : 'No scores to sync or sync failed'
+        }));
+      } catch (error: any) {
+        console.error('[Server] Force sync error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: error.message }));
       }

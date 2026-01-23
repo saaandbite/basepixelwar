@@ -1,4 +1,3 @@
-
 import { createWalletClient, http, publicActions, getContract, Hash } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, baseSepolia } from 'viem/chains';
@@ -242,6 +241,9 @@ export class ContractService {
 
         try {
             const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+            const currentWeekOnChain = await this.getCurrentWeekFromChain(); // Added log
+            console.log(`[ContractService] Starting new week. Current Chain Week: ${currentWeekOnChain}`); // Added log
+
             console.log(`[ContractService] Starting new week on Tournament contract ${tournamentAddress}...`);
 
             const tournamentContract = getContract({
@@ -296,9 +298,14 @@ export class ContractService {
 
         try {
             const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+            
+            // Add current on-chain week check for debugging
+            const currentChainWeek = await this.getCurrentWeekFromChain();
+            
             console.log(`[ContractService] ========================================`);
             console.log(`[ContractService] Setting scores for ${players.length} players on Tournament contract...`);
-            console.log(`[ContractService] ========================================`);
+            console.log(`[ContractService] Debug: Chain Week=${currentChainWeek}`);
+            console.log(`[ContractService] Debug: First few scores: ${scores.slice(0, 5).join(', ')}...`); 
 
             const tournamentContract = getContract({
                 address: tournamentAddress,
