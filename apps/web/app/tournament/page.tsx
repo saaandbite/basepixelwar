@@ -394,7 +394,14 @@ export default function TournamentPage() {
                                         <><Loader2 className="animate-spin inline w-6 h-6" /> PROCESSING TX...</>
                                     ) : !isRegistrationOpen ? (
                                         tournamentStatus?.phase === 'point_collection'
-                                            ? "⚔️ TOURNAMENT IN PROGRESS"
+                                            ? (
+                                                <div
+                                                    onClick={() => setJoinedRoomId(1)}
+                                                    className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-colors"
+                                                >
+                                                    👀 ENTER ROOM (SPECTATOR)
+                                                </div>
+                                            )
                                             : "🔒 REGISTRATION CLOSED"
                                     ) : (
                                         "JOIN TOURNAMENT"
