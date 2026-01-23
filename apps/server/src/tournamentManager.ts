@@ -45,9 +45,7 @@ export async function joinTournament(
     const wallet = walletAddress.toLowerCase();
     const mask = `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
 
-    console.log(`\n========================================`);
     console.log(`[Tournament] PAYMENT PROCESSING - ${mask}`);
-    console.log(`========================================`);
     console.log(`[Tournament] Week: ${week}, TxHash: ${txHash.slice(0, 10)}...`);
 
     // 0. TIME PHASE CHECK - Registration must be open
@@ -86,7 +84,6 @@ export async function joinTournament(
         // If joined this week, return existing info
         if (data.week === week) {
             console.log(`[Tournament] DUPLICATE: ${mask} already in Week ${week}, Room ${data.roomId}`);
-            console.log(`========================================\n`);
             return { roomId: data.roomId, isNew: false };
         }
     }
@@ -130,7 +127,6 @@ export async function joinTournament(
     });
 
     console.log(`[Tournament] PAYMENT SUCCESS: ${mask} joined Week ${week}, Room ${roomId}`);
-    console.log(`========================================\n`);
 
     return { roomId, isNew: true };
 }

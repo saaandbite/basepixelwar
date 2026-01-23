@@ -74,9 +74,9 @@ async function main() {
     console.log(`Current Allowed Minter: ${currentAllowed}`);
 
     if (currentAllowed.toLowerCase() === TOURNAMENT_ADDRESS.toLowerCase()) {
-        console.log('✅ Permissions are ALREADY CORRECT. No action needed.');
+        console.log('Permissions are ALREADY CORRECT. No action needed.');
     } else {
-        console.log('⚠️  Permissions MISMATCH. Fixing now...');
+        console.log('Permissions MISMATCH. Fixing now...');
         try {
             const hash = await trophy.write.setTournamentContract([TOURNAMENT_ADDRESS]);
             console.log(`Transaction sent: ${hash}`);
@@ -85,9 +85,9 @@ async function main() {
             const receipt = await client.waitForTransactionReceipt({ hash });
             
             if (receipt.status === 'success') {
-                console.log('✅ SUCCESS! Permissions updated.');
+                console.log('SUCCESS! Permissions updated.');
             } else {
-                console.error('❌ FAILED. Transaction reverted.');
+                console.error('FAILED. Transaction reverted.');
             }
         } catch (error: any) {
             console.error('Error sending transaction:', error.message || error);

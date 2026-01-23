@@ -41,10 +41,10 @@ export async function syncAllScoresToChain(week: number): Promise<boolean> {
             console.log(`[TournamentScheduler] No players joined tournament Week ${week} (Redis key: ${playerCountKey} is empty/0)`);
             
             // EMERGENCY FALLBACK: Check leaderboard directly if counter is broken
-            console.log(`[TournamentScheduler] ⚠️ Checking room leaderboards directly as fallback...`);
+            console.log(`[TournamentScheduler] Checking room leaderboards directly as fallback...`);
             const leaderboard = await getTournamentLeaderboard(week, "1"); // Try room 1
             if (leaderboard.length > 0) {
-                console.log(`[TournamentScheduler] ⚠️ Fallback found ${leaderboard.length} players in Room 1! Proceeding with sync.`);
+                console.log(`[TournamentScheduler] Fallback found ${leaderboard.length} players in Room 1! Proceeding with sync.`);
                 // Force proceed with at least 1 room
             } else {
                 return false;
@@ -108,7 +108,7 @@ export async function syncAllScoresToChain(week: number): Promise<boolean> {
         }
 
         if (allSuccess) {
-            console.log(`[TournamentScheduler] ✅ All scores synced to chain!`);
+            console.log(`[TournamentScheduler] All scores synced to chain!`);
             scoresSyncedForWeek = week;
             return true;
         }
@@ -125,9 +125,7 @@ export async function syncAllScoresToChain(week: number): Promise<boolean> {
  * Checks every 5 seconds if the tournament has ended and triggers week transition
  */
 export async function initTournamentScheduler(): Promise<void> {
-    console.log('[TournamentScheduler] ========================================');
     console.log('[TournamentScheduler] Tournament Scheduler Initialized');
-    console.log('[TournamentScheduler] ========================================');
 
     // Initial status check
     const status = getTournamentStatus();
@@ -176,9 +174,7 @@ async function checkAndTransition(): Promise<void> {
         // MUTEX: Set flag BEFORE calling smart contract to prevent race condition
         isTransitioning = true;
 
-        console.log('[TournamentScheduler] ========================================');
-        console.log('[TournamentScheduler] 🏁 TOURNAMENT ENDED! Starting finalization...');
-        console.log('[TournamentScheduler] ========================================');
+        console.log('[TournamentScheduler] TOURNAMENT ENDED! Starting finalization...');
 
         try {
             const status = getTournamentStatus();
@@ -193,12 +189,12 @@ async function checkAndTransition(): Promise<void> {
             const txHash = await contractService.startNewWeek();
 
             if (txHash) {
-                console.log(`[TournamentScheduler] ✅ Week transition successful!`);
+                console.log(`[TournamentScheduler] Week transition successful!`);
                 console.log(`[TournamentScheduler] TX Hash: ${txHash}`);
                 console.log(`[TournamentScheduler] Players can now claim rewards from Week ${week}.`);
                 weekTransitionDone = true;
             } else {
-                console.error('[TournamentScheduler] ❌ Week transition failed!');
+                console.error('[TournamentScheduler] Week transition failed!');
                 console.error('[TournamentScheduler] Possible causes:');
                 console.error('  - Backend wallet is not the owner of Tournament contract');
                 console.error('  - Tournament contract address is not set');
