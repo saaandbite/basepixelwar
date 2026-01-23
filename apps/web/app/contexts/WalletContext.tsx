@@ -52,13 +52,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     // Derived state
     const chainId = chain?.id ?? null;
     const error = null; // Wagmi handles errors differently, we'll handle inline
-    
+
     // Log current connector for debugging
-    console.log('[Wallet] Current state:', { 
-        isConnected, 
-        connector: connector?.id, 
+    console.log('[Wallet] Current state:', {
+        isConnected,
+        connector: connector?.id,
         connectorName: connector?.name,
-        chainId 
+        chainId
     });
 
     // Connect wallet - auto-detect best connector
@@ -66,33 +66,33 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         try {
             // Check if we're in a wallet's in-app browser (MetaMask, Coinbase, etc.)
             const ethereum = typeof window !== 'undefined' ? (window as any).ethereum : null;
-            
+
             let selectedConnector = connectors[0]; // Default fallback
-            
+
             // Check if we're on mobile
             const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            
-            console.log('[Wallet] Detecting environment:', { 
-                isMobile, 
+
+            console.log('[Wallet] Detecting environment:', {
+                isMobile,
                 hasEthereum: !!ethereum,
                 connectors: connectors.map(c => ({ id: c.id, name: c.name }))
             });
-            
+
             if (ethereum) {
                 // Detect which wallet we're in
                 const isMetaMask = ethereum.isMetaMask && !ethereum.isCoinbaseWallet;
                 const isCoinbaseWallet = ethereum.isCoinbaseWallet;
-                
+
                 console.log('[Wallet] In-app browser detected:', { isMetaMask, isCoinbaseWallet });
-                
+
                 if (isMetaMask) {
                     // Find MetaMask or injected connector
-                    selectedConnector = connectors.find(c => 
+                    selectedConnector = connectors.find(c =>
                         c.id === 'metaMask' || c.id === 'injected'
                     ) || connectors[0];
                 } else if (isCoinbaseWallet) {
                     // Find Coinbase Wallet connector
-                    selectedConnector = connectors.find(c => 
+                    selectedConnector = connectors.find(c =>
                         c.id === 'coinbaseWalletSDK' || c.name.toLowerCase().includes('coinbase')
                     ) || connectors[0];
                 } else {
@@ -109,9 +109,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 console.log('[Wallet] Desktop browser without wallet, using WalletConnect QR');
                 selectedConnector = connectors.find(c => c.id === 'walletConnect') || connectors[0];
             }
-            
+
             console.log('[Wallet] Using connector:', selectedConnector?.name, selectedConnector?.id);
-            
+
             if (selectedConnector) {
                 wagmiConnect({ connector: selectedConnector });
             }

@@ -7,27 +7,40 @@
    ======================================== */
 
 :root {
+  /* ============================================
+     PRIMARY COLOR: Coral Pink #ff8ba7
+     ============================================ */
+  --pixel-primary: #ff8ba7;
+  --pixel-primary-light: #ffc6c7;
+  --pixel-primary-lighter: #ffe4e6;
+  --pixel-primary-dark: #c44569;
+  --pixel-primary-darker: #903749;
+
   /* Atmosphere Colors */
   --pixel-bg: #ff8ba7;
-  /* Deep Space Blue-Black (Softer than #000) */
   --pixel-fg: #FFFFFF;
 
-  /* PALETTE (Vibrant but Rounded) */
-  --pixel-blue: #3b82f6;
-  /* Friendly Blue */
-  --pixel-red: #ef4444;
-  /* Soft Red */
-  --pixel-yellow: #fbbf24;
-  /* Warm Gold */
-  --pixel-green: #10b981;
-  /* Emerald */
-  --pixel-pink: #f472b6;
-  /* Codédex Pink */
+  /* PALETTE (Harmonious with Coral Pink) */
+  --pixel-blue: #6cb2eb;
+  /* Softer Sky Blue - complements pink */
+  --pixel-red: #e74c3c;
+  /* Warm Red */
+  --pixel-yellow: #f9ca24;
+  /* Sunshine Gold */
+  --pixel-green: #26de81;
+  /* Fresh Mint */
+  --pixel-pink: #ff6b9d;
+  /* Hot Pink - sister color */
+  --pixel-purple: #a855f7;
+  /* Lavender accent */
+  --pixel-peach: #ffeaa7;
+  /* Warm Peach */
 
   /* Surfaces */
-  --pixel-card-bg: #ff8ba7;
-  /* Slightly lighter than BG */
-  --pixel-card-border: #ffffff;
+  --pixel-card-bg: rgba(196, 69, 105, 0.6);
+  /* Semi-transparent deep rose */
+  --pixel-card-border: rgba(255, 255, 255, 0.5);
+  --pixel-card-glow: rgba(255, 139, 167, 0.3);
 
   /* Fonts */
   --font-retro: 'Press Start 2P', cursive;
@@ -287,7 +300,8 @@ a {
       rgba(0, 0, 0, 0.05) 50%,
       rgba(0, 0, 0, 0.05));
   background-size: 100% 4px;
-  pointer-events: none; /* Ensure clicks pass through */
+  pointer-events: none;
+  /* Ensure clicks pass through */
 }
 
 .text-retro {
