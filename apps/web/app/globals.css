@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Press+Start+2P&family=VT323&display=swap');
 @import "tailwindcss";
 
 /* ========================================
@@ -64,20 +65,10 @@ body {
   background-color: var(--pixel-bg);
   color: var(--pixel-fg);
   font-family: var(--font-terminal);
-  font-size: 24px;
   line-height: 1.5;
 }
 
-/* Paragraphs and body text - Pixel art for larger sizes */
-p,
-span,
-li,
-td,
-th,
-label {
-  font-family: var(--font-terminal);
-  font-size: 24px;
-}
+/* Remove aggressive overrides - let Tailwind work naturally */
 
 /* Inputs stay readable */
 input,
@@ -88,41 +79,9 @@ select {
 }
 
 /* =============================================
-   TEXT SIZE UTILITIES
-   Rule: ≤14px = Inter (readable), >14px = VT323 (pixel)
+   Let Tailwind text utilities work naturally
+   Use explicit font-terminal or font-retro classes when needed
    ============================================= */
-
-/* Small text - READABLE (Inter) */
-.text-xs {
-  font-family: var(--font-body) !important;
-  font-size: 12px !important;
-}
-
-.text-sm {
-  font-family: var(--font-body) !important;
-  font-size: 14px !important;
-}
-
-/* Medium to Large text - PIXEL ART (VT323) */
-.text-base {
-  font-family: var(--font-terminal) !important;
-  font-size: 18px !important;
-}
-
-.text-lg {
-  font-family: var(--font-terminal) !important;
-  font-size: 22px !important;
-}
-
-.text-xl {
-  font-family: var(--font-terminal) !important;
-  font-size: 26px !important;
-}
-
-.text-2xl {
-  font-family: var(--font-terminal) !important;
-  font-size: 30px !important;
-}
 
 h1,
 h2,

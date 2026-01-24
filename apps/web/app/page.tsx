@@ -19,13 +19,13 @@ export default function LandingPage() {
           {/* Logo */}
           <div className="flex items-center gap-3 select-none">
             <div className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform duration-200">
-              <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-[#FFC6C7] drop-shadow-[3px_3px_0_#000000]">PIXEL</span>
-              <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-black drop-shadow-[3px_3px_0_rgba(255,255,255,0.8)]">WAR</span>
+              <span className="text-xl md:text-2xl font-black font-retro tracking-tighter text-[#FFC6C7] drop-shadow-[3px_3px_0_#000000]">PIXEL</span>
+              <span className="text-xl md:text-2xl font-black font-retro tracking-tighter text-black drop-shadow-[3px_3px_0_rgba(255,255,255,0.8)]">WAR</span>
             </div>
           </div>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex gap-10 font-sans text-xl md:text-2xl uppercase tracking-wider font-black">
+          <div className="hidden md:flex gap-10 font-sans text-base md:text-m uppercase tracking-wider font-black">
             <Link href="/" className="text-[#903749] border-b-4 border-[#903749] pb-1" style={{ color: '#903749' }}>Home</Link>
             <Link href="/leaderboard" className="text-[#903749]/70 hover:text-[#903749] transition-all" style={{ color: '#903749' }}>Rankings</Link>
             <Link href="/tournament" className="text-[#903749]/70 hover:text-[#903749] transition-all" style={{ color: '#903749' }}>Tournament</Link>
@@ -97,7 +97,7 @@ export default function LandingPage() {
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-retro text-white mb-4">ZERO LAG</h3>
-              <p className="text-xl text-white/80">
+              <p className="font-sans text-lg text-[#903749]">
                 High-speed WebSocket combat. No delays. Pure skill.
               </p>
             </div>
@@ -108,7 +108,7 @@ export default function LandingPage() {
                 <Shield className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-retro text-white mb-4">SECURE LOOT</h3>
-              <p className="text-xl text-white/80">
+              <p className="font-sans text-lg text-[#903749]">
                 Win ETH directly to your wallet via Smart Contract.
               </p>
             </div>
@@ -119,7 +119,7 @@ export default function LandingPage() {
                 <Trophy className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-retro text-white mb-4">WEEKLY CUP</h3>
-              <p className="text-xl text-white/80">
+              <p className="font-sans text-lg text-[#903749]">
                 Join tournaments. Win legendary NFT Trophies.
               </p>
             </div>
