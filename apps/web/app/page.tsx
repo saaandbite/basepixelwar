@@ -14,42 +14,41 @@ export default function LandingPage() {
       <Hero3D />
 
       {/* Navbar */}
-      <nav className="relative z-10 flex items-center justify-between p-6 md:p-10 max-w-7xl mx-auto w-full">
-        {/* Logo */}
-        <div className="flex items-center gap-3 select-none">
-          <div className="w-10 h-10 bg-[var(--pixel-primary-darker)] shadow-[4px_4px_0_rgba(0,0,0,0.2)] flex items-center justify-center text-xl text-white font-retro">
-            P
+      <nav className="relative z-10 w-full py-6 md:py-10">
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-3 select-none">
+            <strong className="font-heading text-2xl md:text-3xl text-[#903749] font-retro tracking-widest">
+              PIXEL WAR
+            </strong>
           </div>
-          <span className="font-heading text-xl md:text-2xl text-[var(--pixel-fg)] drop-shadow-md font-retro">
-            PIXEL WAR
-          </span>
-        </div>
 
-        {/* Desktop Nav Links */}
-        <div className="hidden md:flex gap-10 font-body text-xl md:text-2xl uppercase tracking-widest">
-          <Link href="/" className="text-white hover:text-[var(--pixel-primary-darker)] transition-colors border-b-2 border-[var(--pixel-primary-darker)]">Home</Link>
-          <Link href="/leaderboard" className="text-white hover:text-[var(--pixel-primary-darker)] transition-colors">Rankings</Link>
-          <Link href="/tournament" className="text-white hover:text-[var(--pixel-primary-darker)] transition-colors">Tournament</Link>
-        </div>
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex gap-10 font-body text-xl md:text-2xl uppercase tracking-widest font-bold">
+            <Link href="/" className="text-[#903749] border-b-4 border-[#903749] pb-1" style={{ color: '#903749' }}>Home</Link>
+            <Link href="/leaderboard" className="text-[#903749]/70 hover:text-[#903749] transition-all" style={{ color: '#903749' }}>Rankings</Link>
+            <Link href="/tournament" className="text-[#903749]/70 hover:text-[#903749] transition-all" style={{ color: '#903749' }}>Tournament</Link>
+          </div>
 
-        {/* Connect Wallet / Mobile Menu Placeholder */}
-        <div className="flex items-center">
-          <Wallet>
-            <ConnectWallet className="pixel-btn-connect !font-terminal !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform">
-              <Avatar className="h-6 w-6" />
-              <Name />
-            </ConnectWallet>
-            <WalletDropdown className="!font-terminal">
-              <Identity className="px-4 py-3" hasCopyAddressOnClick>
-                <Avatar />
+          {/* Connect Wallet / Mobile Menu Placeholder */}
+          <div className="flex items-center">
+            <Wallet>
+              <ConnectWallet className="pixel-btn-connect !font-terminal !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform">
+                <Avatar className="h-6 w-6" />
                 <Name />
-                <Address />
-                <EthBalance />
-              </Identity>
-              <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-              <WalletDropdownDisconnect />
-            </WalletDropdown>
-          </Wallet>
+              </ConnectWallet>
+              <WalletDropdown className="!font-terminal">
+                <Identity className="px-4 py-3" hasCopyAddressOnClick>
+                  <Avatar />
+                  <Name />
+                  <Address />
+                  <EthBalance />
+                </Identity>
+                <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
+                <WalletDropdownDisconnect />
+              </WalletDropdown>
+            </Wallet>
+          </div>
         </div>
       </nav>
 
@@ -58,8 +57,8 @@ export default function LandingPage() {
 
         {/* Brand Logo */}
         <h1 className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-6 text-white drop-shadow-[4px_4px_0_var(--pixel-primary-darker)] font-retro">
-          <strong className="text-[#903749] font-normal">Pixel</strong>
-          <strong className="text-white font-normal"> War</strong>
+          <strong className="text-[#ff8ba7] font-normal">Pixel</strong>
+          <strong className="text-black font-normal"> War</strong>
         </h1>
 
         {/* Headline */}
