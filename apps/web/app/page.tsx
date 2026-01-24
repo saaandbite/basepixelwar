@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Zap, Shield, Trophy } from "lucide-react";
+import { Zap, Shield, Trophy, Swords } from "lucide-react";
 import Hero3D from "./components/Hero3D";
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Avatar, Name, Identity, Address, EthBalance } from '@coinbase/onchainkit/identity';
@@ -33,7 +33,7 @@ export default function LandingPage() {
           {/* Connect Wallet / Mobile Menu Placeholder */}
           <div className="flex items-center">
             <Wallet>
-              <ConnectWallet className="pixel-btn-connect !font-terminal !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform">
+              <ConnectWallet className="pixel-btn-connect !font-terminal !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black">
                 <Avatar className="h-6 w-6" />
                 <Name />
               </ConnectWallet>
@@ -66,25 +66,28 @@ export default function LandingPage() {
           Compete.Conquer.Claim your territory!
         </h1>
 
-        <p className="font-body text-2xl md:text-3xl lg:text-4xl text-white/90 mb-12 max-w-4xl leading-relaxed drop-shadow-md">
-          Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2 <br />
-          <span className="text-[var(--pixel-primary-darker)] font-bold bg-white/20 px-2 rounded">BLUE</span> vs <span className="text-[var(--pixel-primary-darker)] font-bold bg-white/20 px-2 rounded">RED</span>.
+        <p className="font-sans font-bold text-xl md:text-2xl lg:text-3xl text-white mb-12 max-w-3xl leading-relaxed drop-shadow-md tracking-wide">
+          Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col md:flex-row gap-6 items-center flex-wrap justify-center">
-          <Link href="/play" className="pixel-btn pixel-btn-primary text-lg md:text-xl px-8 py-5 group">
-            <span className="mr-3 group-hover:rotate-12 transition-transform inline-block">⚔️</span> START BATTLE
+        {/* CTA Buttons */}
+        <div className="flex flex-col md:flex-row gap-6 items-center flex-wrap justify-center font-sans font-black tracking-wider">
+          {/* Primary Button: Red Background, White Text */}
+          <Link href="/play" className="text-base md:text-lg px-10 py-3 group !font-sans flex items-center justify-center !rounded-full border-4 border-[#903749] bg-[#903749] text-white hover:bg-[#7a2e3d] hover:border-[#7a2e3d] transition-all !shadow-none hover:!shadow-lg transform">
+            <Swords className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform" /> START BATTLE
           </Link>
-          <Link href="/tournament" className="pixel-btn pixel-btn-secondary text-lg md:text-xl px-8 py-5 group">
-            <span className="mr-3 group-hover:scale-110 transition-transform inline-block">🏆</span> JOIN TOURNAMENT
+
+          {/* Secondary Button: White Background, Red Text */}
+          <Link href="/tournament" className="text-base md:text-lg px-10 py-3 group !font-sans flex items-center justify-center !rounded-full border-4 border-white bg-white !text-[#903749] hover:bg-[#903749] hover:border-[#903749] hover:!text-white transition-all !shadow-none hover:!shadow-lg transform">
+            <Trophy className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" /> JOIN TOURNAMENT
           </Link>
         </div>
 
-      </main>
+      </main >
 
       {/* Features Section (Preserved logic, updated style) */}
-      <section className="relative z-10 py-24">
+      < section className="relative z-10 py-24" >
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-10">
             {/* Feature 1 */}
@@ -121,10 +124,10 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section >
 
       {/* Footer */}
-      <footer className="relative z-10 py-12 text-center border-t-2 border-white/20 bg-black/10 backdrop-blur-lg">
+      < footer className="relative z-10 py-12 text-center border-t-2 border-white/20 bg-black/10 backdrop-blur-lg" >
         <div className="container mx-auto text-white/60 font-terminal">
           <p className="text-2xl mb-4 text-white">BUILT ON BASE L2</p>
           <div className="flex justify-center gap-6 text-lg">
@@ -133,7 +136,7 @@ export default function LandingPage() {
             <a href="#" className="hover:text-white hover:underline transition-colors">SMART CONTRACT</a>
           </div>
         </div>
-      </footer>
-    </div>
+      </footer >
+    </div >
   );
 }
