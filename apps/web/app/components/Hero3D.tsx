@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 
-// Theme Constants for Canvas Drawing
+// --- Colors & Theme ---
 const THEME = {
     primary: '#ff8ba7',
     primaryLight: '#ffc6c7',
@@ -33,23 +33,27 @@ export default function Hero3D() {
         canvas.style.width = `${width}px`;
         canvas.style.height = `${height}px`;
 
-        // Cubes
-        const cubes: { x: number; y: number; z: number; size: number; color: string; speed: number }[] = [];
-        const colors = ['#6cb2eb', '#e74c3c', '#ffffff', '#6cb2eb', '#e74c3c']; // Blue & Red dominant
+        // Grid Settings
+        const tileWidth = 60;
+        const tileHeight = 30; // Isometric 2:1 ratio
 
-        for (let i = 0; i < 50; i++) {
-            cubes.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                z: Math.random() * 2 + 0.5, // Depth scale
-                size: Math.random() * 20 + 10,
-                color: colors[Math.floor(Math.random() * colors.length)] || '#ffffff',
-                speed: Math.random() * 0.5 + 0.2
-            });
-        }
+        // Calculate Rows/Cols to cover screen + buffer
+        const cols = Math.ceil(width / tileWidth) * 2 + 10;
+        const rows = Math.ceil(height / tileHeight) * 2 + 10;
 
+        // Grid State: 0 = Neutral, 1 = Faction A (Dark), 2 = Faction B (Light)
+        // Initial random distribution centered
+        const grid = new Array(rows).fill(0).map(() => new Array(cols).fill(0).map(() => {
+            const rand = Math.random();
+            if (rand > 0.9) return 1; // Sparse Faction A
+            if (rand > 0.8) return 2; // Sparse Faction B
+            return 0; // Mostly Neutral
+        }));
+
+        let tick = 0;
         let mouseX = width / 2;
         let mouseY = height / 2;
+        let animationFrameId: number;
 
         const handleMouseMove = (e: MouseEvent) => {
             const rect = canvas.getBoundingClientRect();
@@ -58,77 +62,135 @@ export default function Hero3D() {
         };
         window.addEventListener('mousemove', handleMouseMove);
 
-        let animationFrameId: number;
+        const drawBlock = (x: number, y: number, type: number, zOffset: number) => {
+            // Define colors based on Type (Faction)
+            let top, right, left;
+
+            if (type === 1) { // Faction A (Dark/Red - The Aggressor)
+                top = THEME.primaryDarker;
+                right = '#5c1a26';
+                left = THEME.primaryDark;
+            } else if (type === 2) { // Faction B (Light/White - The Defender)
+                top = '#ffffff';
+                right = THEME.primaryLight;
+                left = '#ffe4e6';
+            } else { // Neutral (Base Terrain)
+                top = THEME.primary;
+                right = THEME.primaryDark;
+                left = THEME.primaryDark; // Slightly darker for depth
+            }
+
+            // Height of the block extrusion
+            const blockHeight = 12;
+
+            ctx.lineWidth = 1;
+            ctx.lineJoin = 'round';
+
+            // Calculate Vertices
+            const topY = y - zOffset;
+
+            // Top Face (Diamond)
+            ctx.beginPath();
+            ctx.moveTo(x, topY);
+            ctx.lineTo(x + tileWidth / 2, topY + tileHeight / 2);
+            ctx.lineTo(x, topY + tileHeight);
+            ctx.lineTo(x - tileWidth / 2, topY + tileHeight / 2);
+            ctx.closePath();
+            ctx.fillStyle = top;
+            ctx.fill();
+
+            // Subtle border for grid definition
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.stroke();
+
+            // Right Face
+            ctx.beginPath();
+            ctx.moveTo(x + tileWidth / 2, topY + tileHeight / 2);
+            ctx.lineTo(x, topY + tileHeight);
+            ctx.lineTo(x, topY + tileHeight + blockHeight);
+            ctx.lineTo(x + tileWidth / 2, topY + tileHeight / 2 + blockHeight);
+            ctx.closePath();
+            ctx.fillStyle = right;
+            ctx.fill();
+
+            // Left Face
+            ctx.beginPath();
+            ctx.moveTo(x - tileWidth / 2, topY + tileHeight / 2);
+            ctx.lineTo(x, topY + tileHeight);
+            ctx.lineTo(x, topY + tileHeight + blockHeight);
+            ctx.lineTo(x - tileWidth / 2, topY + tileHeight / 2 + blockHeight);
+            ctx.closePath();
+            ctx.fillStyle = left;
+            ctx.fill();
+        };
 
         const animate = () => {
-            if (!canvas || !ctx) return;
+            // Background clear
+            ctx.fillStyle = THEME.bg;
+            ctx.fillRect(0, 0, width, height);
 
-            // Clear with theme background
-            // Clear canvas (transparent)
-            ctx.clearRect(0, 0, width, height);
+            tick++;
 
-            // Draw Grid Floor (Pseudo 3D)
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // Slightly more visible grid on gradient
-            ctx.lineWidth = 1;
+            // Isometric Transformation Center
+            const startX = width / 2;
+            const startY = -height / 2; // Start high to fill down
 
-            // Static grid lines
-            const gridSize = 40;
+            for (let r = 0; r < rows; r++) {
+                const row = grid[r];
+                if (!row) continue;
 
-            // Vertical lines
-            for (let x = 0; x < width; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-            }
+                for (let c = 0; c < cols; c++) {
+                    // Convert Grid(r,c) to Screen(x,y)
+                    const cx = (c - r) * tileWidth / 2 + startX;
+                    const cy = (c + r) * tileHeight / 2 + startY;
 
-            // Horizontal lines
-            for (let y = 0; y < height; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(width, y);
-                ctx.stroke();
-            }
+                    // Optimization: Check bounds
+                    // Expand bounds slightly to account for tile size and wave height
+                    const margin = 100;
+                    if (cx < -margin || cx > width + margin || cy < -margin || cy > height + margin) {
+                        continue;
+                    }
 
-            // Draw Pixel Art Circles (Coins/Balls)
-            cubes.forEach((cube) => {
-                // Parallax effect based on mouse
-                const dx = (mouseX - width / 2) * 0.02 * cube.z;
-                const dy = (mouseY - height / 2) * 0.02 * cube.z;
+                    // Dynamic Logic: "Conquer" neighbors randomly
+                    if (tick % 10 === 0 && Math.random() > 0.999) {
+                        const type = row[c];
+                        if (type !== undefined && type !== 0) {
+                            // Try to spread to a random neighbor
+                            const dr = Math.floor(Math.random() * 3) - 1;
+                            const dc = Math.floor(Math.random() * 3) - 1;
+                            const nr = r + dr;
+                            const nc = c + dc;
 
-                cube.y -= cube.speed * cube.z;
+                            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                                const neighborRow = grid[nr];
+                                if (neighborRow) {
+                                    neighborRow[nc] = type;
+                                }
+                            }
+                        }
+                    }
 
-                // Reset if off screen (top)
-                if (cube.y < -cube.size * 2) {
-                    cube.y = height + cube.size;
-                    cube.x = Math.random() * width;
+                    // Animation: Wave height
+                    // Dist from center for wave
+                    const dist = Math.sqrt((r - rows / 2) ** 2 + (c - cols / 2) ** 2);
+                    let z = Math.sin(dist * 0.2 - tick * 0.05) * 8; // Gentle breathing wave
+
+                    // Mouse Interaction: Lift tiles near cursor
+                    // Approx screen pos check
+                    const dx = cx - mouseX;
+                    const dy = (cy + tileHeight / 2) - mouseY;
+                    const mouseDist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (mouseDist < 120) {
+                        z += (120 - mouseDist) * 0.3; // Lift up
+                    }
+
+                    const tileType = row[c];
+                    if (tileType !== undefined) {
+                        drawBlock(cx, cy, tileType, z);
+                    }
                 }
-
-                const renderX = cube.x + dx;
-                const renderY = cube.y + dy;
-                const radius = cube.size / 2;
-
-                // Draw White Shadow (Bottom Right)
-                ctx.beginPath();
-                ctx.arc(renderX + 4, renderY + 4, radius, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // White shadow
-                ctx.fill();
-
-                // Draw Main Circle
-                ctx.beginPath();
-                ctx.arc(renderX, renderY, radius, 0, Math.PI * 2);
-                ctx.fillStyle = cube.color;
-                ctx.fill();
-
-                // Draw Pixel Highlight (Square shine) to give 8-bit feel
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.fillRect(renderX - radius / 2, renderY - radius / 2, radius / 2.5, radius / 2.5);
-
-                // Border for pop
-                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            });
+            }
 
             animationFrameId = requestAnimationFrame(animate);
         };
@@ -149,15 +211,27 @@ export default function Hero3D() {
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('resize', handleResize);
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            cancelAnimationFrame(animationFrameId);
         };
     }, []);
 
     return (
-        <canvas
-            ref={canvasRef}
-            className="fixed inset-0 z-0 pointer-events-none"
-            aria-hidden="true"
-        />
+        <>
+            <canvas
+                ref={canvasRef}
+                style={{ position: 'absolute', top: 0, left: 0, zIndex: 0 }}
+                className="absolute inset-0 z-0 pointer-events-none"
+            />
+            <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle at center, transparent 0%, rgba(144, 55, 73, 0.2) 100%)',
+                pointerEvents: 'none',
+                zIndex: 1
+            }} />
+        </>
     );
 }
