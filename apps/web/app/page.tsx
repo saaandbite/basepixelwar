@@ -18,13 +18,14 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-3 select-none">
-            <strong className="font-heading text-2xl md:text-3xl text-[#903749] font-retro tracking-widest">
-              PIXEL WAR
-            </strong>
+            <div className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform duration-200">
+              <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-[#FFC6C7] drop-shadow-[3px_3px_0_#000000]">PIXEL</span>
+              <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-black drop-shadow-[3px_3px_0_rgba(255,255,255,0.8)]">WAR</span>
+            </div>
           </div>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex gap-10 font-body text-xl md:text-2xl uppercase tracking-widest font-bold">
+          <div className="hidden md:flex gap-10 font-sans text-xl md:text-2xl uppercase tracking-wider font-black">
             <Link href="/" className="text-[#903749] border-b-4 border-[#903749] pb-1" style={{ color: '#903749' }}>Home</Link>
             <Link href="/leaderboard" className="text-[#903749]/70 hover:text-[#903749] transition-all" style={{ color: '#903749' }}>Rankings</Link>
             <Link href="/tournament" className="text-[#903749]/70 hover:text-[#903749] transition-all" style={{ color: '#903749' }}>Tournament</Link>
@@ -33,11 +34,11 @@ export default function LandingPage() {
           {/* Connect Wallet / Mobile Menu Placeholder */}
           <div className="flex items-center">
             <Wallet>
-              <ConnectWallet className="pixel-btn-connect !font-terminal !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black">
+              <ConnectWallet className="pixel-btn-connect !font-sans !font-bold !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black">
                 <Avatar className="h-6 w-6" />
                 <Name />
               </ConnectWallet>
-              <WalletDropdown className="!font-terminal">
+              <WalletDropdown className="!font-sans">
                 <Identity className="px-4 py-3" hasCopyAddressOnClick>
                   <Avatar />
                   <Name />

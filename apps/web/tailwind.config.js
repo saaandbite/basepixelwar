@@ -53,10 +53,9 @@ export default {
                 "powerup-orange": "#FF9800",
             },
             fontFamily: {
-                display: ['"Fredoka"', 'cursive'],
-                sans: ['"Nunito"', 'sans-serif'],
-                retro: ['"Press Start 2P"', 'cursive'],
-                terminal: ['"VT323"', 'monospace'],
+                sans: ['var(--font-sans)', 'sans-serif'],
+                retro: ['var(--font-retro)', 'cursive'],
+                terminal: ['var(--font-terminal)', 'monospace'],
             },
             boxShadow: {
                 game: "0 20px 40px -5px rgba(76, 201, 240, 0.35)",

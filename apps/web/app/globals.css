@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Press+Start+2P&family=VT323&display=swap');
 @import "tailwindcss";
 
 /* ========================================
@@ -42,11 +41,11 @@
   --pixel-card-border: rgba(255, 255, 255, 0.5);
   --pixel-card-glow: rgba(255, 139, 167, 0.3);
 
-  /* Fonts */
-  --font-retro: 'Press Start 2P', cursive;
-  --font-terminal: 'VT323', monospace;
-  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  --font-display: 'Outfit', 'Inter', sans-serif;
+  /* Fonts - Mapped to Tailwind/NextFont Variables */
+  --font-retro: var(--font-retro);
+  --font-terminal: var(--font-terminal);
+  --font-body: var(--font-sans);
+  --font-display: var(--font-sans);
 }
 
 /* ========================================
