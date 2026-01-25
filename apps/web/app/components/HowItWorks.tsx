@@ -37,13 +37,15 @@ export default function HowItWorks() {
           <div className="h-px bg-white/30 w-12 md:w-24"></div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-stretch justify-center gap-8 md:gap-12 relative">
-
-          {/* Connector Line (Desktop) - Circuit Trace Style */}
-          <div className="hidden md:block absolute top-1/2 left-10 right-10 h-px border-t-2 border-dashed border-white/30 -z-10 transform -translate-y-[60%]"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative">
 
           {steps.map((step, index) => (
-            <div key={index} className="flex-1 flex flex-col items-center text-center relative max-w-sm mx-auto w-full group">
+            <div key={index} className="flex flex-col items-center text-center relative w-full group">
+
+              {/* Desktop Connector (Between Cards) */}
+              {index < steps.length - 1 && (
+                <div className="hidden md:block absolute top-20 -right-6 md:-right-12 w-6 md:w-12 h-px border-t-2 border-dashed border-white/30 z-0"></div>
+              )}
 
               {/* Step Card */}
               <div className="relative w-full bg-white/5 border border-white/10 p-8 pt-12 hover:bg-white/10 transition-all duration-300 hover:-translate-y-2">

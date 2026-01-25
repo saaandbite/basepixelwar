@@ -6,18 +6,18 @@ export default function Footer() {
     <footer className="relative z-10 bg-[#5c1a26] text-white py-12 border-t-8 border-[#903749]">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left">
-          
+
           {/* Brand */}
           <div>
-             <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
-                <span className="text-2xl font-black font-retro text-[#FFC6C7]">PIXEL</span>
-                <span className="text-2xl font-black font-retro text-white">WAR</span>
-              </div>
-              <p className="font-terminal text-lg text-[#ff8ba7] max-w-xs mx-auto md:mx-0">
-                The ultimate on-chain pixel battle arena. Compete, conquer, and earn on Base L2.
-              </p>
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
+              <span className="text-2xl font-black font-retro text-[#FFC6C7]">PIXEL</span>
+              <span className="text-2xl font-black font-retro text-white">WAR</span>
+            </div>
+            <p className="font-terminal text-lg text-[#ff8ba7] max-w-xs mx-auto md:mx-0">
+              The ultimate on-chain pixel battle arena. Compete, conquer, and earn on Base L2.
+            </p>
           </div>
-          
+
           {/* Links */}
           <div className="font-sans">
             <h4 className="font-retro text-lg mb-4 text-[#FFC6C7]">Quick Links</h4>
@@ -37,7 +37,7 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        
+
         <div className="mt-12 pt-8 border-t border-[#903749] text-center font-terminal text-[#ff8ba7]">
           <p>© {new Date().getFullYear()} Pixel War. All rights reserved.</p>
         </div>
