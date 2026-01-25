@@ -61,6 +61,41 @@ body {
   /* Regular cursor for friendly feel */
 }
 
+/* ========================================
+   SCROLLBAR REMOVAL (NUCLEAR OPTION)
+   ======================================== */
+
+/* Firefox */
+* {
+  scrollbar-width: none !important;
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* Ensure HTML and Body don't force it */
+html,
+body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow-y: auto;
+}
+
 body {
   background-color: var(--pixel-bg);
   color: var(--pixel-fg);
@@ -409,4 +444,16 @@ a {
 
 .animate-damage {
   animation: text-damage 0.5s steps(4) forwards;
+}
+
+/* Custom Scrollbar Utility if explicit class needed */
+.custom-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }

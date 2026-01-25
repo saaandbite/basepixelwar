@@ -295,10 +295,10 @@ export default function PlayHub() {
                 </div>
 
                 <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                  TOP PLAYERS
+                  HALL OF FAME
                 </h3>
                 <div className="font-sans font-bold text-base text-white/90 drop-shadow-sm bg-black/10 px-4 py-1.5 rounded border border-white/20">
-                  #1 SATOSHI
+                  VIEW
                 </div>
               </div>
             </Link>
