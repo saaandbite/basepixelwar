@@ -95,57 +95,6 @@ export default function LandingPage() {
         </main >
       </div>
 
-      {/* Features Section (Preserved logic, updated style) */}
-      < section className="relative z-10 py-24" >
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-10">
-            {/* Feature 1 */}
-            <div className="bg-white/10 backdrop-blur-sm border-4 border-white/30 p-8 rounded-xl hover:-translate-y-2 transition-transform text-center shadow-lg">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-retro text-white mb-4">ZERO LAG</h3>
-              <p className="font-sans text-lg text-[#903749]">
-                High-speed WebSocket combat. No delays. Pure skill.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="bg-white/10 backdrop-blur-sm border-4 border-white/30 p-8 rounded-xl hover:-translate-y-2 transition-transform text-center shadow-lg">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-retro text-white mb-4">SECURE LOOT</h3>
-              <p className="font-sans text-lg text-[#903749]">
-                Win ETH directly to your wallet via Smart Contract.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-white/10 backdrop-blur-sm border-4 border-white/30 p-8 rounded-xl hover:-translate-y-2 transition-transform text-center shadow-lg">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Trophy className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-retro text-white mb-4">WEEKLY CUP</h3>
-              <p className="font-sans text-lg text-[#903749]">
-                Join tournaments. Win legendary NFT Trophies.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section >
-
-      {/* Footer */}
-      < footer className="relative z-10 py-12 text-center border-t-2 border-white/20 bg-black/10 backdrop-blur-lg" >
-        <div className="container mx-auto text-white/60 font-terminal">
-          <p className="text-2xl mb-4 text-white">BUILT ON BASE L2</p>
-          <div className="flex justify-center gap-6 text-lg">
-            <span>© 2026 PIXELWAR TEAM</span>
-            <span>•</span>
-            <a href="#" className="hover:text-white hover:underline transition-colors">SMART CONTRACT</a>
-          </div>
-        </div>
-      </footer >
     </div >
   );
 }
