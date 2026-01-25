@@ -34,6 +34,7 @@ import HelpOverlay from "../components/HelpOverlay";
 
 export default function PlayHub() {
   const {
+    address,
     isConnected,
     chainId,
     error,
@@ -53,6 +54,25 @@ export default function PlayHub() {
 
   const isOnCorrectChain = isCorrectChain(chainId);
   const isServerOnline = connectionStatus === 'connected';
+
+  // Base card class without background (we'll add varied bgs)
+  const cardBaseClass = "relative border border-white/10 p-6 md:p-8 group transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-xl";
+  const cornerBracketClass = "absolute w-6 h-6 transition-colors duration-300 z-20";
+  const iconContainerClass = "relative w-16 h-16 mb-4 flex items-center justify-center z-10";
+  const iconBgClass = "absolute inset-0 border border-white/30 skew-x-6 group-hover:skew-x-0 transition-transform duration-300 bg-black/20";
+  const iconFillClass = "absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-300";
+
+  // CSS Pattern for Pixel Art Effect
+  const pixelPattern = {
+    backgroundImage: `
+        linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%), 
+        linear-gradient(-45deg, rgba(0,0,0,0.1) 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.1) 75%), 
+        linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.1) 75%)
+    `,
+    backgroundSize: '20px 20px',
+    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+  };
 
   return (
     <div className="min-h-screen relative flex flex-col font-terminal text-[var(--pixel-fg)] bg-[#ffe4e6] overflow-x-hidden">
@@ -133,134 +153,180 @@ export default function PlayHub() {
           {/* 4-COLUMN BENTO GRID LAYOUT */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full mx-auto mb-10">
 
-            {/* HEADER CARD (Full Width) */}
-            <div className="md:col-span-4 relative block bg-white/5 border-4 border-white backdrop-blur-md shadow-[8px_8px_0_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
-              {/* Decorative Background */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff8ba7]/20 rounded-bl-full z-0"></div>
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#903749]/10 rounded-tr-full z-0"></div>
+            {/* HEADER CARD (Full Width) - Dark Tech Theme */}
+            <div className={`md:col-span-4 ${cardBaseClass} bg-[#2d1b2e] flex flex-col md:flex-row items-center justify-between gap-6`}>
+              <div className="absolute inset-0 opacity-10" style={pixelPattern}></div>
+
+              {/* Tech Corners */}
+              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
+              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
+              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
+              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
 
               <div className="relative z-10 text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#903749] text-white rounded text-xs font-bold tracking-widest uppercase mb-4 shadow-sm">
-                  <Gamepad2 className="w-4 h-4" />
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-black/40 text-[#ff8ba7] border border-[#ff8ba7]/30 rounded text-base font-bold font-sans tracking-widest uppercase mb-4 shadow-sm backdrop-blur-md">
+                  <Gamepad2 className="w-5 h-5" />
                   <span>Select Game Mode</span>
                 </div>
-                <h1 className="font-heading text-4xl md:text-6xl text-white font-retro tracking-wide drop-shadow-[4px_4px_0_rgba(0,0,0,0.3)]">
+                <h1 className="font-heading text-4xl md:text-6xl text-white font-retro tracking-wide drop-shadow-[4px_4px_0_#903749]">
                   BATTLE ARENA
                 </h1>
               </div>
 
               <div className="relative z-10 flex gap-3 opacity-80">
-                <div className="w-3 h-3 bg-white animate-pulse"></div>
-                <div className="w-3 h-3 bg-white animate-pulse delay-75"></div>
-                <div className="w-3 h-3 bg-white animate-pulse delay-150"></div>
+                <div className="w-3 h-3 bg-[#ff8ba7] animate-pulse"></div>
+                <div className="w-3 h-3 bg-[#903749] animate-pulse delay-75"></div>
+                <div className="w-3 h-3 bg-[#ff8ba7] animate-pulse delay-150"></div>
               </div>
             </div>
 
 
-            {/* 1. 1v1 DUEL (Left Half - 2x2) */}
-            <Link href="/room" className="group md:col-span-2 md:row-span-2 relative block min-h-[340px] md:min-h-full">
-              <div className="absolute inset-0 bg-[#903749] border-4 border-white opacity-90 transition-all duration-300 group-hover:bg-[#7a2e3d] group-hover:scale-[1.01] shadow-[8px_8px_0_rgba(0,0,0,0.2)]"></div>
+            {/* 1. 1v1 DUEL (Left Half - 2x2) - RED THEME */}
+            <Link href="/room" className={`md:col-span-2 md:row-span-2 ${cardBaseClass} bg-[#903749] min-h-[340px] md:min-h-full flex flex-col justify-between hover:bg-[#a63d54]`}>
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
 
-              {/* Corner Brackets */}
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white z-20"></div>
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white z-20"></div>
+              {/* Tech Corners */}
+              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
 
-              <div className="relative z-10 h-full p-8 md:p-12 flex flex-col justify-between">
+              <div className="relative z-10 h-full flex flex-col justify-between">
                 <div className="flex justify-between items-start">
-                  <div className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-[10px] font-retro tracking-widest border border-white/30">CLASSIC</div>
-                  <Swords className="w-20 h-20 md:w-24 md:h-24 text-white group-hover:rotate-12 transition-transform duration-300 drop-shadow-[4px_4px_0_rgba(0,0,0,0.5)]" />
+                  <div className="px-4 py-1.5 bg-black/20 backdrop-blur-sm text-white text-sm font-bold font-sans tracking-widest border border-white/30 rounded-sm">CLASSIC</div>
+
+                  <div className={iconContainerClass}>
+                    <div className={iconBgClass}></div>
+                    <div className={`${iconFillClass} bg-white`}></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Swords className="w-10 h-10 text-white" />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
-                  <h2 className="text-5xl md:text-7xl font-black font-retro text-white mb-4 drop-shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+                  <h2 className="text-5xl md:text-7xl font-black font-retro text-white mb-4 drop-shadow-[5px_5px_0_rgba(0,0,0,0.3)]">
                     1 VS 1
                   </h2>
-                  <p className="font-sans text-white/90 text-xl leading-relaxed mb-8 max-w-lg drop-shadow-md">
-                    High stakes duel. Winner takes all.<br />Prove your worth in the arena.
+                  <p className="font-sans text-white/90 text-2xl leading-relaxed mb-8 max-w-lg drop-shadow-md font-bold">
+                    High stakes duel. Winner takes all.
                   </p>
 
-                  <div className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#903749] font-black text-base uppercase tracking-wider group-hover:bg-[#ffc6c7] transition-colors rounded-none shadow-[4px_4px_0_rgba(0,0,0,0.2)]">
-                    Start Battle <ChevronRight className="w-5 h-5" />
+                  <div className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#903749] font-black font-sans text-xl uppercase tracking-wider group-hover:bg-[#ffc6c7] transition-colors border-b-4 border-black/20 shadow-lg rounded-sm">
+                    Start Battle <ChevronRight className="w-6 h-6" />
                   </div>
                 </div>
               </div>
             </Link>
 
 
-            {/* 2. server status (1x1) */}
-            <div className="group md:col-span-1 relative block min-h-[190px]">
-              <div className={`absolute inset-0 border-4 border-white transition-all duration-300 shadow-[8px_8px_0_rgba(0,0,0,0.1)] backdrop-blur-md ${isServerOnline ? 'bg-green-500/20' : 'bg-red-500/20'}`}></div>
+            {/* 2. server status (1x1) - DYNAMIC GREEN/RED THEME */}
+            <div className={`md:col-span-1 ${cardBaseClass} ${isServerOnline ? 'bg-[#00b894] hover:bg-[#00ceb0]' : 'bg-[#d63031] hover:bg-[#ff4757]'} min-h-[190px] flex flex-col items-center justify-center text-center transition-colors`}>
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
 
-              <div className="relative z-10 h-full p-6 flex flex-col justify-between items-center text-center">
-                <div className={`p-3 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2 ${isServerOnline ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                  <Activity className="w-8 h-8 drop-shadow-lg" />
+              {/* Tech Corners */}
+              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
+
+              <div className="relative z-10 w-full flex flex-col items-center">
+                <div className={`${iconContainerClass} mx-auto mb-4`}>
+                  <div className={iconBgClass}></div>
+                  <div className={`${iconFillClass} bg-white`}></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Activity className="w-8 h-8 text-white" />
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-black font-retro text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                    SERVER<br />STATUS
-                  </h3>
-                  <div className={`mt-2 font-bold text-xs uppercase tracking-widest ${isServerOnline ? 'text-green-800' : 'text-red-800'}`}>
-                    {isServerOnline ? 'ONLINE' : 'OFFLINE'}
-                  </div>
+                <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                  STATUS
+                </h3>
+                <div className="font-bold font-sans text-base uppercase tracking-widest px-6 py-2 rounded border border-white/40 bg-black/10 text-white">
+                  {isServerOnline ? 'ONLINE' : 'OFFLINE'}
                 </div>
               </div>
             </div>
 
-            {/* 3. TOURNAMENT (Resized to 1x1) */}
-            <Link href="/tournament" className="group md:col-span-1 relative block min-h-[190px]">
-              <div className="absolute inset-0 bg-white/10 border-4 border-white transition-all duration-300 group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)] backdrop-blur-md"></div>
+            {/* 3. TOURNAMENT (1x1) - GOLD/AMBER THEME */}
+            <Link href="/tournament" className={`md:col-span-1 ${cardBaseClass} bg-[#e1b12c] hover:bg-[#fbc531] min-h-[190px] flex flex-col items-center justify-center text-center`}>
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
 
-              <div className="relative z-10 h-full p-6 flex flex-col justify-between text-center items-center">
-                <div className="p-3 bg-white/20 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2">
-                  <Trophy className="w-8 h-8 text-[#903749] drop-shadow-md" />
-                </div>
+              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
 
-                <div>
-                  <h3 className="text-xl font-black font-retro text-[#903749] mb-1">TOURNAMENT</h3>
-                  <div className="inline-flex items-center gap-2 px-2 py-1 bg-[#903749] text-white text-[10px] font-bold uppercase rounded-sm">
-                    <span>LIVE</span>
+              <div className="relative z-10 w-full flex flex-col items-center">
+                <div className={`${iconContainerClass} mx-auto mb-4`}>
+                  <div className={iconBgClass}></div>
+                  <div className={`${iconFillClass} bg-white`}></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Trophy className="w-8 h-8 text-white" />
                   </div>
                 </div>
-              </div>
-            </Link>
 
-
-            {/* 4. LEADERBOARD (1x1) */}
-            <Link href="/leaderboard" className="group md:col-span-1 relative block min-h-[190px]">
-              <div className="absolute inset-0 bg-[#ff8ba7] border-4 border-white transition-all duration-300 group-hover:bg-[#ff7a9e] group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)]"></div>
-
-              <div className="relative z-10 h-full p-6 flex flex-col justify-between items-center text-center">
-                <div className="p-3 bg-white/20 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2">
-                  <Medal className="w-8 h-8 text-white drop-shadow-lg" />
-                </div>
-                <h3 className="text-xl font-black font-retro leading-none text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                  HALL OF<br />FAME
+                <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                  TOURNAMENT
                 </h3>
-
-                <div className="w-full bg-black/20 backdrop-blur-md border border-white/20 p-2 mt-2 rounded-none">
-                  <div className="font-retro text-sm text-white drop-shadow-sm">
-                    TOP: SATOSHI
-                  </div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#e1b12c] text-sm font-bold font-sans uppercase rounded-sm border border-white/20 shadow-sm">
+                  <span>LIVE NOW</span>
                 </div>
               </div>
             </Link>
 
-            {/* 5. HELP / GUIDE (1x1) */}
-            <div className="group md:col-span-1 relative block min-h-[190px] cursor-pointer">
+
+            {/* 4. LEADERBOARD (1x1) - PURPLE THEME */}
+            <Link href="/leaderboard" className={`md:col-span-1 ${cardBaseClass} bg-[#6c5ce7] hover:bg-[#a29bfe] min-h-[190px] flex flex-col items-center justify-center text-center`}>
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
+
+              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
+              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
+
+              <div className="relative z-10 w-full flex flex-col items-center">
+                <div className={`${iconContainerClass} mx-auto mb-4`}>
+                  <div className={iconBgClass}></div>
+                  <div className={`${iconFillClass} bg-white`}></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Medal className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+
+                <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                  TOP PLAYERS
+                </h3>
+                <div className="font-sans font-bold text-base text-white/90 drop-shadow-sm bg-black/10 px-4 py-1.5 rounded border border-white/20">
+                  #1 SATOSHI
+                </div>
+              </div>
+            </Link>
+
+            {/* 5. HELP / GUIDE (1x1) - BLUE THEME */}
+            <div className={`md:col-span-1 ${cardBaseClass} bg-[#0984e3] hover:bg-[#74b9ff] min-h-[190px] flex flex-col items-center justify-center text-center cursor-pointer p-0`}>
               <HelpOverlay customTrigger={
-                <div className="w-full h-full relative block">
-                  <div className="absolute inset-0 bg-[#00b894] border-4 border-white transition-all duration-300 group-hover:bg-[#00a884] group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)]"></div>
-                  <div className="relative z-10 h-full p-6 flex flex-col justify-between items-center text-center min-h-[190px]">
-                    <div className="p-3 bg-white/20 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2">
-                      <BookOpen className="w-8 h-8 text-white drop-shadow-lg" />
+                <div className="w-full h-full flex flex-col items-center justify-center">
+                  <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
+
+                  <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
+                  <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
+                  <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
+                  <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
+
+                  <div className={`${iconContainerClass} mx-auto mb-4`}>
+                    <div className={iconBgClass}></div>
+                    <div className={`${iconFillClass} bg-white`}></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-black font-retro leading-none text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                      GAME<br />GUIDE
-                    </h3>
-                    <div className="px-3 py-1 bg-white/20 rounded text-[10px] font-bold text-white border border-white/30">
-                      READ MANUAL
-                    </div>
+                  </div>
+
+                  <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                    HOW TO PLAY
+                  </h3>
+                  <div className="px-5 py-2 bg-white/20 rounded text-sm font-bold font-sans text-white border border-white/30">
+                    MANUAL
                   </div>
                 </div>
               } />
