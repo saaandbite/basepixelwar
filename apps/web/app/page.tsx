@@ -5,13 +5,16 @@ import { Zap, Shield, Trophy, Swords } from "lucide-react";
 import Hero3D from "./components/Hero3D";
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Avatar, Name, Identity, Address, EthBalance } from '@coinbase/onchainkit/identity';
+import GameFeatures from "./components/GameFeatures";
+import HowItWorks from "./components/HowItWorks";
+import Footer from "./components/Footer";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen relative flex flex-col font-terminal text-[var(--pixel-fg)] bg-gradient-to-b from-[#ffe4e6] to-[#ff8ba7] overflow-x-hidden">
+    <div className="min-h-screen relative flex flex-col font-terminal text-[var(--pixel-fg)] bg-[#ffe4e6] overflow-x-hidden">
 
       {/* Hero Section Container (Background + Nav + Hero Content) */}
-      <div className="relative w-full min-h-screen flex flex-col">
+      <div className="relative w-full min-h-screen flex flex-col bg-gradient-to-b from-[#ffe4e6] to-[#ff8ba7]">
         {/* Interactive 3D Background - Confined to this container with CSS Mask for smooth fade */}
         <div className="absolute inset-0 z-0" style={{
           maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
@@ -94,6 +97,10 @@ export default function LandingPage() {
           </div>
         </main >
       </div>
+
+      <GameFeatures />
+      <HowItWorks />
+      <Footer />
 
     </div >
   );
