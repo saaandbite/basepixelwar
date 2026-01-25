@@ -13,7 +13,9 @@ import {
     Zap,
     Lightbulb,
     Link2,
-    Crosshair
+    Crosshair,
+    Target,
+    MousePointer2
 } from "lucide-react";
 
 interface HelpOverlayProps {
@@ -28,129 +30,184 @@ export default function HelpOverlay({ customTrigger }: HelpOverlayProps) {
         setMounted(true);
     }, []);
 
-    // Portal content to body to escape parent stacking contexts (transforms/filters)
-    const modalContent = (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 font-terminal text-[20px]">
-            <div className="bg-[#13131f] border-4 border-white rounded-[2rem] w-full max-w-4xl h-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative">
+    // Reusing the Style System from Play Page
+    const cardBaseClass = "relative bg-[#13131f] border border-white/10 p-6 group transition-all duration-300 hover:-translate-y-1 overflow-hidden shadow-lg rounded-xl";
+    const cornerBracketClass = "absolute w-4 h-4 transition-colors duration-300 z-20"; // Slightly smaller for modal
+    const iconContainerClass = "relative w-12 h-12 mb-3 flex items-center justify-center z-10";
+    const iconBgClass = "absolute inset-0 border border-white/30 skew-x-6 group-hover:skew-x-0 transition-transform duration-300 bg-black/20";
+    const iconFillClass = "absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-300";
 
-                {/* Decorative Scanlines */}
-                <div className="scanline absolute inset-0 pointer-events-none opacity-50 z-0" />
+    const pixelPattern = {
+        backgroundImage: `
+            linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%), 
+            linear-gradient(-45deg, rgba(0,0,0,0.1) 25%, transparent 25%), 
+            linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.1) 75%), 
+            linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.1) 75%)
+        `,
+        backgroundSize: '20px 20px',
+        backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+    };
 
-                {/* Header */}
-                <div className="relative z-10 p-6 border-b-4 border-white/10 bg-[#1e1e2e] flex items-center justify-between shrink-0">
-                    <h2 className="text-2xl sm:text-3xl font-retro text-[#f1c40f] flex items-center gap-4 text-shadow-hard">
-                        <Gamepad2 size={32} />
-                        PIXEL WARS MANUAL
-                    </h2>
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="p-2 hover:bg-white/10 text-white hover:text-[#e74c3c] rounded-xl transition-colors"
-                    >
-                        <X className="w-8 h-8" />
-                    </button>
+    // Card Component to reduce repetition
+    const ManualCard = ({ title, activeColor, icon: Icon, step, description, bgColor }: any) => (
+        <div className={`relative ${cardBaseClass} ${bgColor} flex flex-col items-center text-center h-full`}>
+            <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
+
+            {/* Tech Corners */}
+            <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/40 group-hover:border-white`}></div>
+            <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/40 group-hover:border-white`}></div>
+            <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/40 group-hover:border-white`}></div>
+            <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white/40 group-hover:border-white`}></div>
+
+            <div className="relative z-10 w-full flex flex-col items-center">
+                {/* Step Pill */}
+                <div className="mb-4 px-3 py-1 bg-black/20 rounded-full border border-white/20 text-white text-[10px] font-bold font-sans uppercase tracking-widest">
+                    STEP {step}
                 </div>
 
-                {/* Scrollable Content */}
-                <div className="relative z-10 p-6 sm:p-8 overflow-y-auto custom-scrollbar flex-1 space-y-10 text-white">
-
-                    {/* Intro Box */}
-                    <div className="pixel-box bg-white/5 border-2 border-white/20 p-6 leading-relaxed text-xl rounded-xl">
-                        <span className="text-[#0984e3] font-bold">PIXEL WAR</span> IS A REAL-TIME PVP ARENA.
-                        FIGHT FOR TERRITORY. EARN ETHEREUM.
+                <div className={`${iconContainerClass} mx-auto mb-2`}>
+                    <div className={iconBgClass}></div>
+                    <div className={`${iconFillClass} bg-white`}></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Icon className="w-6 h-6 text-white" />
                     </div>
+                </div>
 
-                    {/* How to Play Steps */}
-                    <section>
-                        <h3 className="text-xl font-retro text-white mb-6 flex items-center gap-3 border-b-2 border-white/10 pb-2">
-                            <Lightbulb className="text-[#f1c40f]" />
-                            HOW TO PLAY
-                        </h3>
+                <h3 className="font-retro text-xl mb-3 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                    {title}
+                </h3>
+                <p className="font-sans font-medium text-sm text-white/90 leading-relaxed px-2">
+                    {description}
+                </p>
+            </div>
+        </div>
+    );
 
-                        <div className="grid sm:grid-cols-2 gap-6">
-                            {/* Step 1 */}
-                            <div className="bg-[#0f0f1a] p-5 rounded-2xl border-2 border-white/10 hover:border-[#0984e3] transition-colors group">
-                                <div className="font-retro text-[#0984e3] mb-2 flex items-center gap-2 text-lg">
-                                    <Zap size={20} /> Step 1
-                                </div>
-                                <div className="font-bold text-white mb-1">CONNECT & PAY</div>
-                                <p className="text-white/80 text-lg">
-                                    Connect Base Wallet. Pay 0.001 ETH entry fee.
-                                </p>
-                            </div>
+    // Portal content
+    const modalContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+            {/* Modal Container */}
+            <div className="relative bg-[#0f0f1a] border-4 border-white/20 rounded-3xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
 
-                            {/* Step 2 */}
-                            <div className="bg-[#0f0f1a] p-5 rounded-2xl border-2 border-white/10 hover:border-[#e74c3c] transition-colors group">
-                                <div className="font-retro text-[#e74c3c] mb-2 flex items-center gap-2 text-lg">
-                                    <Crosshair size={20} className="group-hover:rotate-45 transition-transform" /> Step 2
-                                </div>
-                                <div className="font-bold text-white mb-1">AIM & SHOOT</div>
-                                <p className="text-white/80 text-lg">
-                                    Click & Hold to shoot. Slide to aim (Desktop/Mobile).
-                                </p>
-                            </div>
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-5 pointer-events-none" style={pixelPattern}></div>
 
-                            {/* Step 3 */}
-                            <div className="bg-[#0f0f1a] p-5 rounded-2xl border-2 border-white/10 hover:border-[#00b894] transition-colors group">
-                                <div className="font-retro text-[#00b894] mb-2 flex items-center gap-2 text-lg">
-                                    <Flag size={20} /> Step 3
-                                </div>
-                                <div className="font-bold text-white mb-1">CAPTURE ZONES</div>
-                                <p className="text-white/80 text-lg">
-                                    Cover the grid with your color. Capture Golden Pixel for Frenzy!
-                                </p>
-                            </div>
-
-                            {/* Step 4 */}
-                            <div className="bg-[#0f0f1a] p-5 rounded-2xl border-2 border-white/10 hover:border-[#f1c40f] transition-colors group">
-                                <div className="font-retro text-[#f1c40f] mb-2 flex items-center gap-2 text-lg">
-                                    <Coins size={20} /> Step 4
-                                </div>
-                                <div className="font-bold text-white mb-1">WIN ETH</div>
-                                <p className="text-white/80 text-lg">
-                                    Winner takes 0.00198 ETH instantly via Smart Contract.
-                                </p>
-                            </div>
+                {/* Header */}
+                <div className="relative z-10 p-6 sm:p-8 bg-[#181825] border-b border-white/10 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-[#2d1b2e] rounded-xl flex items-center justify-center border border-white/10 shadow-inner">
+                            <Gamepad2 size={24} className="text-[#ff8ba7]" />
                         </div>
-                    </section>
-
-                    <div className="grid md:grid-cols-2 gap-8">
-                        {/* Pro Tips */}
-                        <div className="pixel-box border-2 border-[#ff8ba7] bg-[#ff8ba7]/5 p-6 rounded-xl">
-                            <h3 className="text-lg font-retro text-[#ff8ba7] mb-4 uppercase">
-                                PRO STRATEGIES
-                            </h3>
-                            <ul className="space-y-4">
-                                <li className="flex gap-3 text-lg text-white items-start">
-                                    <span className="text-[#ff8ba7]">»</span>
-                                    <span>Use <strong className="text-[#ff8ba7]">Ink Bomb</strong> to clear large enemy areas.</span>
-                                </li>
-                                <li className="flex gap-3 text-lg text-white items-start">
-                                    <span className="text-[#ff8ba7]">»</span>
-                                    <span><strong className="text-[#ff8ba7]">Shotgun</strong> is best for close range defense.</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* Network */}
-                        <div className="pixel-box border-2 border-[#0984e3] bg-[#0984e3]/5 p-6 rounded-xl">
-                            <h3 className="text-lg font-retro text-[#0984e3] mb-4 uppercase">
-                                NETWORK
-                            </h3>
-                            <p className="text-white text-lg">
-                                Running on <strong className="text-[#0984e3]">BASE L2</strong>.
-                                <br />
-                                Fast transactions. Low gas. Instant payouts.
+                        <div>
+                            <h2 className="text-2xl sm:text-3xl font-black font-retro text-white tracking-wide drop-shadow-[2px_2px_0_#903749]">
+                                GAME MANUAL
+                            </h2>
+                            <p className="text-white/60 text-xs font-bold font-sans tracking-widest uppercase">
+                                OFFICIAL BATTLE GUIDE
                             </p>
                         </div>
                     </div>
 
-                    {/* Action */}
-                    <div className="pt-4 flex justify-center">
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="p-3 bg-white/5 hover:bg-white/10 text-white hover:text-red-400 rounded-xl transition-all border border-white/5 hover:border-red-400/30"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                {/* Scrollable Content */}
+                <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8">
+
+                    {/* Welcome Banner */}
+                    <div className="mb-10 text-center">
+                        <h3 className="text-xl text-white font-sans font-medium leading-relaxed max-w-2xl mx-auto">
+                            <span className="text-[#ff8ba7] font-black">PIXEL WAR</span> IS A REAL-TIME PVP ARENA.
+                            <br />
+                            FIGHT FOR TERRITORY. EARN ETHEREUM.
+                        </h3>
+                    </div>
+
+                    {/* STEPS GRID */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <ManualCard
+                            step="1"
+                            title="CONNECT & PAY"
+                            icon={Zap}
+                            bgColor="bg-[#00b894] hover:bg-[#00ceb0]" // Greenish
+                            description="Connect Base Wallet. Pay 0.001 ETH entry fee to join the arena."
+                        />
+                        <ManualCard
+                            step="2"
+                            title="AIM & SHOOT"
+                            icon={Target}
+                            bgColor="bg-[#d63031] hover:bg-[#ff4757]" // Red
+                            description="Click & Hold to fire. Slide cursor to aim. Destroy enemies."
+                        />
+                        <ManualCard
+                            step="3"
+                            title="CAPTURE ZONES"
+                            icon={Flag}
+                            bgColor="bg-[#0984e3] hover:bg-[#74b9ff]" // Blue
+                            description="Cover the grid with your color. Control space to earn points."
+                        />
+                        <ManualCard
+                            step="4"
+                            title="WIN ETH"
+                            icon={Coins}
+                            bgColor="bg-[#e1b12c] hover:bg-[#fbc531]" // Gold
+                            description="Winner takes the pot via Smart Contract. Instant payout."
+                        />
+                    </div>
+
+                    {/* Pro Strategies (Wide) */}
+                    <div className="relative bg-[#2d1b2e] border border-white/10 p-8 rounded-xl group hover:border-[#ff8ba7]/50 transition-colors mb-8">
+                        <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
+                        {/* Corners */}
+                        <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/30 group-hover:border-[#ff8ba7]`}></div>
+                        <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/30 group-hover:border-[#ff8ba7]`}></div>
+                        <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/30 group-hover:border-[#ff8ba7]`}></div>
+                        <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white/30 group-hover:border-[#ff8ba7]`}></div>
+
+                        <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+                            <div className="w-16 h-16 bg-[#ff8ba7]/20 rounded-full flex items-center justify-center shrink-0 border border-[#ff8ba7]/30">
+                                <Lightbulb className="w-8 h-8 text-[#ff8ba7]" />
+                            </div>
+                            <div className="flex-1 text-center md:text-left">
+                                <h3 className="font-retro text-2xl text-white mb-2">PRO STRATEGIES</h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="bg-black/20 p-4 rounded-lg border border-white/5">
+                                        <strong className="text-[#ff8ba7] block mb-1 font-sans text-sm tracking-wider uppercase">INK BOMB</strong>
+                                        <p className="text-white/80 text-sm font-sans">Use bombs to clear large enemy clusters instantly and reset zones.</p>
+                                    </div>
+                                    <div className="bg-black/20 p-4 rounded-lg border border-white/5">
+                                        <strong className="text-[#ff8ba7] block mb-1 font-sans text-sm tracking-wider uppercase">SHOTGUN DEFENSE</strong>
+                                        <p className="text-white/80 text-sm font-sans">Wait for enemies to get close, then bast them for max damage.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Network Info */}
+                    <div className="flex justify-center mb-8">
+                        <div className="inline-flex items-center gap-3 px-6 py-3 bg-[#0984e3]/10 border border-[#0984e3]/30 rounded-full">
+                            <div className="w-2 h-2 rounded-full bg-[#0984e3] animate-pulse" />
+                            <span className="text-[#0984e3] font-bold font-sans text-sm tracking-widest uppercase">
+                                POWERED BY BASE L2 • LOW GAS • INSTANT
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="flex justify-center pb-8">
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="bg-[#0984e3] hover:bg-[#74b9ff] text-white text-xl px-12 py-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all font-retro uppercase border-b-4 border-[#06528d]"
+                            className="group relative px-10 py-4 bg-white text-[#13131f] font-black font-sans text-xl tracking-wider uppercase rounded hover:bg-[#ff8ba7] transition-all overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-none"
                         >
-                            BACK TO BATTLE
+                            <span className="relative z-10 flex items-center gap-2">
+                                BACK TO BATTLE <Swords className="w-5 h-5" />
+                            </span>
                         </button>
                     </div>
 
