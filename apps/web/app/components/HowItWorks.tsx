@@ -1,4 +1,5 @@
 import { Wallet, Gamepad2, Trophy } from "lucide-react";
+import ScrollReveal from "./ScrollReveal";
 
 const steps = [
   {
@@ -27,7 +28,7 @@ export default function HowItWorks() {
       <div className="container mx-auto px-4 relative z-10">
 
         {/* Tech/HUD Section Header */}
-        <div className="flex items-center justify-center gap-4 mb-20">
+        <ScrollReveal className="flex items-center justify-center gap-4 mb-20">
           <div className="h-px bg-white/30 w-12 md:w-24"></div>
           <div className="w-2 h-2 bg-white"></div>
           <h2 className="text-3xl md:text-5xl font-retro text-center text-white drop-shadow-[4px_4px_0_rgba(0,0,0,0.3)]">
@@ -35,12 +36,12 @@ export default function HowItWorks() {
           </h2>
           <div className="w-2 h-2 bg-white"></div>
           <div className="h-px bg-white/30 w-12 md:w-24"></div>
-        </div>
+        </ScrollReveal>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative">
 
           {steps.map((step, index) => (
-            <div key={index} className="flex flex-col items-center text-center relative w-full group">
+            <ScrollReveal key={index} direction="up" delay={index * 200} className="flex flex-col items-center text-center relative w-full group">
 
               {/* Desktop Connector (Between Cards) */}
               {index < steps.length - 1 && (
@@ -79,7 +80,7 @@ export default function HowItWorks() {
 
               </div>
 
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>

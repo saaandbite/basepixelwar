@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { Github, Twitter } from 'lucide-react';
+import ScrollReveal from "./ScrollReveal";
 
 export default function Footer() {
   return (
     <footer className="relative z-10 bg-[#5c1a26] text-white py-12 border-t-8 border-[#903749]">
-      <div className="container mx-auto px-4">
+      <ScrollReveal className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left">
 
           {/* Brand */}
@@ -41,7 +42,7 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-[#903749] text-center font-terminal text-[#ff8ba7]">
           <p>© {new Date().getFullYear()} Pixel War. All rights reserved.</p>
         </div>
-      </div>
+      </ScrollReveal>
     </footer>
   );
 }

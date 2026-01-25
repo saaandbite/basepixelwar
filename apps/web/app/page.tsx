@@ -8,6 +8,7 @@ import { Avatar, Name, Identity, Address, EthBalance } from '@coinbase/onchainki
 import GameFeatures from "./components/GameFeatures";
 import HowItWorks from "./components/HowItWorks";
 import Footer from "./components/Footer";
+import ScrollReveal from "./components/ScrollReveal";
 
 export default function LandingPage() {
   return (
@@ -60,31 +61,37 @@ export default function LandingPage() {
         <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 py-20 md:py-32 max-w-5xl mx-auto">
 
           {/* Brand Logo */}
-          <h1
-            className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-6 text-white font-retro"
-            style={{ textShadow: '4px 4px 0 var(--pixel-primary-darker), 0 0 20px #5c1a26' }}
-          >
-            <strong className="text-[#ff8ba7] font-normal">Pixel</strong>
-            <strong className="text-black font-normal"> War</strong>
-          </h1>
+          <ScrollReveal direction="down" duration={1000}>
+            <h1
+              className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-6 text-white font-retro"
+              style={{ textShadow: '4px 4px 0 var(--pixel-primary-darker), 0 0 20px #5c1a26' }}
+            >
+              <strong className="text-[#ff8ba7] font-normal">Pixel</strong>
+              <strong className="text-black font-normal"> War</strong>
+            </h1>
+          </ScrollReveal>
 
           {/* Headline */}
-          <h1
-            className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-10 text-white font-retro animate-float"
-            style={{ textShadow: '4px 4px 0 var(--pixel-primary-darker), 0 0 20px #5c1a26' }}
-          >
-            Compete.Conquer.Claim your territory!
-          </h1>
+          <ScrollReveal direction="down" duration={1000} delay={200}>
+            <h1
+              className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-10 text-white font-retro animate-float"
+              style={{ textShadow: '4px 4px 0 var(--pixel-primary-darker), 0 0 20px #5c1a26' }}
+            >
+              Compete.Conquer.Claim your territory!
+            </h1>
+          </ScrollReveal>
 
-          <p
-            className="font-terminal text-2xl md:text-3xl lg:text-4xl text-white mb-12 max-w-3xl leading-relaxed"
-            style={{ textShadow: '0 2px 4px rgba(92, 26, 38, 0.5), 0 0 10px rgba(92, 26, 38, 0.4)' }}
-          >
-            Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2
-          </p>
+          <ScrollReveal delay={400}>
+            <p
+              className="font-terminal text-2xl md:text-3xl lg:text-4xl text-white mb-12 max-w-3xl leading-relaxed"
+              style={{ textShadow: '0 2px 4px rgba(92, 26, 38, 0.5), 0 0 10px rgba(92, 26, 38, 0.4)' }}
+            >
+              Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2
+            </p>
+          </ScrollReveal>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col md:flex-row gap-6 items-center flex-wrap justify-center font-sans font-black tracking-wider">
+          <ScrollReveal delay={600} className="flex flex-col md:flex-row gap-6 items-center flex-wrap justify-center font-sans font-black tracking-wider">
             {/* Primary Button: Red Background, White Text */}
             <Link href="/play" className="text-base md:text-lg px-10 py-3 group !font-sans flex items-center justify-center !rounded-full border-4 border-[#903749] bg-[#903749] text-white hover:bg-[#7a2e3d] hover:border-[#7a2e3d] transition-all !shadow-none hover:!shadow-lg transform">
               <Swords className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform" /> START BATTLE
@@ -94,7 +101,7 @@ export default function LandingPage() {
             <Link href="/tournament" className="text-base md:text-lg px-10 py-3 group !font-sans flex items-center justify-center !rounded-full border-4 border-white bg-white !text-[#903749] hover:bg-[#903749] hover:border-[#903749] hover:!text-white transition-all !shadow-none hover:!shadow-lg transform">
               <Trophy className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" /> JOIN TOURNAMENT
             </Link>
-          </div>
+          </ScrollReveal>
         </main >
       </div>
 

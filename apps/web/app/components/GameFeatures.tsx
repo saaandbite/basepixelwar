@@ -1,4 +1,5 @@
 import { Zap, Trophy, Swords, Coins } from "lucide-react";
+import ScrollReveal from "./ScrollReveal";
 
 const features = [
   {
@@ -30,12 +31,12 @@ export default function GameFeatures() {
         {/* Tech/HUD About Section */}
         <div className="relative mb-32 pt-10">
           {/* Label */}
-          <div className="absolute -top-6 left-0 text-sm font-retro text-white tracking-widest opacity-80 pl-2">
+          <ScrollReveal direction="right" duration={800} className="absolute -top-6 left-0 text-sm font-retro text-white tracking-widest opacity-80 pl-2">
             ABOUT US
-          </div>
+          </ScrollReveal>
 
           {/* HUD Container */}
-          <div className="relative border-t border-l border-white/30 p-8 md:p-12">
+          <ScrollReveal direction="up" duration={800} className="relative border-t border-l border-white/30 p-8 md:p-12">
             {/* Top Right Decorative Structure */}
             <div className="absolute top-0 right-0 w-1/3 h-1 border-t border-white/60"></div>
             <div className="absolute top-0 right-[33%] w-8 h-8 border-r border-t border-white/30 skew-x-12 origin-top-right transform translate-x-4"></div>
@@ -89,11 +90,11 @@ export default function GameFeatures() {
               </div>
             </div>
 
-          </div>
+          </ScrollReveal>
         </div>
 
         {/* Tech/HUD Section Header */}
-        <div className="flex items-center justify-center gap-4 mb-16">
+        <ScrollReveal className="flex items-center justify-center gap-4 mb-16">
           <div className="h-px bg-white/30 w-12 md:w-24"></div>
           <div className="w-2 h-2 bg-[#903749]"></div>
           <h2 className="text-3xl md:text-5xl font-retro text-center text-white drop-shadow-[4px_4px_0_rgba(0,0,0,0.3)]">
@@ -101,12 +102,14 @@ export default function GameFeatures() {
           </h2>
           <div className="w-2 h-2 bg-[#903749]"></div>
           <div className="h-px bg-white/30 w-12 md:w-24"></div>
-        </div>
+        </ScrollReveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <div
+            <ScrollReveal
               key={index}
+              direction="up"
+              delay={index * 150}
               className="relative bg-white/5 border border-white/10 p-8 group transition-all duration-300 hover:bg-white/10 hover:-translate-y-2"
             >
               {/* Corner Brackets */}
@@ -133,10 +136,11 @@ export default function GameFeatures() {
               <p className="font-terminal text-base text-white/80 leading-relaxed text-center md:text-left drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]">
                 {feature.description}
               </p>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>
     </section >
   );
 }
+
