@@ -25,7 +25,7 @@ export default function HelpOverlay({ customTrigger }: HelpOverlayProps) {
         <>
             {/* Custom Trigger or Default Floating Button */}
             {customTrigger ? (
-                <div onClick={() => setIsOpen(true)} className="cursor-pointer">
+                <div onClick={() => setIsOpen(true)} className="cursor-pointer w-full h-full">
                     {customTrigger}
                 </div>
             ) : (

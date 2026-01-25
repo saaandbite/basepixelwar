@@ -26,7 +26,9 @@ import {
   ChevronRight,
   Gamepad2,
   BookOpen,
-  Sword
+  Sword,
+  Zap,
+  Activity
 } from "lucide-react";
 import HelpOverlay from "../components/HelpOverlay";
 
@@ -38,7 +40,11 @@ export default function PlayHub() {
     switchToBase,
   } = useWallet();
 
-  const { connect: connectToServer, disconnect: disconnectFromServer } = useMultiplayer();
+  const {
+    connect: connectToServer,
+    disconnect: disconnectFromServer,
+    connectionStatus
+  } = useMultiplayer();
 
   useEffect(() => {
     connectToServer();
@@ -46,6 +52,7 @@ export default function PlayHub() {
   }, [connectToServer, disconnectFromServer]);
 
   const isOnCorrectChain = isCorrectChain(chainId);
+  const isServerOnline = connectionStatus === 'connected';
 
   return (
     <div className="min-h-screen relative flex flex-col font-terminal text-[var(--pixel-fg)] bg-[#ffe4e6] overflow-x-hidden">
@@ -124,9 +131,9 @@ export default function PlayHub() {
 
 
           {/* 4-COLUMN BENTO GRID LAYOUT */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full max-w-5xl mx-auto mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full mx-auto mb-10">
 
-            {/* HEADER CARD (New - Full Width) */}
+            {/* HEADER CARD (Full Width) */}
             <div className="md:col-span-4 relative block bg-white/5 border-4 border-white backdrop-blur-md shadow-[8px_8px_0_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
               {/* Decorative Background */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff8ba7]/20 rounded-bl-full z-0"></div>
@@ -180,31 +187,46 @@ export default function PlayHub() {
             </Link>
 
 
-            {/* 2. TOURNAMENT (Top Right Half - 2x1) */}
-            <Link href="/tournament" className="group md:col-span-2 relative block min-h-[190px]">
-              <div className="absolute inset-0 bg-white/10 border-4 border-white transition-all duration-300 group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)] backdrop-blur-md"></div>
+            {/* 2. server status (1x1) */}
+            <div className="group md:col-span-1 relative block min-h-[190px]">
+              <div className={`absolute inset-0 border-4 border-white transition-all duration-300 shadow-[8px_8px_0_rgba(0,0,0,0.1)] backdrop-blur-md ${isServerOnline ? 'bg-green-500/20' : 'bg-red-500/20'}`}></div>
 
-              <div className="absolute top-0 right-0 w-16 h-16 bg-[#ff8ba7]/20 rounded-bl-full z-0"></div>
-
-              <div className="relative z-10 h-full p-6 flex flex-row items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <Trophy className="w-10 h-10 text-[#903749] drop-shadow-md" />
-                    <h3 className="text-3xl font-black font-retro text-[#903749]">TOURNAMENT</h3>
-                  </div>
-                  <p className="font-sans text-[#903749]/80 text-sm font-bold pl-14">
-                    Weekly Cup • Big Prizes • NFT Trophies
-                  </p>
+              <div className="relative z-10 h-full p-6 flex flex-col justify-between items-center text-center">
+                <div className={`p-3 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2 ${isServerOnline ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                  <Activity className="w-8 h-8 drop-shadow-lg" />
                 </div>
 
-                <div className="flex flex-col items-center justify-center p-3 bg-[#903749] text-white text-[10px] font-bold rotate-6 shadow-lg border-2 border-[#903749] ml-4">
-                  <span>LIVE</span>
+                <div>
+                  <h3 className="text-xl font-black font-retro text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                    SERVER<br />STATUS
+                  </h3>
+                  <div className={`mt-2 font-bold text-xs uppercase tracking-widest ${isServerOnline ? 'text-green-800' : 'text-red-800'}`}>
+                    {isServerOnline ? 'ONLINE' : 'OFFLINE'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. TOURNAMENT (Resized to 1x1) */}
+            <Link href="/tournament" className="group md:col-span-1 relative block min-h-[190px]">
+              <div className="absolute inset-0 bg-white/10 border-4 border-white transition-all duration-300 group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)] backdrop-blur-md"></div>
+
+              <div className="relative z-10 h-full p-6 flex flex-col justify-between text-center items-center">
+                <div className="p-3 bg-white/20 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2">
+                  <Trophy className="w-8 h-8 text-[#903749] drop-shadow-md" />
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-black font-retro text-[#903749] mb-1">TOURNAMENT</h3>
+                  <div className="inline-flex items-center gap-2 px-2 py-1 bg-[#903749] text-white text-[10px] font-bold uppercase rounded-sm">
+                    <span>LIVE</span>
+                  </div>
                 </div>
               </div>
             </Link>
 
 
-            {/* 3. LEADERBOARD (Bottom Right 1 - 1x1) */}
+            {/* 4. LEADERBOARD (1x1) */}
             <Link href="/leaderboard" className="group md:col-span-1 relative block min-h-[190px]">
               <div className="absolute inset-0 bg-[#ff8ba7] border-4 border-white transition-all duration-300 group-hover:bg-[#ff7a9e] group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)]"></div>
 
@@ -224,7 +246,7 @@ export default function PlayHub() {
               </div>
             </Link>
 
-            {/* 4. HELP / GUIDE (Bottom Right 2 - 1x1) */}
+            {/* 5. HELP / GUIDE (1x1) */}
             <div className="group md:col-span-1 relative block min-h-[190px] cursor-pointer">
               <HelpOverlay customTrigger={
                 <div className="w-full h-full relative block">
