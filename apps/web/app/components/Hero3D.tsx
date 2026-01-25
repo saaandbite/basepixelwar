@@ -98,10 +98,10 @@ export default function Hero3D() {
                 top = THEME.primaryDarker;
                 right = '#5c1a26';
                 left = THEME.primaryDark;
-            } else if (type === 2) { // Faction B (Light/White - The Defender)
-                top = '#ffffff';
+            } else if (type === 2) { // Faction B (Light/Pinkish - The Defender)
+                top = '#d9acb5ff'; // Lavender Blush (was pure white)
                 right = THEME.primaryLight;
-                left = '#ffe4e6';
+                left = '#eddce0ff'; // Slightly darker than top
             } else { // Neutral (Base Terrain)
                 top = THEME.primary;
                 right = THEME.primaryDark;

@@ -57,17 +57,26 @@ export default function LandingPage() {
         <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 py-20 md:py-32 max-w-5xl mx-auto">
 
           {/* Brand Logo */}
-          <h1 className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-6 text-white drop-shadow-[4px_4px_0_var(--pixel-primary-darker)] font-retro">
+          <h1
+            className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-6 text-white font-retro"
+            style={{ textShadow: '4px 4px 0 var(--pixel-primary-darker), 0 0 20px #5c1a26' }}
+          >
             <strong className="text-[#ff8ba7] font-normal">Pixel</strong>
             <strong className="text-black font-normal"> War</strong>
           </h1>
 
           {/* Headline */}
-          <h1 className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-10 text-white drop-shadow-[4px_4px_0_var(--pixel-primary-darker)] font-retro animate-float">
+          <h1
+            className="font-heading text-4xl md:text-7xl lg:text-8xl leading-tight mb-10 text-white font-retro animate-float"
+            style={{ textShadow: '4px 4px 0 var(--pixel-primary-darker), 0 0 20px #5c1a26' }}
+          >
             Compete.Conquer.Claim your territory!
           </h1>
 
-          <p className="font-terminal text-2xl md:text-3xl lg:text-4xl text-white mb-12 max-w-3xl leading-relaxed drop-shadow-md">
+          <p
+            className="font-terminal text-2xl md:text-3xl lg:text-4xl text-white mb-12 max-w-3xl leading-relaxed"
+            style={{ textShadow: '0 2px 4px rgba(92, 26, 38, 0.5), 0 0 10px rgba(92, 26, 38, 0.4)' }}
+          >
             Real-Time PvP Battle Arena with Instant On-Chain Settlement on Base L2
           </p>
 

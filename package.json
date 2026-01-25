@@ -16,7 +16,7 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "rm -rf tb_data redis_data && pnpm db:init",
-    "dev:reset": "rm -rf .cache apps/*/.cache node_modules apps/*/node_modules packages/*/node_modules pnpm-lock.yaml .turbo apps/*/.turbo apps/*/.next apps/*/next-env.d.ts && pnpm install"
+    "dev:reset": "rm -rf .cache apps/*/.cache node_modules apps/*/node_modules packages/*/node_modules .turbo apps/*/.turbo apps/*/.next apps/*/next-env.d.ts && pnpm install"
   },
   "devDependencies": {
     "prettier": "^3.0.0",
