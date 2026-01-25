@@ -85,24 +85,24 @@ export default function HelpOverlay({ customTrigger }: HelpOverlayProps) {
 
     // Portal content
     const modalContent = (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-            {/* Modal Container */}
-            <div className="relative bg-[#0f0f1a] border-4 border-white/20 rounded-3xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 md:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+            {/* Modal Container - WIDER AND TALLER */}
+            <div className="relative bg-[#0f0f1a] border-4 border-white/20 rounded-3xl w-full max-w-[95vw] max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
 
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-5 pointer-events-none" style={pixelPattern}></div>
 
-                {/* Header */}
-                <div className="relative z-10 p-6 sm:p-8 bg-[#181825] border-b border-white/10 flex items-center justify-between shrink-0">
+                {/* Header - COMPACTED */}
+                <div className="relative z-10 p-4 bg-[#181825] border-b border-white/10 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#2d1b2e] rounded-xl flex items-center justify-center border border-white/10 shadow-inner">
-                            <Gamepad2 size={24} className="text-[#ff8ba7]" />
+                        <div className="w-10 h-10 bg-[#2d1b2e] rounded-xl flex items-center justify-center border border-white/10 shadow-inner">
+                            <Gamepad2 size={20} className="text-[#ff8ba7]" />
                         </div>
                         <div>
-                            <h2 className="text-2xl sm:text-3xl font-black font-retro text-white tracking-wide drop-shadow-[2px_2px_0_#903749]">
+                            <h2 className="text-xl sm:text-2xl font-black font-retro text-white tracking-wide drop-shadow-[2px_2px_0_#903749]">
                                 GAME MANUAL
                             </h2>
-                            <p className="text-white/60 text-xs font-bold font-sans tracking-widest uppercase">
+                            <p className="text-white/60 text-[10px] font-bold font-sans tracking-widest uppercase">
                                 OFFICIAL BATTLE GUIDE
                             </p>
                         </div>
@@ -110,26 +110,25 @@ export default function HelpOverlay({ customTrigger }: HelpOverlayProps) {
 
                     <button
                         onClick={() => setIsOpen(false)}
-                        className="p-3 bg-white/5 hover:bg-white/10 text-white hover:text-red-400 rounded-xl transition-all border border-white/5 hover:border-red-400/30"
+                        className="p-2 bg-white/5 hover:bg-white/10 text-white hover:text-red-400 rounded-lg transition-all border border-white/5 hover:border-red-400/30"
                     >
                         <X className="w-6 h-6" />
                     </button>
                 </div>
 
-                {/* Scrollable Content */}
-                <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8">
+                {/* Content Container - Compacted Padding */}
+                <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar p-6">
 
-                    {/* Welcome Banner */}
-                    <div className="mb-10 text-center">
-                        <h3 className="text-xl text-white font-sans font-medium leading-relaxed max-w-2xl mx-auto">
+                    {/* Welcome Banner - Reduced Margin */}
+                    <div className="mb-6 text-center">
+                        <h3 className="text-lg text-white font-sans font-medium leading-relaxed max-w-2xl mx-auto">
                             <span className="text-[#ff8ba7] font-black">PIXEL WAR</span> IS A REAL-TIME PVP ARENA.
-                            <br />
                             FIGHT FOR TERRITORY. EARN ETHEREUM.
                         </h3>
                     </div>
 
-                    {/* STEPS GRID */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    {/* STEPS GRID - Reduced Gap */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <ManualCard
                             step="1"
                             title="CONNECT & PAY"
@@ -160,8 +159,8 @@ export default function HelpOverlay({ customTrigger }: HelpOverlayProps) {
                         />
                     </div>
 
-                    {/* Pro Strategies (Wide) */}
-                    <div className="relative bg-[#2d1b2e] border border-white/10 p-8 rounded-xl group hover:border-[#ff8ba7]/50 transition-colors mb-8">
+                    {/* Pro Strategies (Wide) - Reduced Margin */}
+                    <div className="relative bg-[#2d1b2e] border border-white/10 p-6 rounded-xl group hover:border-[#ff8ba7]/50 transition-colors mb-6">
                         <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
                         {/* Corners */}
                         <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/30 group-hover:border-[#ff8ba7]`}></div>
@@ -169,41 +168,38 @@ export default function HelpOverlay({ customTrigger }: HelpOverlayProps) {
                         <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/30 group-hover:border-[#ff8ba7]`}></div>
                         <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white/30 group-hover:border-[#ff8ba7]`}></div>
 
-                        <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
-                            <div className="w-16 h-16 bg-[#ff8ba7]/20 rounded-full flex items-center justify-center shrink-0 border border-[#ff8ba7]/30">
-                                <Lightbulb className="w-8 h-8 text-[#ff8ba7]" />
+                        <div className="relative z-10 flex flex-col md:flex-row gap-6 items-center">
+                            <div className="w-14 h-14 bg-[#ff8ba7]/20 rounded-full flex items-center justify-center shrink-0 border border-[#ff8ba7]/30">
+                                <Lightbulb className="w-7 h-7 text-[#ff8ba7]" />
                             </div>
                             <div className="flex-1 text-center md:text-left">
-                                <h3 className="font-retro text-2xl text-white mb-2">PRO STRATEGIES</h3>
+                                <h3 className="font-retro text-xl text-white mb-2">PRO STRATEGIES</h3>
                                 <div className="grid md:grid-cols-2 gap-4">
-                                    <div className="bg-black/20 p-4 rounded-lg border border-white/5">
-                                        <strong className="text-[#ff8ba7] block mb-1 font-sans text-sm tracking-wider uppercase">INK BOMB</strong>
-                                        <p className="text-white/80 text-sm font-sans">Use bombs to clear large enemy clusters instantly and reset zones.</p>
+                                    <div className="bg-black/20 p-3 rounded-lg border border-white/5">
+                                        <strong className="text-[#ff8ba7] block mb-1 font-sans text-xs tracking-wider uppercase">INK BOMB</strong>
+                                        <p className="text-white/80 text-xs font-sans">Use bombs to clear large enemy clusters instantly and reset zones.</p>
                                     </div>
-                                    <div className="bg-black/20 p-4 rounded-lg border border-white/5">
-                                        <strong className="text-[#ff8ba7] block mb-1 font-sans text-sm tracking-wider uppercase">SHOTGUN DEFENSE</strong>
-                                        <p className="text-white/80 text-sm font-sans">Wait for enemies to get close, then bast them for max damage.</p>
+                                    <div className="bg-black/20 p-3 rounded-lg border border-white/5">
+                                        <strong className="text-[#ff8ba7] block mb-1 font-sans text-xs tracking-wider uppercase">SHOTGUN DEFENSE</strong>
+                                        <p className="text-white/80 text-xs font-sans">Wait for enemies to get close, then bast them for max damage.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Network Info */}
-                    <div className="flex justify-center mb-8">
-                        <div className="inline-flex items-center gap-3 px-6 py-3 bg-[#0984e3]/10 border border-[#0984e3]/30 rounded-full">
+                    {/* Network Info & Action */}
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-auto">
+                        <div className="inline-flex items-center gap-3 px-4 py-2 bg-[#0984e3]/10 border border-[#0984e3]/30 rounded-full">
                             <div className="w-2 h-2 rounded-full bg-[#0984e3] animate-pulse" />
-                            <span className="text-[#0984e3] font-bold font-sans text-sm tracking-widest uppercase">
-                                POWERED BY BASE L2 • LOW GAS • INSTANT
+                            <span className="text-[#0984e3] font-bold font-sans text-xs tracking-widest uppercase">
+                                POWERED BY BASE L2 • LOW GAS
                             </span>
                         </div>
-                    </div>
 
-                    {/* Action Button */}
-                    <div className="flex justify-center pb-8">
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="group relative px-10 py-4 bg-white text-[#13131f] font-black font-sans text-xl tracking-wider uppercase rounded hover:bg-[#ff8ba7] transition-all overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-none"
+                            className="group relative px-8 py-3 bg-white text-[#13131f] font-black font-sans text-lg tracking-wider uppercase rounded hover:bg-[#ff8ba7] transition-all overflow-hidden shadow-[4px_4px_0_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-none"
                         >
                             <span className="relative z-10 flex items-center gap-2">
                                 BACK TO BATTLE <Swords className="w-5 h-5" />
