@@ -14,24 +14,34 @@ import {
     Link2
 } from "lucide-react";
 
-export default function HelpOverlay() {
+interface HelpOverlayProps {
+    customTrigger?: React.ReactNode;
+}
+
+export default function HelpOverlay({ customTrigger }: HelpOverlayProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
         <>
-            {/* Floating Button - Retro Style */}
-            <button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-50 p-4 bg-[var(--pixel-blue)] text-white rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,0.5)] hover:shadow-[6px_6px_0px_rgba(0,0,0,0.5)] hover:-translate-y-1 transition-all border-4 border-white group animate-bounce-in"
-                aria-label="Help & Guide"
-            >
-                <HelpCircle size={32} className="group-hover:rotate-12 transition-transform" />
+            {/* Custom Trigger or Default Floating Button */}
+            {customTrigger ? (
+                <div onClick={() => setIsOpen(true)} className="cursor-pointer">
+                    {customTrigger}
+                </div>
+            ) : (
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="fixed bottom-6 right-6 z-50 p-4 bg-[var(--pixel-blue)] text-white rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,0.5)] hover:shadow-[6px_6px_0px_rgba(0,0,0,0.5)] hover:-translate-y-1 transition-all border-4 border-white group animate-bounce-in"
+                    aria-label="Help & Guide"
+                >
+                    <HelpCircle size={32} className="group-hover:rotate-12 transition-transform" />
 
-                {/* Pixel Tooltip */}
-                <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-4 py-2 bg-black text-white text-xs font-retro border-2 border-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                    GAME GUIDE
-                </span>
-            </button>
+                    {/* Pixel Tooltip */}
+                    <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-4 py-2 bg-black text-white text-xs font-retro border-2 border-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                        GAME GUIDE
+                    </span>
+                </button>
+            )}
 
             {/* Overlay Modal */}
             {isOpen && (

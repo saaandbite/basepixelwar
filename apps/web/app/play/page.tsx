@@ -25,27 +25,20 @@ import {
   Swords,
   ChevronRight,
   Gamepad2,
-  Wifi,
-  WifiOff,
-  Loader2,
+  BookOpen,
+  Sword
 } from "lucide-react";
 import HelpOverlay from "../components/HelpOverlay";
 
 export default function PlayHub() {
   const {
-    address,
     isConnected,
     chainId,
     error,
     switchToBase,
   } = useWallet();
 
-  const { 
-    connect: connectToServer, 
-    disconnect: disconnectFromServer, 
-    connectionStatus,
-    playerId 
-  } = useMultiplayer();
+  const { connect: connectToServer, disconnect: disconnectFromServer } = useMultiplayer();
 
   useEffect(() => {
     connectToServer();
@@ -60,7 +53,7 @@ export default function PlayHub() {
       {/* Hero Section Container (Background + Nav + Hero Content) */}
       <div className="relative w-full min-h-screen flex flex-col bg-gradient-to-b from-[#ffe4e6] to-[#ff8ba7]">
 
-        {/* Navbar - Matching Landing Page exactly */}
+        {/* Navbar */}
         <nav className="relative z-10 w-full py-6 md:py-10">
           <div className="container mx-auto px-4 flex items-center justify-between">
             {/* Logo */}
@@ -103,22 +96,8 @@ export default function PlayHub() {
         {/* Main Content */}
         <main className="relative z-10 flex-1 container mx-auto px-4 py-8 flex flex-col items-center justify-center">
 
-          {/* Title Section matching landing page text shadow style */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1 bg-[#903749]/10 rounded-full mb-6 border border-[#903749]/20 backdrop-blur-sm">
-              <Gamepad2 className="w-4 h-4 text-[#903749]" />
-              <span className="text-xs font-bold text-[#903749] tracking-widest uppercase">Select Game Mode</span>
-            </div>
-            <h1
-              className="font-heading text-4xl md:text-6xl text-white font-retro mb-4 tracking-wide"
-              style={{ textShadow: '4px 4px 0 var(--pixel-primary-darker), 0 0 20px #5c1a26' }}
-            >
-              BATTLE ARENA
-            </h1>
-          </div>
-
           {/* Error Message */}
-          <div className="w-full max-w-4xl mx-auto mb-8">
+          <div className="w-full max-w-5xl mx-auto mb-6">
             {error && (
               <div className="w-full p-4 mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 font-sans rounded shadow-sm flex items-center gap-3">
                 <AlertTriangle className="w-6 h-6 flex-shrink-0" />
@@ -144,208 +123,133 @@ export default function PlayHub() {
           </div>
 
 
-          {/* GAME MODE CARDS - Styled like GameFeatures.tsx */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl mx-auto">
+          {/* 4-COLUMN BENTO GRID LAYOUT */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full max-w-5xl mx-auto mb-10">
 
-            {/* 1. 1v1 DUEL - Primary Card */}
-            <Link href="/room" className="group relative block bg-[#903749] overflow-hidden transition-all duration-300 hover:bg-[#7a2e3d] hover:-translate-y-2 min-h-[320px]">
+            {/* HEADER CARD (New - Full Width) */}
+            <div className="md:col-span-4 relative block bg-white/5 border-4 border-white backdrop-blur-md shadow-[8px_8px_0_rgba(0,0,0,0.1)] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
+              {/* Decorative Background */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff8ba7]/20 rounded-bl-full z-0"></div>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#903749]/10 rounded-tr-full z-0"></div>
 
-              {/* Corner Brackets - like GameFeatures */}
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/50 group-hover:border-white transition-colors duration-300 z-20"></div>
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/20 group-hover:border-[#ff8ba7] transition-colors duration-300 z-20"></div>
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white/20 group-hover:border-[#ff8ba7] transition-colors duration-300 z-20"></div>
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#ff8ba7] group-hover:scale-110 transition-transform duration-300 z-20"></div>
-
-              {/* Pixel Accent */}
-              <div className="absolute top-4 right-4 w-2 h-2 bg-white/20 group-hover:bg-[#ff8ba7] transition-colors"></div>
-
-              <div className="relative z-10 h-full p-8 flex flex-col">
-                {/* Icon Container with Tech Border */}
-                <div className="relative w-16 h-16 mb-6">
-                  <div className="absolute inset-0 border border-white/30 skew-x-6 group-hover:skew-x-0 transition-transform duration-300"></div>
-                  <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Swords className="w-8 h-8 text-white" />
-                  </div>
+              <div className="relative z-10 text-center md:text-left">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#903749] text-white rounded text-xs font-bold tracking-widest uppercase mb-4 shadow-sm">
+                  <Gamepad2 className="w-4 h-4" />
+                  <span>Select Game Mode</span>
                 </div>
-
-                <div className="px-3 py-1 bg-white/10 backdrop-blur-sm text-white text-[10px] font-retro tracking-widest border border-white/20 w-fit mb-4">CLASSIC</div>
-
-                <h2 className="font-retro text-3xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)] group-hover:text-[#ffc6c7] transition-colors">
-                  1 VS 1 DUEL
-                </h2>
-                <p className="font-terminal text-base text-white/80 leading-relaxed drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)] mb-6">
-                  High stakes duel. Winner takes all. Prove your worth in the arena.
-                </p>
-
-                <div className="mt-auto inline-flex items-center gap-2 text-white/70 group-hover:text-white transition-colors text-sm font-bold">
-                  Start Battle <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
+                <h1 className="font-heading text-4xl md:text-6xl text-white font-retro tracking-wide drop-shadow-[4px_4px_0_rgba(0,0,0,0.3)]">
+                  BATTLE ARENA
+                </h1>
               </div>
-            </Link>
 
-
-            {/* 2. TOURNAMENT */}
-            <Link href="/tournament" className="group relative block bg-white/5 border border-white/10 overflow-hidden transition-all duration-300 hover:bg-white/10 hover:-translate-y-2 min-h-[320px]">
-
-              {/* Corner Brackets */}
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/50 group-hover:border-white transition-colors duration-300 z-20"></div>
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/20 group-hover:border-[#ff8ba7] transition-colors duration-300 z-20"></div>
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white/20 group-hover:border-[#ff8ba7] transition-colors duration-300 z-20"></div>
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#903749] group-hover:scale-110 transition-transform duration-300 z-20"></div>
-
-              {/* Pixel Accent */}
-              <div className="absolute top-4 right-4 w-2 h-2 bg-white/20 group-hover:bg-[#ff8ba7] transition-colors"></div>
-
-              <div className="relative z-10 h-full p-8 flex flex-col">
-                {/* Icon Container with Tech Border */}
-                <div className="relative w-16 h-16 mb-6">
-                  <div className="absolute inset-0 border border-white/30 skew-x-6 group-hover:skew-x-0 transition-transform duration-300"></div>
-                  <div className="absolute inset-0 bg-[#903749] opacity-20 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Trophy className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-
-                <div className="px-3 py-1 bg-[#903749] text-white text-[10px] font-retro tracking-widest border border-white/20 w-fit mb-4">
-                  LIVE EVENT
-                </div>
-
-                <h3 className="font-retro text-3xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)] group-hover:text-[#ffc6c7] transition-colors">
-                  TOURNAMENT
-                </h3>
-                <p className="font-terminal text-base text-white/80 leading-relaxed drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)] mb-6">
-                  Weekly Cup with big prizes. Compete and win exclusive NFT Trophies.
-                </p>
-
-                <div className="mt-auto inline-flex items-center gap-2 text-white/70 group-hover:text-white transition-colors text-sm font-bold">
-                  Join Now <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            </Link>
-
-
-            {/* 3. LEADERBOARD */}
-            <Link href="/leaderboard" className="group relative block bg-[#ff8ba7] border border-white/20 overflow-hidden transition-all duration-300 hover:bg-[#ff7a9e] hover:-translate-y-2 min-h-[320px]">
-
-              {/* Corner Brackets */}
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/50 group-hover:border-white transition-colors duration-300 z-20"></div>
-              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/20 group-hover:border-white transition-colors duration-300 z-20"></div>
-              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white/20 group-hover:border-white transition-colors duration-300 z-20"></div>
-              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white group-hover:scale-110 transition-transform duration-300 z-20"></div>
-
-              {/* Pixel Accent */}
-              <div className="absolute top-4 right-4 w-2 h-2 bg-white/40 group-hover:bg-white transition-colors"></div>
-
-              <div className="relative z-10 h-full p-8 flex flex-col">
-                {/* Icon Container with Tech Border */}
-                <div className="relative w-16 h-16 mb-6">
-                  <div className="absolute inset-0 border border-white/50 skew-x-6 group-hover:skew-x-0 transition-transform duration-300"></div>
-                  <div className="absolute inset-0 bg-white/20 group-hover:bg-white/30 transition-opacity duration-300"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Medal className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-
-                <div className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-[10px] font-retro tracking-widest border border-white/30 w-fit mb-4">RANKINGS</div>
-
-                <h3 className="font-retro text-3xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.3)] group-hover:text-white transition-colors">
-                  HALL OF FAME
-                </h3>
-                <p className="font-terminal text-base text-white/90 leading-relaxed drop-shadow-[1px_1px_0_rgba(0,0,0,0.3)] mb-6">
-                  See top players and their achievements. Climb the global leaderboard.
-                </p>
-
-                <div className="mt-auto inline-flex items-center gap-2 text-white/80 group-hover:text-white transition-colors text-sm font-bold">
-                  View Rankings <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            </Link>
-
-          </div>
-
-          {/* SERVER CONNECTION STATUS - Stacked Container Below */}
-          <div className="w-full max-w-5xl mx-auto mt-8">
-            <div className={`relative overflow-hidden transition-all duration-300 ${
-              connectionStatus === 'connected' 
-                ? 'bg-emerald-500/20 border border-emerald-400/30' 
-                : connectionStatus === 'connecting'
-                  ? 'bg-yellow-500/20 border border-yellow-400/30'
-                  : 'bg-red-500/20 border border-red-400/30'
-            }`}>
-              {/* Corner Brackets */}
-              <div className={`absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 z-20 ${
-                connectionStatus === 'connected' ? 'border-emerald-400' : connectionStatus === 'connecting' ? 'border-yellow-400' : 'border-red-400'
-              }`}></div>
-              <div className={`absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 z-20 ${
-                connectionStatus === 'connected' ? 'border-emerald-400' : connectionStatus === 'connecting' ? 'border-yellow-400' : 'border-red-400'
-              }`}></div>
-
-              <div className="relative z-10 p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  {/* Status Icon */}
-                  <div className={`relative w-10 h-10 flex items-center justify-center ${
-                    connectionStatus === 'connected' 
-                      ? 'text-emerald-400' 
-                      : connectionStatus === 'connecting'
-                        ? 'text-yellow-400'
-                        : 'text-red-400'
-                  }`}>
-                    {connectionStatus === 'connected' && (
-                      <Wifi className="w-6 h-6" />
-                    )}
-                    {connectionStatus === 'connecting' && (
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                    )}
-                    {connectionStatus === 'disconnected' && (
-                      <WifiOff className="w-6 h-6" />
-                    )}
-                  </div>
-
-                  {/* Status Text */}
-                  <div>
-                    <div className={`font-retro text-sm ${
-                      connectionStatus === 'connected' 
-                        ? 'text-emerald-300' 
-                        : connectionStatus === 'connecting'
-                          ? 'text-yellow-300'
-                          : 'text-red-300'
-                    }`}>
-                      {connectionStatus === 'connected' && 'SERVER CONNECTED'}
-                      {connectionStatus === 'connecting' && 'CONNECTING...'}
-                      {connectionStatus === 'disconnected' && 'SERVER OFFLINE'}
-                    </div>
-                    <div className="font-terminal text-xs text-white/60">
-                      {connectionStatus === 'connected' && 'Real-time multiplayer ready'}
-                      {connectionStatus === 'connecting' && 'Establishing connection to game server'}
-                      {connectionStatus === 'disconnected' && 'Unable to reach game server'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status Indicator Dot */}
-                <div className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${
-                    connectionStatus === 'connected' 
-                      ? 'bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]' 
-                      : connectionStatus === 'connecting'
-                        ? 'bg-yellow-400 animate-pulse shadow-[0_0_10px_#facc15]'
-                        : 'bg-red-400 shadow-[0_0_10px_#f87171]'
-                  }`} />
-                  {playerId && (
-                    <span className="font-terminal text-[10px] text-white/40 hidden md:block">
-                      ID: {playerId.slice(0, 8)}...
-                    </span>
-                  )}
-                </div>
+              <div className="relative z-10 flex gap-3 opacity-80">
+                <div className="w-3 h-3 bg-white animate-pulse"></div>
+                <div className="w-3 h-3 bg-white animate-pulse delay-75"></div>
+                <div className="w-3 h-3 bg-white animate-pulse delay-150"></div>
               </div>
             </div>
+
+
+            {/* 1. 1v1 DUEL (Left Half - 2x2) */}
+            <Link href="/room" className="group md:col-span-2 md:row-span-2 relative block min-h-[340px] md:min-h-full">
+              <div className="absolute inset-0 bg-[#903749] border-4 border-white opacity-90 transition-all duration-300 group-hover:bg-[#7a2e3d] group-hover:scale-[1.01] shadow-[8px_8px_0_rgba(0,0,0,0.2)]"></div>
+
+              {/* Corner Brackets */}
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white z-20"></div>
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white z-20"></div>
+
+              <div className="relative z-10 h-full p-8 md:p-12 flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white text-[10px] font-retro tracking-widest border border-white/30">CLASSIC</div>
+                  <Swords className="w-20 h-20 md:w-24 md:h-24 text-white group-hover:rotate-12 transition-transform duration-300 drop-shadow-[4px_4px_0_rgba(0,0,0,0.5)]" />
+                </div>
+
+                <div>
+                  <h2 className="text-5xl md:text-7xl font-black font-retro text-white mb-4 drop-shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+                    1 VS 1
+                  </h2>
+                  <p className="font-sans text-white/90 text-xl leading-relaxed mb-8 max-w-lg drop-shadow-md">
+                    High stakes duel. Winner takes all.<br />Prove your worth in the arena.
+                  </p>
+
+                  <div className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#903749] font-black text-base uppercase tracking-wider group-hover:bg-[#ffc6c7] transition-colors rounded-none shadow-[4px_4px_0_rgba(0,0,0,0.2)]">
+                    Start Battle <ChevronRight className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+
+            {/* 2. TOURNAMENT (Top Right Half - 2x1) */}
+            <Link href="/tournament" className="group md:col-span-2 relative block min-h-[190px]">
+              <div className="absolute inset-0 bg-white/10 border-4 border-white transition-all duration-300 group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)] backdrop-blur-md"></div>
+
+              <div className="absolute top-0 right-0 w-16 h-16 bg-[#ff8ba7]/20 rounded-bl-full z-0"></div>
+
+              <div className="relative z-10 h-full p-6 flex flex-row items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-2">
+                    <Trophy className="w-10 h-10 text-[#903749] drop-shadow-md" />
+                    <h3 className="text-3xl font-black font-retro text-[#903749]">TOURNAMENT</h3>
+                  </div>
+                  <p className="font-sans text-[#903749]/80 text-sm font-bold pl-14">
+                    Weekly Cup • Big Prizes • NFT Trophies
+                  </p>
+                </div>
+
+                <div className="flex flex-col items-center justify-center p-3 bg-[#903749] text-white text-[10px] font-bold rotate-6 shadow-lg border-2 border-[#903749] ml-4">
+                  <span>LIVE</span>
+                </div>
+              </div>
+            </Link>
+
+
+            {/* 3. LEADERBOARD (Bottom Right 1 - 1x1) */}
+            <Link href="/leaderboard" className="group md:col-span-1 relative block min-h-[190px]">
+              <div className="absolute inset-0 bg-[#ff8ba7] border-4 border-white transition-all duration-300 group-hover:bg-[#ff7a9e] group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)]"></div>
+
+              <div className="relative z-10 h-full p-6 flex flex-col justify-between items-center text-center">
+                <div className="p-3 bg-white/20 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2">
+                  <Medal className="w-8 h-8 text-white drop-shadow-lg" />
+                </div>
+                <h3 className="text-xl font-black font-retro leading-none text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                  HALL OF<br />FAME
+                </h3>
+
+                <div className="w-full bg-black/20 backdrop-blur-md border border-white/20 p-2 mt-2 rounded-none">
+                  <div className="font-retro text-sm text-white drop-shadow-sm">
+                    TOP: SATOSHI
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            {/* 4. HELP / GUIDE (Bottom Right 2 - 1x1) */}
+            <div className="group md:col-span-1 relative block min-h-[190px] cursor-pointer">
+              <HelpOverlay customTrigger={
+                <div className="w-full h-full relative block">
+                  <div className="absolute inset-0 bg-[#00b894] border-4 border-white transition-all duration-300 group-hover:bg-[#00a884] group-hover:scale-[1.02] shadow-[8px_8px_0_rgba(0,0,0,0.1)]"></div>
+                  <div className="relative z-10 h-full p-6 flex flex-col justify-between items-center text-center min-h-[190px]">
+                    <div className="p-3 bg-white/20 rounded-full ring-2 ring-white/30 backdrop-blur-sm mb-2">
+                      <BookOpen className="w-8 h-8 text-white drop-shadow-lg" />
+                    </div>
+                    <h3 className="text-xl font-black font-retro leading-none text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
+                      GAME<br />GUIDE
+                    </h3>
+                    <div className="px-3 py-1 bg-white/20 rounded text-[10px] font-bold text-white border border-white/30">
+                      READ MANUAL
+                    </div>
+                  </div>
+                </div>
+              } />
+            </div>
+
+
           </div>
 
         </main>
       </div>
 
-      <HelpOverlay />
     </div>
   );
 }
