@@ -183,6 +183,11 @@ export default function RoomPage() {
             <header className={`${styles.header} w-full flex justify-center`}>
                 <div className="flex flex-col items-center gap-4">
                     <div className="flex items-center gap-4">
+                        <Link href="/play" className={`${styles.statusPill} !gap-2 !px-4 hover:text-[#ff8ba7] hover:border-[#ff8ba7] transition-colors`}>
+                            <ArrowLeft className="w-4 h-4" />
+                            <span className="font-bold">BACK TO LOBBY</span>
+                        </Link>
+
                         {/* Server Status Pill */}
                         <div className={styles.statusPill}>
                             <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-[#26de81]' :
@@ -205,10 +210,6 @@ export default function RoomPage() {
                                 </>
                             )}
                         </div>
-
-                        <Link href="/play" className={`${styles.statusPill} !gap-0 !px-2 hover:text-[#ff8ba7]`}>
-                            <ArrowLeft className="w-5 h-5" />
-                        </Link>
                     </div>
                 </div>
             </header>
@@ -317,7 +318,7 @@ export default function RoomPage() {
                                 <p className="text-white/70 font-terminal">QUEUE POS: #{queuePosition}</p>
                             </div>
 
-                            <button onClick={leaveQueue} className="text-[#e74c3c] font-terminal border-b border-[#e74c3c] hover:opacity-80 transition-opacity pb-1 mt-4">
+                            <button onClick={leaveQueue} className="text-white font-sans font-bold border border-white/50 hover:bg-white/10 hover:border-white transition-all px-8 py-2 rounded-full mt-4 bg-black/20 text-sm tracking-wide">
                                 ABORT SCAN
                             </button>
                         </div>

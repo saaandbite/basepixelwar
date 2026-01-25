@@ -56,7 +56,8 @@
     border: 1px solid var(--tech-border);
     backdrop-filter: blur(4px);
     color: var(--text-primary);
-    font-family: var(--font-terminal);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
     font-size: 0.85rem;
     padding: 0.5rem 1rem;
     display: flex;
