@@ -1,324 +1,284 @@
-/* Room Page Styles - Enhanced Color Hierarchy */
+/* Room Page Styles - Pixel Tech / HUD Aesthetic */
 .container {
-    /* Level 1: Primary Colors - Brand Identity */
-    --pink-primary: #FF8BA7;
-    --pink-primary-hover: #FF7B9C;
-    --pink-primary-active: #FF6B8C;
+    /* Brand Colors */
+    --pixel-primary: #ff8ba7;
+    --pixel-dark: #903749;
+    --pixel-accent: #ffc6c7;
 
-    /* Level 2: Secondary Colors - Supporting Elements */
-    --pink-secondary: #FFC6C6;
-    --pink-light: #FFE5E5;
-    --pink-lightest: #FFFAFA;
+    /* Tech UI Colors */
+    --tech-border: rgba(255, 255, 255, 0.3);
+    --tech-border-light: rgba(255, 255, 255, 0.6);
+    --hud-bg: rgba(255, 255, 255, 0.05);
+    --hud-bg-hover: rgba(255, 255, 255, 0.1);
 
-    /* Level 3: Accent Colors - Functional */
-    --success: #4CAF50;
-    --success-hover: #43A047;
-    --warning: #F59E0B;
-    --error: #E53935;
-    --info: #3B82F6;
-
-    /* Level 4: Text Hierarchy - Optimized Contrast */
-    --text-primary: #1F2937;
-    --text-secondary: #4B5563;
-    --text-tertiary: #6B7280;
-    --text-muted: #9CA3AF;
-
-    /* Level 5: Background & Surface */
-    --surface-white: #FFFFFF;
-    --surface-overlay: rgba(0, 0, 0, 0.5);
+    /* Text */
+    --text-primary: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.7);
 
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    /* Gradient Background directly from Landing Page theme */
+    background: linear-gradient(180deg, var(--pixel-primary) 0%, var(--pixel-dark) 100%);
+    position: relative;
+    overflow-x: hidden;
+    font-family: var(--font-terminal, monospace);
+
+    /* Centering */
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #FFE5E5 0%, #FFC6C6 100%);
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
+    gap: 1.5rem;
 }
 
-/* Background Pattern */
-.backgroundGrid {
+/* Background Noise/Grid Overlay */
+.scanlineOverlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background-image:
-        linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
-    background-size: 40px 40px;
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
     pointer-events: none;
+    z-index: 0;
 }
 
 /* Header */
 .header {
-    text-align: center;
-    margin-bottom: 32px;
     position: relative;
     z-index: 10;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
 }
 
-.logoTitle {
-    font-size: 2.5rem;
-    font-weight: 900;
-    margin-bottom: 8px;
-    letter-spacing: -1.5px;
-}
-
-.pixel {
-    color: var(--pink-primary);
-}
-
-.war {
+/* Status Pills - Tech Style */
+.statusPill {
+    background: var(--hud-bg);
+    border: 1px solid var(--tech-border);
+    backdrop-filter: blur(4px);
     color: var(--text-primary);
-}
-
-.subtitle {
-    color: var(--text-secondary);
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-}
-
-/* Status Badges */
-.statusContainer {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    margin-bottom: 24px;
-    position: relative;
-    z-index: 10;
-}
-
-.statusBadge {
+    font-family: var(--font-terminal);
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: var(--surface-white);
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-tertiary);
-    border: 1.5px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    /* Skew effect for tech look */
+    transform: skewX(-10deg);
 }
 
-.statusDot {
+.statusPill>* {
+    transform: skewX(10deg);
+    /* Counter-skew content */
+}
+
+.statusPill:hover {
+    background: var(--hud-bg-hover);
+    border-color: var(--pixel-accent);
+}
+
+/* HUD Main Container - The "Cabinet" */
+.hudContainer {
+    position: relative;
+    z-index: 10;
+    background: var(--hud-bg);
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 2.5rem;
+
+    /* Tech Borders - Partial */
+    border-left: 1px solid var(--tech-border);
+    border-right: 1px solid var(--tech-border);
+    border-bottom: 1px solid var(--tech-border);
+
+    /* Box Shadow for depth */
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+}
+
+/* Top Decorative Bar (Skewed Tab) */
+.hudTopBar {
+    position: absolute;
+    top: -20px;
+    left: -1px;
+    /* Align with border */
+    right: 20%;
+    height: 20px;
+    background: var(--hud-bg);
+    border-top: 1px solid var(--tech-border);
+    border-left: 1px solid var(--tech-border);
+    border-right: 1px solid var(--tech-border);
+
+    /* Simple clip-path to simulate the tab shape if CSS skew is tricky with positioning */
+    /* Alternatively, use a pseudo-element or separate div for the angled cut */
+}
+
+/* Decorative Pixel Accents */
+.pixelCorner {
+    position: absolute;
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    background: var(--text-primary);
+    box-shadow: 0 0 10px var(--pixel-primary);
 }
 
-.statusDot.connected {
-    background-color: #4CAF50;
+.pixelCorner.tl {
+    top: -4px;
+    left: -4px;
 }
 
-.statusDot.connecting {
-    background-color: #FFC107;
+.pixelCorner.tr {
+    top: -4px;
+    right: -4px;
 }
 
-.statusDot.offline {
-    background-color: #F44336;
+.pixelCorner.bl {
+    bottom: -4px;
+    left: -4px;
 }
 
-.walletBadge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: white;
-    border: 2px solid var(--success);
-    color: var(--success);
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
+.pixelCorner.br {
+    bottom: -4px;
+    right: -4px;
 }
 
-/* Main Card */
-.mainCard {
-    background: var(--surface-white);
-    border-radius: 20px;
-    padding: 24px;
-    width: 100%;
-    max-width: 420px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+/* Player Card in HUD */
+.playerCard {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--tech-border);
+    padding: 1.5rem;
     position: relative;
-    z-index: 10;
     display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* Player Info Section */
-.playerInfoCard {
-    background: var(--surface-white);
-    border: 2px solid var(--pink-light);
-    border-radius: 12px;
-    padding: 16px;
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.playingAsLabel {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-    display: block;
-}
-
-.playerDetails {
-    display: flex;
+    gap: 1.5rem;
     align-items: center;
-    gap: 12px;
+    margin-bottom: 2rem;
 }
 
-.avatar {
-    width: 48px;
-    height: 48px;
-    background: var(--pink-primary);
-    color: white;
-    border-radius: 50%;
+.playerAvatar {
+    width: 80px;
+    height: 80px;
+    background: var(--pixel-dark);
+    border: 2px solid var(--pixel-accent);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
+    font-family: var(--font-retro);
+    font-size: 2rem;
+    color: var(--text-primary);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.playerInfo h3 {
+    font-family: var(--font-retro);
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    margin-bottom: 0.25rem;
+}
+
+.playerInfo p {
+    font-family: var(--font-terminal);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* Tech Input */
+.techInput {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--tech-border);
+    color: var(--text-primary);
+    font-family: var(--font-terminal);
+    padding: 0.5rem 1rem;
+    width: 100%;
+}
+
+.techInput:focus {
+    outline: none;
+    border-color: var(--pixel-accent);
+}
+
+/* Buttons - Tech Style */
+.techButton {
+    position: relative;
+    width: 100%;
+    padding: 1.25rem;
+    font-family: var(--font-retro);
     font-size: 1.1rem;
-}
-
-.playerText {
-    display: flex;
-    flex-direction: column;
-}
-
-.playerName {
-    font-weight: 700;
-    color: var(--text-primary);
-    font-size: 1rem;
-}
-
-.walletName {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.editButton {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    color: var(--pink-primary);
-    cursor: pointer;
-}
-
-/* Action Buttons */
-.findMatchButton {
-    width: 100%;
-    background: var(--pink-primary);
-    color: white;
+    text-transform: uppercase;
+    letter-spacing: 2px;
     border: none;
-    border-radius: 12px;
-    padding: 14px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(255, 139, 167, 0.3);
-    margin-bottom: 12px;
-    letter-spacing: 0.3px;
+
+    /* Angled corners via clip-path */
+    clip-path: polygon(10px 0, 100% 0,
+            100% calc(100% - 10px), calc(100% - 10px) 100%,
+            0 100%, 0 10px);
 }
 
-.findMatchButton:hover {
-    transform: translateY(-2px);
-    background: var(--pink-primary-hover);
-    box-shadow: 0 4px 12px rgba(255, 139, 167, 0.4);
-}
-
-.findMatchButton:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.playAiButton {
-    width: 100%;
-    background: white;
-    color: var(--text-tertiary);
-    border: 2px solid #E5E7EB;
-    border-radius: 12px;
-    padding: 14px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.3px;
-}
-
-.playAiButton:hover {
-    border-color: var(--pink-primary);
-    color: var(--pink-primary);
-}
-
-/* Bottom Features */
-.featuresGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 32px;
-    width: 100%;
-    max-width: 420px;
-    position: relative;
-    z-index: 10;
-}
-
-.featureCard {
-    background: white;
-    border-radius: 12px;
-    padding: 16px 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.featureIcon {
-    color: var(--warning);
-}
-
-.featureIcon.blue {
-    color: var(--info);
-}
-
-.featureText {
-    font-size: 0.8rem;
-    font-weight: 600;
+.techButtonPrimary {
+    background: var(--pixel-dark);
     color: var(--text-primary);
-    line-height: 1.2;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Fallback/Inner border simulation */
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
+.techButtonPrimary:hover {
+    background: var(--pixel-primary);
+    color: white;
+    box-shadow: 0 0 30px var(--pixel-primary);
+}
+
+.techButtonPrimary:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.techButtonSecondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--tech-border);
+}
+
+.techButtonSecondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border-color: var(--pixel-accent);
+}
+
+/* Spinner */
+.techSpinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid var(--pixel-accent);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
 @media (max-width: 640px) {
-    .logoTitle {
-        font-size: 2rem;
+    .hudContainer {
+        padding: 1.5rem;
+        width: 95%;
     }
 
-    .featuresGrid {
-        gap: 8px;
-    }
-
-    .featureCard {
-        padding: 12px 6px;
+    .statusPill {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
     }
 }

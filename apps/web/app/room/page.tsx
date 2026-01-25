@@ -8,9 +8,10 @@ import { useWallet, formatAddress, isCorrectChain } from '../contexts/WalletCont
 import { useGameVault, GameMode } from '../hooks/useGameVault';
 import { useENSName } from '../hooks/useENSName';
 import {
-    Loader2, Wallet, AlertTriangle, Edit2, Check, Bot, Search,
-    Trophy, Sparkles, ArrowLeft, Swords, Zap, Target, Crown, Clock
+    Loader2, Wallet, AlertTriangle, Edit2, Bot, Search,
+    ArrowLeft, Swords, Check, Clock, Trophy
 } from 'lucide-react';
+import styles from './room.module.css';
 
 export default function RoomPage() {
     const router = useRouter();
@@ -71,9 +72,8 @@ export default function RoomPage() {
         return () => disconnectFromServer();
     }, [connectToServer, disconnectFromServer]);
 
-    // Auto-reconnect wallet when returning from wallet app during pending payment
+    // Auto-reconnect wallet
     useEffect(() => {
-        // If we have pending payment but wallet is disconnected, try to reconnect
         if (paymentStatus && !isWalletConnected && !isWalletConnecting) {
             const savedWallet = sessionStorage.getItem('wallet_address');
             if (savedWallet) {
@@ -111,7 +111,7 @@ export default function RoomPage() {
         return () => clearInterval(interval);
     }, [paymentStatus?.deadline]);
 
-    // Auto ready (legacy flow)
+    // Auto ready
     useEffect(() => {
         if (matchmakingStatus === 'found' && opponent && room?.status !== 'pending_payment' && !paymentStatus) {
             sessionStorage.removeItem('ai_mode');
@@ -119,178 +119,41 @@ export default function RoomPage() {
         }
     }, [matchmakingStatus, opponent, setReady, room?.status, paymentStatus]);
 
-    // Clear pending payment cache when matchmaking resets to idle (timeout, cancel, etc.)
     useEffect(() => {
         if (matchmakingStatus === 'idle') {
             sessionStorage.removeItem('pending_payment_tx');
         }
     }, [matchmakingStatus]);
 
-    // Resume pending payment after reconnect (mobile browser wallet switching)
-    useEffect(() => {
-        const resumePendingPayment = async () => {
-            // Check if we have a pending payment that wasn't confirmed
-            const pendingPayment = sessionStorage.getItem('pending_payment_tx');
-            if (!pendingPayment) return;
-            
-            try {
-                const { txHash, onChainGameId, roomId, timestamp } = JSON.parse(pendingPayment);
-                
-                // Skip if txHash is still a placeholder (transaction not sent yet)
-                if (!txHash || txHash === 'pending') {
-                    console.log('[RoomPage] Pending payment has placeholder txHash, skipping...');
-                    return;
-                }
-                
-                // Only resume if it's recent (within 5 minutes) and same room
-                const isRecent = Date.now() - timestamp < 5 * 60 * 1000;
-                const isSameRoom = room?.id === roomId;
-                
-                if (!isRecent || !isSameRoom) {
-                    console.log('[RoomPage] Pending payment expired or different room, clearing...');
-                    sessionStorage.removeItem('pending_payment_tx');
-                    return;
-                }
-                
-                // Check if we already confirmed this payment
-                const myPaymentDone = isFirstPlayer ? paymentStatus?.player1Paid : paymentStatus?.player2Paid;
-                if (myPaymentDone) {
-                    console.log('[RoomPage] Payment already confirmed, clearing pending...');
-                    sessionStorage.removeItem('pending_payment_tx');
-                    return;
-                }
-                
-                console.log('[RoomPage] Resuming pending payment confirmation:', { txHash, onChainGameId });
-                
-                // Verify transaction on-chain before confirming
-                if (typeof window !== 'undefined' && window.ethereum) {
-                    const receipt = await window.ethereum.request({
-                        method: 'eth_getTransactionReceipt',
-                        params: [txHash],
-                    }) as { status: string } | null;
-                    
-                    if (receipt && receipt.status === '0x1') {
-                        console.log('[RoomPage] Transaction confirmed on-chain, notifying server...');
-                        confirmPayment(txHash, onChainGameId);
-                        sessionStorage.removeItem('pending_payment_tx');
-                    } else if (receipt && receipt.status === '0x0') {
-                        console.error('[RoomPage] Transaction failed on-chain');
-                        sessionStorage.removeItem('pending_payment_tx');
-                    } else {
-                        console.log('[RoomPage] Transaction still pending, will retry...');
-                        // Transaction not mined yet, retry in a few seconds
-                        setTimeout(resumePendingPayment, 3000);
-                    }
-                }
-            } catch (error) {
-                console.error('[RoomPage] Error resuming pending payment:', error);
-                sessionStorage.removeItem('pending_payment_tx');
-            }
-        };
-        
-        // Only run when we have room, paymentStatus, and wallet is connected
-        if (room?.id && paymentStatus && isWalletConnected && connectionStatus === 'connected') {
-            resumePendingPayment();
-        }
-    }, [room?.id, paymentStatus, isWalletConnected, connectionStatus, isFirstPlayer, confirmPayment]);
-
-    // Payment handlers
     const handlePayToPlay = useCallback(async () => {
         if (!room?.id || !paymentStatus) return;
-
-        // Ensure wallet is connected before attempting payment
         if (!isWalletConnected) {
-            console.log('[RoomPage] Wallet not connected, connecting first...');
             await connectWallet();
-            // Give wagmi a moment to update state
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            // Check again after connect attempt
-            if (!walletAddress) {
-                console.error('[RoomPage] Failed to connect wallet for payment');
-                return;
-            }
+            return;
         }
-
-        // Check if we're on mobile browser (not in wallet's browser)
-        const isMobileBrowser = typeof window !== 'undefined' && 
-            /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) &&
-            !(window as any).ethereum;
 
         try {
             let txHash: string;
             let onChainGameId: number;
             const existingGameId = paymentStatus.onChainGameId;
 
-            if (!isFirstPlayer && !existingGameId) {
-                return; // Wait for Player 1
-            }
-
-            console.log('[RoomPage] Starting payment...', { 
-                existingGameId, 
-                isFirstPlayer, 
-                walletAddress,
-                isMobileBrowser 
-            });
-
-            // Save pending payment BEFORE sending transaction (in case browser gets backgrounded)
-            const pendingData = {
-                roomId: room.id,
-                onChainGameId: existingGameId || 0, // Will be updated after createGame
-                timestamp: Date.now(),
-                isFirstPlayer,
-            };
+            if (!isFirstPlayer && !existingGameId) return;
 
             if (existingGameId) {
                 onChainGameId = existingGameId;
-                
-                // Save pending state before wallet opens
-                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
-                    ...pendingData,
-                    onChainGameId,
-                    txHash: 'pending', // Placeholder, will be updated
-                }));
-                
                 txHash = await gameVault.joinGame(onChainGameId);
-                
-                // Update with actual txHash
-                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
-                    ...pendingData,
-                    onChainGameId,
-                    txHash,
-                }));
             } else {
-                // Save pending state before wallet opens
-                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
-                    ...pendingData,
-                    txHash: 'pending',
-                }));
-                
                 const result = await gameVault.createGame(GameMode.OneVsOne);
                 txHash = result.txHash;
                 onChainGameId = result.gameId;
-                
-                // Update with actual txHash and gameId
-                sessionStorage.setItem('pending_payment_tx', JSON.stringify({
-                    ...pendingData,
-                    onChainGameId,
-                    txHash,
-                }));
             }
-
-            console.log('[RoomPage] Payment successful:', { txHash, onChainGameId });
             confirmPayment(txHash, onChainGameId);
-            
-            // Clear pending payment after successful confirmation
-            sessionStorage.removeItem('pending_payment_tx');
         } catch (error) {
             console.error('[RoomPage] Payment failed:', error);
-            // Clear pending payment on error
-            sessionStorage.removeItem('pending_payment_tx');
         }
-    }, [room?.id, paymentStatus, gameVault, confirmPayment, isFirstPlayer, isWalletConnected, connectWallet, walletAddress]);
+    }, [room?.id, paymentStatus, gameVault, confirmPayment, isFirstPlayer, isWalletConnected, connectWallet]);
 
     const handleCancelPayment = useCallback(() => {
-        // Clear any pending payment cache
         sessionStorage.removeItem('pending_payment_tx');
         cancelPayment();
     }, [cancelPayment]);
@@ -313,131 +176,124 @@ export default function RoomPage() {
     const error = multiplayerError || walletError || transactionError;
 
     return (
-        <div className="min-h-screen relative flex flex-col font-terminal text-[24px]">
-            <div className="scanline" />
-            <div className="fixed inset-0 bg-[var(--pixel-bg)] z-0" />
+        <div className={styles.container}>
+            {/* Background Noise */}
+            <div className={styles.scanlineOverlay} />
 
-            {/* Header */}
-            <header className="relative z-10 p-6 border-b-4 border-[var(--pixel-card-border)] bg-black/90">
-                <div className="container mx-auto flex items-center justify-between">
-                    <Link href="/play" className="flex items-center gap-3 hover:text-[var(--pixel-blue)] transition-colors">
-                        <ArrowLeft className="w-8 h-8" />
-                        <span className="font-bold">EXIT</span>
-                    </Link>
-
-                    <div className="flex items-center gap-6 text-base md:text-lg">
-                        {/* Server Status */}
-                        <div className="flex items-center gap-3 pixel-badge text-[var(--pixel-fg)] bg-black border-2 border-[var(--pixel-fg)]">
-                            <div className={`w-4 h-4 ${connectionStatus === 'connected' ? 'bg-[var(--pixel-green)] animate-blink' :
-                                connectionStatus === 'connecting' ? 'bg-[var(--pixel-yellow)]' : 'bg-[var(--pixel-red)]'
+            <header className={`${styles.header} w-full flex justify-center`}>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-4">
+                        {/* Server Status Pill */}
+                        <div className={styles.statusPill}>
+                            <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-[#26de81]' :
+                                connectionStatus === 'connecting' ? 'bg-[#f9ca24]' : 'bg-[#e74c3c]'
                                 }`} />
-                            <span>NET: {connectionStatus === 'connected' ? 'ONLINE' : 'OFFLINE'}</span>
+                            <span>SERVER: {connectionStatus === 'connected' ? 'ONLINE' : 'OFFLINE'}</span>
                         </div>
 
-                        {/* Wallet */}
-                        <div className="flex items-center gap-3 pixel-badge text-[var(--pixel-fg)] bg-black border-2 border-[var(--pixel-fg)]">
-                            <Wallet className="w-5 h-5" />
-                            <span>{isWalletConnected && walletAddress ? formatAddress(walletAddress) : 'NO_DATA'}</span>
+                        {/* Wallet Pill */}
+                        <div className={styles.statusPill}>
+                            {isWalletConnected ? (
+                                <>
+                                    <Wallet className="w-4 h-4 text-[#26de81]" />
+                                    <span>{formatAddress(walletAddress || '')}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Wallet className="w-4 h-4 text-slate-400" />
+                                    <span>NO LINK</span>
+                                </>
+                            )}
                         </div>
+
+                        <Link href="/play" className={`${styles.statusPill} !gap-0 !px-2 hover:text-[#ff8ba7]`}>
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
                     </div>
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="relative z-10 container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
+            <main className="relative z-10 w-full flex flex-col items-center justify-center">
 
                 {/* Error Box */}
                 {error && (
-                    <div className="pixel-box w-full max-w-2xl mb-12 bg-black border-4 border-[var(--pixel-red)] animate-shake text-center">
-                        <h3 className="text-[var(--pixel-red)] mb-4 text-3xl font-retro">⚠ ERROR ⚠</h3>
-                        <p className="text-xl">{error}</p>
+                    <div className="w-full max-w-[520px] mb-6 p-4 bg-red-900/20 border border-red-500/50 backdrop-blur-sm shadow-sm text-center">
+                        <p className="text-red-400 font-terminal text-sm border-l-2 border-red-500 pl-4">{error}</p>
                     </div>
                 )}
 
-                {/* Matchmaking Interface - The "Cabinet" */}
-                <div className="pixel-card w-full max-w-2xl bg-[#13131f] relative border-4 border-white rounded-[2rem] shadow-2xl">
+                {/* Main Card / HUD Container */}
+                <div className={styles.hudContainer}>
+                    {/* Decorative Elements */}
+                    <div className={styles.hudTopBar} />
+                    <div className={`${styles.pixelCorner} ${styles.tl}`} />
+                    <div className={`${styles.pixelCorner} ${styles.tr}`} />
+                    <div className={`${styles.pixelCorner} ${styles.bl}`} />
+                    <div className={`${styles.pixelCorner} ${styles.br}`} />
 
-                    {/* Decorative Header */}
-                    <div className="bg-[var(--pixel-blue)] text-center py-3 mb-8 -mx-7 -mt-7 rounded-t-[1.5rem] border-b-4 border-white text-white font-retro text-lg tracking-widest shadow-md">
-                        BATTLE LOBBY - SYSTEM v2.0
-                    </div>
-
-                    {/* Reconnecting during pending_payment - special UI */}
                     {!isServerConnected && (paymentStatus || room?.status === 'pending_payment') ? (
-                        <div className="flex flex-col items-center py-16 gap-6">
-                            <Loader2 className="w-16 h-16 text-[var(--pixel-yellow)] animate-spin" />
-                            <p className="text-[var(--pixel-yellow)] text-2xl animate-blink">RECONNECTING...</p>
-                            <p className="text-[var(--pixel-fg)] text-lg opacity-70">Match in progress, please wait...</p>
+                        <div className="flex flex-col items-center py-12 gap-6">
+                            <div className={styles.techSpinner} />
+                            <p className="text-[#ff8ba7] font-retro animate-pulse">RECONNECTING...</p>
                         </div>
-
                     ) : !isServerConnected ? (
-                        <div className="flex flex-col items-center py-16 gap-6">
-                            <Loader2 className="w-16 h-16 text-[var(--pixel-blue)] animate-spin" />
-                            <p className="text-[var(--pixel-fg)] text-2xl animate-blink">CONNECTING TO SERVER...</p>
+                        <div className="flex flex-col items-center py-12 gap-6">
+                            <div className={styles.techSpinner} />
+                            <p className="text-white/80 font-terminal">ESTABLISHING UPLINK...</p>
                         </div>
-
                     ) : matchmakingStatus === 'idle' ? (
                         <div className="space-y-8">
-                            {/* Player Status Panel - BLUE THEME */}
-                            <div className="bg-[var(--pixel-bg)] border-4 border-[var(--pixel-blue)] p-6 relative">
-                                <div className="absolute -top-4 left-6 bg-[var(--pixel-blue)] px-3 py-1 text-base text-white border-2 border-white">
-                                    PLAYER 1 (YOU)
+                            {/* Player Info */}
+                            <div className={styles.playerCard}>
+                                <div className={styles.playerAvatar}>
+                                    {isWalletConnected ? displayName.slice(0, 1).toUpperCase() : '?'}
                                 </div>
-                                <div className="flex items-center gap-6 mt-4">
-                                    <div className="w-24 h-24 bg-[var(--pixel-blue)] border-4 border-white flex items-center justify-center font-retro text-4xl text-white shadow-lg">
-                                        {isWalletConnected ? displayName.slice(0, 1).toUpperCase() : '?'}
+                                <div className="flex-1 min-w-0 playerInfo">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="!text-xs uppercase tracking-widest !text-[#ff8ba7]">Operator ID</p>
+                                        {isWalletConnected && (
+                                            <button onClick={() => setIsEditingName(!isEditingName)} className="text-white/50 hover:text-white transition-colors">
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            {isEditingName ? (
-                                                <div className="flex gap-4 w-full">
-                                                    <input
-                                                        type="text"
-                                                        value={customName}
-                                                        onChange={(e) => setCustomName(e.target.value)}
-                                                        placeholder="ENTER NAME"
-                                                        className="pixel-input text-2xl !p-2 flex-1"
-                                                        autoFocus
-                                                    />
-                                                    <button onClick={() => setIsEditingName(false)} className="pixel-btn pixel-btn-success !py-2 !px-4">
-                                                        OK
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <span className="text-[var(--pixel-green)] text-3xl font-bold truncate tracking-wider">
-                                                        {isWalletConnected ? displayName : 'INSERT COIN'}
-                                                    </span>
-                                                    {isWalletConnected && (
-                                                        <button onClick={() => setIsEditingName(true)} className="hover:text-white p-2">
-                                                            <Edit2 className="w-6 h-6 opacity-50 hover:opacity-100" />
-                                                        </button>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
-                                        <p className="text-xl text-[var(--pixel-fg)] mt-2 opacity-80">
-                                            {isWalletConnected ? 'READY TO BATTLE' : 'WALLET DISCONNECTED'}
-                                        </p>
-                                    </div>
+
+                                    {isEditingName ? (
+                                        <input
+                                            type="text"
+                                            value={customName}
+                                            onChange={(e) => setCustomName(e.target.value)}
+                                            className={styles.techInput}
+                                            autoFocus
+                                            onBlur={() => setIsEditingName(false)}
+                                        />
+                                    ) : (
+                                        <h3 className="text-white truncate">
+                                            {displayName}
+                                        </h3>
+                                    )}
+                                    <p className="mt-1 font-terminal text-xs text-white/50">
+                                        {isWalletConnected ? 'STATUS: ACTIVE' : 'STATUS: OFFLINE'}
+                                    </p>
                                 </div>
                             </div>
 
                             {/* Actions */}
-                            <div className="space-y-6 pt-4">
+                            <div className="space-y-4">
                                 <button
                                     onClick={handleJoinQueue}
                                     disabled={isWalletConnecting || isTransactionLoading}
-                                    className="pixel-btn pixel-btn-primary w-full text-2xl py-6 group shadow-xl"
+                                    className={`${styles.techButton} ${styles.techButtonPrimary}`}
                                 >
                                     {isWalletConnecting ? (
-                                        <span className="animate-blink">CONNECTING...</span>
+                                        <>CONNECTING...</>
                                     ) : !isWalletConnected ? (
-                                        <><Wallet className="inline-block mr-3 w-8 h-8" /> LINK WALLET</>
+                                        <div className="flex items-center justify-center gap-3"><Wallet className="w-5 h-5" /> LINK WALLET</div>
                                     ) : !isOnCorrectChain ? (
-                                        <><AlertTriangle className="inline-block mr-3 w-8 h-8 text-[var(--pixel-yellow)]" /> WRONG NETWORK</>
+                                        <div className="flex items-center justify-center gap-3 text-yellow-400"><AlertTriangle className="w-5 h-5" /> WRONG NET</div>
                                     ) : (
-                                        <><Swords className="inline-block mr-3 w-8 h-8 group-hover:rotate-45 transition-transform" /> FIND MATCH</>
+                                        <div className="flex items-center justify-center gap-3"><Swords className="w-5 h-5" /> INITIALIZE COMBAT</div>
                                     )}
                                 </button>
 
@@ -446,119 +302,105 @@ export default function RoomPage() {
                                         sessionStorage.setItem('ai_mode', 'true');
                                         router.push('/play/game');
                                     }}
-                                    className="pixel-btn pixel-btn-outline w-full text-xl py-4 opacity-70 hover:opacity-100"
+                                    className={`${styles.techButton} ${styles.techButtonSecondary}`}
                                 >
-                                    <Bot className="inline-block mr-3 w-6 h-6" /> PRACTICE MODE (AI)
+                                    <div className="flex items-center justify-center gap-3"><Bot className="w-5 h-5" /> SIMULATION MODE (AI)</div>
                                 </button>
                             </div>
                         </div>
-
                     ) : matchmakingStatus === 'queue' ? (
-                        <div className="flex flex-col items-center py-12 gap-8">
-                            <div className="relative w-32 h-32 flex items-center justify-center">
-                                <div className="absolute inset-0 border-8 border-[var(--pixel-fg)] opacity-30" />
-                                <div className="absolute inset-0 border-8 border-t-[var(--pixel-blue)] border-r-[var(--pixel-blue)] animate-spin" />
-                                <Search className="w-16 h-16 text-[var(--pixel-blue)] animate-pulse" />
+                        <div className="flex flex-col items-center py-12 gap-8 text-center">
+                            <div className={styles.techSpinner} />
+
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-retro text-[#ff8ba7] animate-pulse">SCANNING SECTOR...</h3>
+                                <p className="text-white/70 font-terminal">QUEUE POS: #{queuePosition}</p>
                             </div>
-                            <div className="text-center">
-                                <p className="text-[var(--pixel-blue)] animate-blink text-2xl mb-4 font-bold">SCANNING FOR OPPONENT...</p>
-                                <div className="pixel-badge text-[var(--pixel-fg)] text-lg px-6 py-2">
-                                    QUEUE POS: #{queuePosition}
-                                </div>
-                            </div>
-                            <button onClick={leaveQueue} className="pixel-btn pixel-btn-danger mt-8 text-lg w-full max-w-xs">
-                                CANCEL SEARCH
+
+                            <button onClick={leaveQueue} className="text-[#e74c3c] font-terminal border-b border-[#e74c3c] hover:opacity-80 transition-opacity pb-1 mt-4">
+                                ABORT SCAN
                             </button>
                         </div>
-
                     ) : matchmakingStatus === 'found' && paymentStatus ? (
-                        <div className="space-y-8">
-                            <div className="text-center animate-bounce text-[var(--pixel-green)]">
-                                <h3 className="text-4xl font-retro">OPPONENT FOUND!</h3>
+                        <div className="space-y-8 text-center">
+                            <div className="space-y-2">
+                                <Swords className="w-12 h-12 text-[#26de81] mx-auto animate-bounce" />
+                                <h3 className="text-3xl font-retro text-white">TARGET ACQUIRED</h3>
+                                <p className="text-white/50 font-terminal">AWAITING CONFIRMATION</p>
                             </div>
 
-                            {/* VS Screen */}
-                            <div className="flex items-center justify-between px-8 py-6 bg-[var(--pixel-bg)] border-4 border-white">
-                                <div className="text-center relative">
-                                    <div className={`w-24 h-24 border-4 mx-auto mb-4 flex items-center justify-center ${paymentStatus.player1Paid ? 'bg-[var(--pixel-green)] border-white' : 'border-[var(--pixel-fg)] bg-black'
+                            {/* Players */}
+                            <div className="flex items-center justify-between px-4 py-4 bg-white/5 border border-white/10 relative">
+                                <div className="absolute top-0 left-0 w-2 h-2 bg-white/20" />
+                                <div className="absolute bottom-0 right-0 w-2 h-2 bg-white/20" />
+
+                                <div className="text-center">
+                                    <div className={`w-16 h-16 border-2 flex items-center justify-center mb-2 transition-all ${paymentStatus.player1Paid ? 'border-[#26de81] text-[#26de81]' : 'border-white/30 text-white/30'
                                         }`}>
-                                        {paymentStatus.player1Paid ? <Check className="w-12 h-12 text-black" /> : <span className="text-4xl font-retro text-[var(--pixel-blue)]">P1</span>}
+                                        {paymentStatus.player1Paid ? <Check className="w-8 h-8" /> : <span className="font-retro text-xl">P1</span>}
                                     </div>
-                                    <span className="text-lg font-bold text-[var(--pixel-blue)]">{isFirstPlayer ? 'YOU' : 'OPP'}</span>
+                                    <span className="text-xs font-bold text-white/50">{isFirstPlayer ? 'YOU' : 'OPP'}</span>
                                 </div>
 
-                                <div className="font-retro text-6xl text-[var(--pixel-red)] animate-pulse px-4">VS</div>
+                                <div className="text-4xl font-retro text-[#903749] animate-pulse">VS</div>
 
-                                <div className="text-center relative">
-                                    <div className={`w-24 h-24 border-4 mx-auto mb-4 flex items-center justify-center ${paymentStatus.player2Paid ? 'bg-[var(--pixel-green)] border-white' : 'border-[var(--pixel-fg)] bg-black'
+                                <div className="text-center">
+                                    <div className={`w-16 h-16 border-2 flex items-center justify-center mb-2 transition-all ${paymentStatus.player2Paid ? 'border-[#26de81] text-[#26de81]' : 'border-white/30 text-white/30'
                                         }`}>
-                                        {paymentStatus.player2Paid ? <Check className="w-12 h-12 text-black" /> : <span className="text-4xl font-retro text-[var(--pixel-red)]">P2</span>}
+                                        {paymentStatus.player2Paid ? <Check className="w-8 h-8" /> : <span className="font-retro text-xl">P2</span>}
                                     </div>
-                                    <span className="text-lg font-bold text-[var(--pixel-red)]">{!isFirstPlayer ? 'YOU' : 'OPP'}</span>
+                                    <span className="text-xs font-bold text-white/50">{!isFirstPlayer ? 'YOU' : 'OPP'}</span>
                                 </div>
                             </div>
 
-                            {/* Stakes Panel */}
-                            <div className="bg-[var(--pixel-bg)] border-4 border-[var(--pixel-yellow)] p-6 text-center shadow-[0_0_20px_rgba(234,179,8,0.2)]">
-                                <div className="text-[var(--pixel-yellow)] text-xl mb-2 uppercase font-bold tracking-widest">Battle Stake</div>
-                                <div className="font-retro text-3xl text-white mb-4">{getBidAmount()}</div>
-                                <div className="text-lg text-[var(--pixel-green)] flex items-center justify-center gap-2">
-                                    <Trophy className="w-6 h-6" /> WINNER: 0.00198 ETH
+                            {/* Stake Info */}
+                            <div className="border border-[#ff8ba7]/30 bg-[#ff8ba7]/10 p-4 relative">
+                                <p className="text-xs uppercase tracking-widest text-[#ff8ba7] font-bold mb-1">STAKE AMOUNT</p>
+                                <p className="text-2xl font-retro text-white">{getBidAmount()}</p>
+                                <div className="flex items-center justify-center gap-2 mt-2 text-[#26de81] text-xs font-terminal">
+                                    <Trophy className="w-3 h-3" />
+                                    <span>REWARD: 0.00198 ETH</span>
                                 </div>
                             </div>
 
-                            {/* Timer */}
-                            <div className="text-center flex items-center justify-center gap-3 text-[var(--pixel-red)] text-2xl font-bold bg-black border-2 border-[var(--pixel-red)] py-2">
-                                <Clock className="w-6 h-6 animate-pulse" />
-                                <span>TIME: {paymentTimeLeft}s</span>
+                            <div className="flex items-center justify-center gap-2 text-[#e74c3c] font-retro text-sm border border-[#e74c3c]/50 py-2">
+                                <Clock className="w-4 h-4 animate-pulse" />
+                                <span>TIMEOUT: {paymentTimeLeft}s</span>
                             </div>
 
-                            <div className="flex gap-6">
-                                <button onClick={handleCancelPayment} className="pixel-btn pixel-btn-danger flex-1 text-xl">
-                                    EXIT
-                                </button>
+                            <div className="space-y-3">
                                 <button
                                     onClick={handlePayToPlay}
                                     disabled={gameVault.isLoading || (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) || (!isFirstPlayer && !paymentStatus.onChainGameId)}
-                                    className="pixel-btn pixel-btn-success flex-[2] text-xl font-bold"
+                                    className={`${styles.techButton} ${styles.techButtonPrimary} !bg-[#26de81] !text-black !text-sm border-none`}
                                 >
                                     {gameVault.isLoading ? (
-                                        <><Loader2 className="w-6 h-6 animate-spin inline" /> PROCESSING</>
+                                        <><Loader2 className="w-5 h-5 animate-spin inline mr-2" /> PROCESSING TX</>
                                     ) : (isFirstPlayer ? paymentStatus.player1Paid : paymentStatus.player2Paid) ? (
-                                        'WAITING OPPONENT...'
+                                        'WAITING FOR OPPONENT...'
                                     ) : (!isFirstPlayer && !paymentStatus.onChainGameId) ? (
-                                        <><Loader2 className="w-6 h-6 animate-spin inline" /> WAIT P1</>
+                                        'WAITING FOR PLAYER 1...'
                                     ) : (
-                                        'PAY & FIGHT'
+                                        'CONFIRM ENTRY FEE'
                                     )}
+                                </button>
+                                <button onClick={handleCancelPayment} className="w-full py-3 text-white/50 hover:text-white font-terminal text-sm border border-transparent hover:border-white/20 transition-all">
+                                    CANCEL OPERATION
                                 </button>
                             </div>
                         </div>
-
                     ) : matchmakingStatus === 'found' ? (
-                        <div className="text-center py-16">
-                            <Swords className="w-24 h-24 mx-auto text-[var(--pixel-blue)] animate-bounce mb-6" />
-                            <h2 className="text-4xl font-retro text-white mb-2">MATCH FOUND!</h2>
-                            <p className="text-[var(--pixel-fg)] text-xl animate-pulse">INITIALIZING BATTLEGROUND...</p>
+                        <div className="flex flex-col items-center py-12 gap-6 text-center">
+                            <Swords className="w-16 h-16 text-[#ff8ba7] animate-bounce" />
+                            <h3 className="text-3xl font-retro text-white">MATCH CONFIRMED</h3>
+                            <p className="text-white/70 font-terminal">ENTERING BATTLEFIELD...</p>
                         </div>
-
                     ) : matchmakingStatus === 'countdown' ? (
-                        <div className="text-center py-16">
-                            <p className="font-retro text-3xl text-[var(--pixel-yellow)] mb-8">GET READY</p>
-                            <p className="font-retro text-9xl text-white animate-pulse scale-150">{countdown}</p>
+                        <div className="flex flex-col items-center py-12 gap-6 text-center">
+                            <p className="text-xl font-retro text-[#f9ca24]">PREPARE FOR BATTLE</p>
+                            <p className="text-9xl font-retro text-white animate-pulse">{countdown}</p>
                         </div>
-
                     ) : null}
-                </div>
-
-                {/* Footer Info */}
-                <div className="mt-12 flex gap-12 text-[var(--pixel-fg)] text-lg opacity-60">
-                    <div className="flex items-center gap-3">
-                        <Target className="w-5 h-5" /> 1VS1 STANDARD
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Zap className="w-5 h-5" /> ON-CHAIN SETTLEMENT
-                    </div>
                 </div>
             </main>
         </div>
