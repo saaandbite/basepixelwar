@@ -92,21 +92,45 @@ export default function GameFeatures() {
           </div>
         </div>
 
-        <h2 className="text-3xl md:text-5xl font-retro text-center mb-16 text-white drop-shadow-[6px_6px_0_rgba(0,0,0,0.3)]">
-          Game Features
-        </h2>
+        {/* Tech/HUD Section Header */}
+        <div className="flex items-center justify-center gap-4 mb-16">
+          <div className="h-px bg-white/30 w-12 md:w-24"></div>
+          <div className="w-2 h-2 bg-[#903749]"></div>
+          <h2 className="text-3xl md:text-5xl font-retro text-center text-white drop-shadow-[4px_4px_0_rgba(0,0,0,0.3)]">
+            Game Features
+          </h2>
+          <div className="w-2 h-2 bg-[#903749]"></div>
+          <div className="h-px bg-white/30 w-12 md:w-24"></div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white/10 border-2 border-white rounded-xl p-6 shadow-[8px_8px_0_rgba(0,0,0,0.25)] hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[12px_12px_0_rgba(0,0,0,0.25)] transition-all duration-200 group"
+              className="relative bg-white/5 border border-white/10 p-8 group transition-all duration-300 hover:bg-white/10 hover:-translate-y-2"
             >
-              <div className="bg-[#903749] w-14 h-14 flex items-center justify-center border-2 border-white rounded-lg mb-4 shadow-[4px_4px_0_rgba(0,0,0,0.2)] group-hover:scale-105 transition-transform duration-200">
-                {feature.icon}
+              {/* Corner Brackets */}
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white/50 group-hover:border-white transition-colors duration-300"></div>
+              <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white/20 group-hover:border-[#ff8ba7] transition-colors duration-300"></div>
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white/20 group-hover:border-[#ff8ba7] transition-colors duration-300"></div>
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#903749] group-hover:scale-110 transition-transform duration-300"></div>
+
+              {/* Pixel Accents */}
+              <div className="absolute top-4 right-4 w-2 h-2 bg-white/20 group-hover:bg-[#ff8ba7] transition-colors"></div>
+
+              {/* Icon Container with Tech Border */}
+              <div className="relative w-16 h-16 mb-6 mx-auto md:mx-0">
+                <div className="absolute inset-0 border border-white/30 skew-x-6 group-hover:skew-x-0 transition-transform duration-300"></div>
+                <div className="absolute inset-0 bg-[#903749] opacity-20 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {feature.icon}
+                </div>
               </div>
-              <h3 className="font-retro text-xl mb-3 text-left text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)]">{feature.title}</h3>
-              <p className="font-terminal text-base text-white/90 leading-relaxed text-left drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]">
+
+              <h3 className="font-retro text-xl mb-4 text-center md:text-left text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)] group-hover:text-[#ffc6c7] transition-colors">
+                {feature.title}
+              </h3>
+              <p className="font-terminal text-base text-white/80 leading-relaxed text-center md:text-left drop-shadow-[1px_1px_0_rgba(0,0,0,0.5)]">
                 {feature.description}
               </p>
             </div>
