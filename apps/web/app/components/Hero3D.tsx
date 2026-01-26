@@ -40,8 +40,10 @@ export default function Hero3D() {
         let cols = 0;
 
         // Grid Settings
-        const tileWidth = 80; // Larger tiles = fewer cells to draw (Optimization)
-        const tileHeight = 40; // Isometric 2:1 ratio
+        let tileWidth = 80; // Larger tiles = fewer cells to draw (Optimization)
+        let tileHeight = 40; // Isometric 2:1 ratio
+        let spreadChance = 10;
+        let spreadCount = 20;
 
         // Sprite Cache
         const sprites: Record<number, HTMLCanvasElement> = {};
@@ -50,13 +52,13 @@ export default function Hero3D() {
         let gridState: number[][] = [];
 
         // Helper to create a sprite for a specific block type
-        const createSprite = (type: number) => {
+        const createSprite = (type: number, tw: number, th: number) => {
             const buffer = document.createElement('canvas');
             // Size needs to cover the block: tileWidth x (tileHeight + blockHeight)
             // Add some padding to avoid clipping
             const blockHeight = 12;
-            const w = tileWidth;
-            const h = tileHeight + blockHeight;
+            const w = tw;
+            const h = th + blockHeight;
 
             // buffer size might need to be slightly larger or scaled?
             // Actually, for simplicity, let's keep it exact match to draw logic,
@@ -107,29 +109,29 @@ export default function Hero3D() {
             // Top Face (Diamond)
             bCtx.beginPath();
             bCtx.moveTo(x, 0); // Top vertex
-            bCtx.lineTo(x + tileWidth / 2, tileHeight / 2);
-            bCtx.lineTo(x, tileHeight);
-            bCtx.lineTo(x - tileWidth / 2, tileHeight / 2);
+            bCtx.lineTo(x + tw / 2, th / 2);
+            bCtx.lineTo(x, th);
+            bCtx.lineTo(x - tw / 2, th / 2);
             bCtx.closePath();
             bCtx.fillStyle = top;
             bCtx.fill();
 
             // Right Face
             bCtx.beginPath();
-            bCtx.moveTo(x + tileWidth / 2, tileHeight / 2);
-            bCtx.lineTo(x, tileHeight);
-            bCtx.lineTo(x, tileHeight + blockHeight);
-            bCtx.lineTo(x + tileWidth / 2, tileHeight / 2 + blockHeight);
+            bCtx.moveTo(x + tw / 2, th / 2);
+            bCtx.lineTo(x, th);
+            bCtx.lineTo(x, th + blockHeight);
+            bCtx.lineTo(x + tw / 2, th / 2 + blockHeight);
             bCtx.closePath();
             bCtx.fillStyle = right;
             bCtx.fill();
 
             // Left Face
             bCtx.beginPath();
-            bCtx.moveTo(x - tileWidth / 2, tileHeight / 2);
-            bCtx.lineTo(x, tileHeight);
-            bCtx.lineTo(x, tileHeight + blockHeight);
-            bCtx.lineTo(x - tileWidth / 2, tileHeight / 2 + blockHeight);
+            bCtx.moveTo(x - tw / 2, th / 2);
+            bCtx.lineTo(x, th);
+            bCtx.lineTo(x, th + blockHeight);
+            bCtx.lineTo(x - tw / 2, th / 2 + blockHeight);
             bCtx.closePath();
             bCtx.fillStyle = left;
             bCtx.fill();
@@ -138,22 +140,55 @@ export default function Hero3D() {
         };
 
         const initGrid = () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+
             // Handle High DPI displays - Capped at 1x for performance (Aggressive)
             const dpr = Math.min(window.devicePixelRatio || 1, 1);
             canvas.width = width * dpr;
             canvas.height = height * dpr;
-            // We do NOT scale the context here because we will use drawImage with pre-scaled sprites
-            // Or we can scale context and draw low-res sprites.
-            // Better strategy: Scale context so math is logical pixels, but sprites need to be correct.
-            ctx.resetTransform(); // clear old transforms
+            ctx.resetTransform();
             ctx.scale(dpr, dpr);
             canvas.style.width = `${width}px`;
             canvas.style.height = `${height}px`;
 
+            // --- RESPONSIVE LOGIC ---
+            if (width < 350) {
+                // Extra Small Mobile (< 350px)
+                tileWidth = 40;
+                tileHeight = 20;
+                spreadChance = 30; // 1 in 30 frames (Slower)
+                spreadCount = 5;   // Fewer updates
+            } else if (width < 500) {
+                // Small Mobile (< 500px)
+                tileWidth = 50;
+                tileHeight = 25;
+                spreadChance = 25;
+                spreadCount = 8;
+            } else if (width < 768) {
+                // Standard Mobile (< 768px)
+                tileWidth = 60;
+                tileHeight = 30;
+                spreadChance = 20;
+                spreadCount = 10;
+            } else if (width < 1200) {
+                // Tablet / Small Laptop (< 1200px)
+                tileWidth = 70;
+                tileHeight = 35;
+                spreadChance = 15;
+                spreadCount = 15;
+            } else {
+                // DESKTOP (>= 1200px) - Preserve Original
+                tileWidth = 80;
+                tileHeight = 40;
+                spreadChance = 10;
+                spreadCount = 20;
+            }
+
             // Prepare Sprites (regenerate in case dpr changed)
-            sprites[0] = createSprite(0);
-            sprites[1] = createSprite(1);
-            sprites[2] = createSprite(2);
+            sprites[0] = createSprite(0, tileWidth, tileHeight);
+            sprites[1] = createSprite(1, tileWidth, tileHeight);
+            sprites[2] = createSprite(2, tileWidth, tileHeight);
 
             // Calculate Rows/Cols
             cols = Math.ceil(width / tileWidth) * 2 + 10;
@@ -221,9 +256,9 @@ export default function Hero3D() {
             tick++;
 
             // Logic Update (Spread) - Reduced frequency
-            if (tick % 10 === 0) {
-                // Optimization: Only try 20 random spread attempts per frame
-                for (let i = 0; i < 20; i++) {
+            if (tick % spreadChance === 0) {
+                // Optimization: Only try spreadCount random spread attempts per frame
+                for (let i = 0; i < spreadCount; i++) {
                     if (cells.length > 0) {
                         const cell = cells[Math.floor(Math.random() * cells.length)];
                         if (!cell) continue;
