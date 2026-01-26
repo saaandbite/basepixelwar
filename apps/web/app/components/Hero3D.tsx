@@ -44,6 +44,11 @@ export default function Hero3D() {
         let tileHeight = 40; // Isometric 2:1 ratio
         let spreadChance = 10;
         let spreadCount = 20;
+        let blockHeight = 12; // Responsive
+        let zAmplitude = 8;   // Responsive
+        let waveFrequency = 0.2; // Responsive
+        let waveSpeed = 0.05;    // Responsive
+        let mouseForce = 0.3;    // Responsive
 
         // Sprite Cache
         const sprites: Record<number, HTMLCanvasElement> = {};
@@ -52,13 +57,12 @@ export default function Hero3D() {
         let gridState: number[][] = [];
 
         // Helper to create a sprite for a specific block type
-        const createSprite = (type: number, tw: number, th: number) => {
+        const createSprite = (type: number, tw: number, th: number, bh: number) => {
             const buffer = document.createElement('canvas');
             // Size needs to cover the block: tileWidth x (tileHeight + blockHeight)
             // Add some padding to avoid clipping
-            const blockHeight = 12;
             const w = tw;
-            const h = th + blockHeight;
+            const h = th + bh;
 
             // buffer size might need to be slightly larger or scaled?
             // Actually, for simplicity, let's keep it exact match to draw logic,
@@ -75,35 +79,25 @@ export default function Hero3D() {
             bCtx.scale(dpr, dpr);
 
             // Draw logic ported from original drawBlock
-            // Note: coordinates 0,0 is top-left.
-            // The diamond top needs to be centered.
-            // In drawBlock originally: (x, y) was center.
-            // Here, let's draw at relative coordinates.
-            // Top point of diamond: (w/2, 0)
             const x = w / 2;
-            const y = 0; // The actual "y" center in world space corresponds to tileHeight/2 down.
-            // But we want to draw the whole block starting from 0.
-            // Let's align it so the top diamond's top vertex is at 0 y-offset relative to drawing.
-            // In original code: topY = y - zOffset.
-            // Here we are baking the static shape (zOffset handled by drawImage dy).
 
-            // Colors
+            // Colors based on reference image
             let top, right, left;
-            if (type === 1) { // Faction A
-                top = THEME.primaryDarker;
+            if (type === 1) { // Dark Burgundy Tile
+                top = '#7d2e40'; // Darker top
                 right = '#5c1a26';
-                left = THEME.primaryDark;
-            } else if (type === 2) { // Faction B
-                top = '#d9acb5ff';
-                right = THEME.primaryLight;
-                left = '#eddce0ff';
-            } else { // Neutral
-                top = THEME.primary;
-                right = THEME.primaryDark;
-                left = THEME.primaryDark;
+                left = '#6b2030';
+            } else if (type === 2) { // Light Pink Tile
+                top = '#eebbc3';
+                right = '#d9acb5';
+                left = '#e6b3bc';
+            } else { // Neutral Base Pink
+                top = '#fa8fa5'; // Vibrant Pink base
+                right = '#d66d82'; // Shadow side
+                left = '#e87a91';
             }
 
-            bCtx.lineWidth = 1;
+            bCtx.lineWidth = 0.5; // Thinner lines or no lines
             bCtx.lineJoin = 'round';
 
             // Top Face (Diamond)
@@ -120,8 +114,8 @@ export default function Hero3D() {
             bCtx.beginPath();
             bCtx.moveTo(x + tw / 2, th / 2);
             bCtx.lineTo(x, th);
-            bCtx.lineTo(x, th + blockHeight);
-            bCtx.lineTo(x + tw / 2, th / 2 + blockHeight);
+            bCtx.lineTo(x, th + bh);
+            bCtx.lineTo(x + tw / 2, th / 2 + bh);
             bCtx.closePath();
             bCtx.fillStyle = right;
             bCtx.fill();
@@ -130,8 +124,8 @@ export default function Hero3D() {
             bCtx.beginPath();
             bCtx.moveTo(x - tw / 2, th / 2);
             bCtx.lineTo(x, th);
-            bCtx.lineTo(x, th + blockHeight);
-            bCtx.lineTo(x - tw / 2, th / 2 + blockHeight);
+            bCtx.lineTo(x, th + bh);
+            bCtx.lineTo(x - tw / 2, th / 2 + bh);
             bCtx.closePath();
             bCtx.fillStyle = left;
             bCtx.fill();
@@ -155,44 +149,72 @@ export default function Hero3D() {
             // --- RESPONSIVE LOGIC ---
             if (width < 350) {
                 // Extra Small Mobile (< 350px)
-                tileWidth = 40;
-                tileHeight = 20;
-                spreadChance = 30; // 1 in 30 frames (Slower)
-                spreadCount = 5;   // Fewer updates
+                tileWidth = 30;    // Much smaller (was 40)
+                tileHeight = 15;   // Isometric ratio
+                spreadChance = 5;  // Faster color updates (was 30)
+                spreadCount = 50;  // More concurrent updates (was 5)
+                blockHeight = 6;
+                zAmplitude = 6;
+                waveFrequency = 0.2; // Higher frequency for density
+                waveSpeed = 0.08;  // Very active speed
+                mouseForce = 0;
             } else if (width < 500) {
                 // Small Mobile (< 500px)
-                tileWidth = 50;
-                tileHeight = 25;
-                spreadChance = 25;
-                spreadCount = 8;
+                tileWidth = 30;    // Much smaller (was 50)
+                tileHeight = 15;
+                spreadChance = 5;  // Faster
+                spreadCount = 50;  // More updates
+                blockHeight = 6;
+                zAmplitude = 6;
+                waveFrequency = 0.2;
+                waveSpeed = 0.08;
+                mouseForce = 0;
             } else if (width < 768) {
                 // Standard Mobile (< 768px)
                 tileWidth = 60;
                 tileHeight = 30;
                 spreadChance = 20;
-                spreadCount = 10;
+                blockHeight = 8;
+                zAmplitude = 5;
+                waveFrequency = 0.15;
+                waveSpeed = 0.05;
+                mouseForce = 0;    // No interaction
             } else if (width < 1200) {
                 // Tablet / Small Laptop (< 1200px)
                 tileWidth = 70;
                 tileHeight = 35;
                 spreadChance = 15;
                 spreadCount = 15;
+                blockHeight = 10;
+                zAmplitude = 5;
+                waveFrequency = 0.18;
+                waveSpeed = 0.04;
+                mouseForce = 0; // Decide: No interaction on tablet too? Let's say yes for uniformity on touch.
             } else {
-                // DESKTOP (>= 1200px) - Preserve Original
+                // DESKTOP (>= 1200px) - Preserve Original High Fidelity
                 tileWidth = 80;
                 tileHeight = 40;
                 spreadChance = 10;
                 spreadCount = 20;
+                blockHeight = 12; // Match original commit (was 16)
+                zAmplitude = 8;   // Restored Wave
+                waveFrequency = 0.2; // Restored Frequency
+                waveSpeed = 0.05;    // Restored Speed
+                mouseForce = 0.3;    // Active interaction
             }
 
             // Prepare Sprites (regenerate in case dpr changed)
-            sprites[0] = createSprite(0, tileWidth, tileHeight);
-            sprites[1] = createSprite(1, tileWidth, tileHeight);
-            sprites[2] = createSprite(2, tileWidth, tileHeight);
+            sprites[0] = createSprite(0, tileWidth, tileHeight, blockHeight);
+            sprites[1] = createSprite(1, tileWidth, tileHeight, blockHeight);
+            sprites[2] = createSprite(2, tileWidth, tileHeight, blockHeight);
 
             // Calculate Rows/Cols
-            cols = Math.ceil(width / tileWidth) * 2 + 10;
-            rows = Math.ceil(height / tileHeight) * 2 + 10;
+            // CRITICAL FIX: On mobile (tall screens), cols must be enough to reach the bottom (since y depends on c+r).
+            // Using just width for cols calculation is insufficient when height >> width.
+            // We use the larger dimension to ensure the diamond grid covers the rectangular viewport.
+            const maxDim = Math.max(width, height);
+            cols = Math.ceil(maxDim / tileWidth) * 2 + 10;
+            rows = Math.ceil(maxDim / tileHeight) * 2 + 10;
 
             // Initialize Grid State
             gridState = new Array(rows).fill(0).map(() => new Array(cols).fill(0).map(() => {
@@ -204,14 +226,46 @@ export default function Hero3D() {
 
             // Pre-calculate render coordinates
             cells = [];
+
+            // Adjust start position to ensure center alignment
+            // Isometric center (c=0, r=0) is usually at (startX, startY).
+            // But we want the center of the grid (c=cols/2, r=rows/2) to be at screen center (width/2, height/2).
             const startX = width / 2;
-            const startY = -height / 2;
-            const margin = 100;
+            const startY = height / 4; // Shift up slightly to cover top
+            // Actually, let's keep the existing logic but ensure the grid is large enough.
+            // Original: startX = width/2, startY = -height/2.
+            // With much larger cols/rows, we need to recenter.
+
+            // Re-evaluating center:
+            // Center of grid indices:
+            const centerC = cols / 2;
+            const centerR = rows / 2;
+
+            // We want the pixel position of (centerC, centerR) to be at (width/2, height/2).
+            // px = (c - r) * tw / 2 + offsetX
+            // py = (c + r) * th / 2 + offsetY
+            // 
+            // width/2 = (centerC - centerR) * tw/2 + offsetX
+            // height/2 = (centerC + centerR) * th/2 + offsetY
+
+            // If cols approx rows, centerC - centerR approx 0.
+            // offsetX = width/2.
+            // height/2 = (rows) * th/2 + offsetY -> offsetY = height/2 - rows * th/2.
+
+            // With calculated cols/rows based on maxDim, rows * th/2 will be approx maxDim.
+            // offsetY = height/2 - maxDim.
+            // This is significantly different from -height/2 if maxDim >> height.
+            // Let's use this centering logic for robustness.
+
+            const offsetX = width / 2 - (centerC - centerR) * tileWidth / 2;
+            const offsetY = height / 2 - (centerC + centerR) * tileHeight / 2;
+
+            const margin = 200; // Increased margin
 
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    const cx = (c - r) * tileWidth / 2 + startX;
-                    const cy = (c + r) * tileHeight / 2 + startY;
+                    const cx = (c - r) * tileWidth / 2 + offsetX;
+                    const cy = (c + r) * tileHeight / 2 + offsetY;
 
                     // Bounds check optimization (static)
                     if (cx >= -margin && cx <= width + margin && cy >= -margin && cy <= height + margin) {
@@ -287,11 +341,9 @@ export default function Hero3D() {
             // Draw Loop
             const len = cells.length;
             const spriteW = tileWidth;
-            const spriteH = tileHeight + 12; // + blockHeight
+            const spriteH = tileHeight + blockHeight; // Dynamic height
             // Since sprite is high-res (dpr scaled), using it in drawImage with W/H will auto-scale?
-            // If ctx is scaled by DPR, and we drawImage a 2xDPR image into WxH box:
-            // Standard canvas behavior: yes, it draws into the rect.
-            // Wait, if ctx is scaled by 2, and we draw a 100px image at 0,0 with width 50:
+            // If ctx is scaled by 2, and we draw a 100px image at 0,0 with width 50:
             // It draws 50 logic pixels = 100 physical pixels. Image is 100px. So 1:1 mapping. Perfect.
 
             for (let i = 0; i < len; i++) {
@@ -302,9 +354,11 @@ export default function Hero3D() {
                 if (!row) continue;
                 const type = row[cell.c];
 
-                // Animate Z
+                // Animate Z - Responsive Amplitude & Frequency
                 // Use pre-calced dist
-                let z = Math.sin(cell.dist * 0.2 - tick * 0.05) * 8;
+                // Original Desktop: dist * 0.2 - tick * 0.05
+                // Modified Mobile: dist * 0.1 - tick * 0.02
+                let z = Math.sin(cell.dist * waveFrequency - tick * waveSpeed) * zAmplitude;
 
                 // Mouse interaction - Optimized distance check
                 const dx = cell.x - mouseX;
@@ -312,11 +366,11 @@ export default function Hero3D() {
                 const dy = (cell.y + 15) - mouseY;
                 const mouseDistSq = dx * dx + dy * dy;
 
-                if (mouseDistSq < 14400) { // 120^2
+                if (mouseDistSq < 14400 && mouseForce > 0) { // Check mouseForce
                     // Sqrt is expensive but needed here for linear falloff
                     // Could approximate or just accept it for mouse cursor area only
                     const mouseDist = Math.sqrt(mouseDistSq);
-                    z += (120 - mouseDist) * 0.3;
+                    z += (120 - mouseDist) * mouseForce; // Use dynamic force
                 }
 
                 if (type !== undefined) {

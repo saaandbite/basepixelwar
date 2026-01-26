@@ -46,8 +46,8 @@ export default function LandingPage() {
               {/* Mobile Logo */}
               <div className="flex items-center gap-2 select-none">
                 <div className="flex items-center gap-1 group">
-                  <span className={`${isSmallMobile ? 'text-xl' : 'text-3xl'} font-black font-retro tracking-tighter text-[#FFC6C7] drop-shadow-[2px_2px_0_#000000]`}>PIXEL</span>
-                  <span className={`${isSmallMobile ? 'text-xl' : 'text-3xl'} font-black font-retro tracking-tighter text-black drop-shadow-[2px_2px_0_rgba(255,255,255,0.8)]`}>WAR</span>
+                  <span className={`${isSmallMobile ? 'text-base' : 'text-2xl'} font-black font-retro tracking-tighter text-[#FFC6C7] drop-shadow-[1px_1px_0_#000000]`}>PIXEL</span>
+                  <span className={`${isSmallMobile ? 'text-base' : 'text-2xl'} font-black font-retro tracking-tighter text-black drop-shadow-[1px_1px_0_rgba(255,255,255,0.8)]`}>WAR</span>
                 </div>
               </div>
 
@@ -77,7 +77,7 @@ export default function LandingPage() {
           <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 py-10 w-full max-w-[100vw] overflow-hidden">
             <ScrollReveal direction="down" duration={1000}>
               <h1
-                className={`${isSmallMobile ? 'text-2xl' : 'text-4xl'} font-heading leading-tight mb-4 text-white font-retro break-words w-full`}
+                className={`${isSmallMobile ? 'text-base' : 'text-4xl'} font-heading leading-tight mb-2 text-white font-retro break-words w-full text-center mx-auto`}
                 style={{ textShadow: '2px 2px 0 var(--pixel-primary-darker), 0 0 10px #5c1a26' }}
               >
                 <strong className="text-[#ff8ba7] font-normal">Pixel</strong>
@@ -86,17 +86,17 @@ export default function LandingPage() {
             </ScrollReveal>
 
             <ScrollReveal direction="down" duration={1000} delay={200}>
-              <h1
-                className={`${isSmallMobile ? 'text-2xl' : 'text-5xl'} font-heading leading-tight mb-6 text-white font-retro animate-float break-words w-full px-2`}
+              <h2
+                className={`${isSmallMobile ? 'text-base' : 'text-4xl'} font-heading leading-tight mb-2 text-white font-retro break-words w-full px-2 text-center mx-auto`}
                 style={{ textShadow: '3px 3px 0 var(--pixel-primary-darker), 0 0 10px #5c1a26' }}
               >
-                Compete. Conquer. Claim!
-              </h1>
+                Compete, Dominate, Claim Victory!
+              </h2>
             </ScrollReveal>
 
             <ScrollReveal delay={400}>
               <p
-                className={`${isSmallMobile ? 'text-sm' : 'text-lg'} font-terminal text-white mb-8 max-w-sm leading-relaxed px-4`}
+                className={`${isSmallMobile ? 'text-[22px]' : 'text-xl font-bold'} font-terminal text-white mb-6 max-w-sm leading-relaxed px-4 text-center mx-auto`}
                 style={{ textShadow: '0 1px 2px rgba(92, 26, 38, 0.5), 0 0 5px rgba(92, 26, 38, 0.4)' }}
               >
                 PvP Battle Arena on Base L2
