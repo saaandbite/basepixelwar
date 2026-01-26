@@ -66,10 +66,7 @@ const PixelCard = ({ number, title, description, color, icon, href, onClick, cla
       {/* Background Accent Gradient (Very subtle) */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-      {/* Number Badge (Top Right) */}
-      <div className="absolute top-4 right-4 z-20 text-white font-retro text-2xl px-3 py-1 bg-black/40 border border-white/20">
-        {number}
-      </div>
+
 
       {/* Content */}
       <div className="relative z-10 w-full h-full flex flex-col justify-between p-8">
