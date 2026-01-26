@@ -464,6 +464,125 @@ async function main() {
       return;
     }
 
+    // ============================================
+    // AUTO-FUND NEW USERS ENDPOINT
+    // ============================================
+    // POST /api/user/fund
+    // Body: { walletAddress: string }
+    // Auto-funds new users with 0.03 ETH on Base Sepolia
+    // Also registers the user account in Redis
+    if (req.method === 'POST' && req.url === '/api/user/fund') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          const { walletAddress } = JSON.parse(body);
+
+          if (!walletAddress || typeof walletAddress !== 'string' || !walletAddress.startsWith('0x')) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid wallet address' }));
+            return;
+          }
+
+          const normalizedWallet = walletAddress.toLowerCase();
+          const maskWallet = `${normalizedWallet.slice(0, 6)}...${normalizedWallet.slice(-4)}`;
+
+          console.log(`[Server] New user registration request for: ${maskWallet}`);
+
+          const { getRedis } = await import('./redis.js');
+          const r = getRedis();
+
+          // ============ User Account Registration ============
+          // Store user account data in Redis
+          const USER_KEY = `user:${normalizedWallet}`;
+          const existingUser = await r.exists(USER_KEY);
+
+          if (!existingUser) {
+            // New user - save account data
+            const userData = {
+              walletAddress: normalizedWallet,
+              createdAt: Date.now(),
+              firstConnectAt: new Date().toISOString(),
+              funded: false,
+              fundedAt: null,
+              fundTxHash: null,
+            };
+            await r.hset(USER_KEY, userData);
+            console.log(`[Server] ✅ New user registered: ${maskWallet}`);
+
+            // Also add to global users set for easy enumeration
+            await r.sadd('users:all', normalizedWallet);
+          } else {
+            console.log(`[Server] User ${maskWallet} already registered`);
+          }
+
+          // ============ Auto-Fund Logic ============
+          // Check if wallet has already been funded
+          const FUNDED_WALLETS_KEY = 'funded_wallets';
+          const alreadyFunded = await r.sismember(FUNDED_WALLETS_KEY, normalizedWallet);
+
+          if (alreadyFunded) {
+            console.log(`[Server] Wallet ${maskWallet} already funded, skipping`);
+            res.writeHead(200, {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify({
+              success: false,
+              reason: 'already_funded',
+              message: 'This wallet has already been funded',
+              isNewUser: !existingUser
+            }));
+            return;
+          }
+
+          // Fund the wallet with 0.03 ETH
+          const { contractService } = await import('./contractService.js');
+          const txHash = await contractService.sendEth(normalizedWallet, '0.03');
+
+          if (txHash) {
+            // Mark wallet as funded
+            await r.sadd(FUNDED_WALLETS_KEY, normalizedWallet);
+
+            // Update user data with funding info
+            await r.hset(USER_KEY, {
+              funded: 'true',
+              fundedAt: Date.now(),
+              fundTxHash: txHash,
+            });
+
+            console.log(`[Server] ✅ Successfully funded ${maskWallet} with 0.03 ETH. TX: ${txHash}`);
+
+            res.writeHead(200, {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify({
+              success: true,
+              txHash,
+              amount: '0.03',
+              wallet: normalizedWallet,
+              isNewUser: !existingUser
+            }));
+          } else {
+            console.error(`[Server] ❌ Failed to fund ${maskWallet}`);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: false,
+              reason: 'transfer_failed',
+              message: 'ETH transfer failed. Server wallet may have insufficient funds.'
+            }));
+          }
+
+        } catch (error: any) {
+          console.error('[Server] Auto-fund error:', error);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: error.message || 'Server error' }));
+        }
+      });
+      return;
+    }
+
     // Global CORS preflight handler
     if (req.method === 'OPTIONS') {
       res.writeHead(204, {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useCallback } from "react";
+import React, { createContext, useContext, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAccount, useConnect, useDisconnect, useSwitchChain, useSendTransaction } from "wagmi";
 import { baseSepolia, base } from "wagmi/chains";
 import { parseEther } from "viem";
@@ -60,6 +60,68 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         connectorName: connector?.name,
         chainId
     });
+
+    // ============ Auto-Fund New Users ============
+    // When a wallet connects, automatically fund it with 0.03 ETH if it's a new user
+    const hasFundedRef = useRef(false);
+
+    useEffect(() => {
+        // Only trigger if wallet is connected and we have an address
+        if (!isConnected || !address) {
+            hasFundedRef.current = false;
+            return;
+        }
+
+        // Prevent multiple calls for the same connection
+        if (hasFundedRef.current) return;
+        hasFundedRef.current = true;
+
+        // Check if we've already attempted to fund this wallet in this session
+        const fundedKey = `funded_${address.toLowerCase()}`;
+        if (typeof window !== 'undefined' && sessionStorage.getItem(fundedKey)) {
+            console.log('[Wallet] Already attempted funding this session, skipping');
+            return;
+        }
+
+        // Call the auto-fund API
+        const fundNewUser = async () => {
+            try {
+                // Determine server URL
+                const serverUrl = typeof window !== 'undefined'
+                    ? (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+                        ? `${window.location.protocol}//${window.location.hostname}:3000`
+                        : process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000')
+                    : 'http://localhost:3000';
+
+                console.log('[Wallet] Checking if new user needs funding...', address);
+
+                const response = await fetch(`${serverUrl}/api/user/fund`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress: address }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('[Wallet] ✅ Auto-funded new user with 0.03 ETH!', result.txHash);
+                } else if (result.reason === 'already_funded') {
+                    console.log('[Wallet] User already funded previously');
+                } else {
+                    console.log('[Wallet] Funding skipped:', result.message || result.reason);
+                }
+
+                // Mark as attempted in session storage
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem(fundedKey, 'true');
+                }
+            } catch (err) {
+                console.error('[Wallet] Auto-fund API error:', err);
+            }
+        };
+
+        fundNewUser();
+    }, [isConnected, address]);
 
     // Connect wallet - Smart Wallet only (passkey/biometrics)
     const connect = useCallback(async () => {

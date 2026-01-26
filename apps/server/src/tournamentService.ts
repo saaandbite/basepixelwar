@@ -85,6 +85,10 @@ export async function distributeRoomPrizes(
 
         await recordNFTWin(winner.wallet, week);
 
+        // ============ SAVE NFT WIN TO USER PROFILE IN REDIS ============
+        // Store NFT win details in the user's Redis profile
+        await Redis.recordUserNFTWin(winner.wallet, week, roomId);
+
         // 3. Award ETH Prizes to Runner-ups
         // Prize Structure:
         // 1st: NFT + (Maybe ETH? For now just NFT as per requirements "NFT wins")
