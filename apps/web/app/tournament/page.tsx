@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
-import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { Address, Avatar, Name, Identity, EthBalance } from '@coinbase/onchainkit/identity';
+import SmartWalletButton from '../components/SmartWalletButton';
 import { Loader2, Trophy, Users, ArrowLeft, Crown, DoorOpen, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -370,22 +369,7 @@ export default function TournamentPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <Wallet>
-                            <ConnectWallet className="!font-terminal !text-base !h-10 !min-h-0 !bg-[var(--pixel-red)] !text-white !border-0 hover:!bg-white hover:!text-black">
-                                <Avatar className="h-6 w-6" />
-                                <Name />
-                            </ConnectWallet>
-                            <WalletDropdown className="!font-terminal">
-                                <Identity className="px-6 py-4" hasCopyAddressOnClick>
-                                    <Avatar />
-                                    <Name />
-                                    <Address />
-                                    <EthBalance />
-                                </Identity>
-                                <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-                                <WalletDropdownDisconnect />
-                            </WalletDropdown>
-                        </Wallet>
+                        <SmartWalletButton className="!font-terminal !text-base !h-10 !min-h-0 !bg-[var(--pixel-red)] !text-white !border-0 hover:!bg-white hover:!text-black !rounded-lg !px-4" />
                     </div>
                 </div>
             </header>

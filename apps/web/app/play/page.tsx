@@ -4,18 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useWallet, formatAddress, isCorrectChain } from "../contexts/WalletContext";
 import { useMultiplayer } from "./game/hooks/useMultiplayer";
-import {
-  ConnectWallet,
-  Wallet,
-  WalletDropdown,
-  WalletDropdownDisconnect,
-} from "@coinbase/onchainkit/wallet";
-import {
-  Address,
-  Avatar,
-  Name,
-  Identity,
-} from "@coinbase/onchainkit/identity";
+import SmartWalletButton from "../components/SmartWalletButton";
 import {
   Wallet as WalletIcon,
   Trophy,
@@ -75,20 +64,7 @@ export default function PlayHub() {
               </div>
             )}
 
-            <Wallet>
-              <ConnectWallet className="!font-terminal !text-xl !px-6 !py-3 !h-auto !min-h-0 !bg-[var(--pixel-card-bg)] !border-2 !border-[var(--pixel-card-border)] hover:!border-[var(--pixel-blue)] !rounded-xl transition-all hover:scale-105 active:scale-95 shadow-md">
-                <WalletIcon className="w-6 h-6 mr-3" />
-                <span>{isConnected ? 'WALLET_OK' : 'CONNECT'}</span>
-              </ConnectWallet>
-              <WalletDropdown className="!font-terminal !rounded-xl border-4 border-white">
-                <Identity className="px-6 py-4" hasCopyAddressOnClick>
-                  <Avatar className="!rounded-full border-2 border-white" />
-                  <Name />
-                  <Address />
-                </Identity>
-                <WalletDropdownDisconnect className="!rounded-lg hover:bg-red-500 hover:text-white" />
-              </WalletDropdown>
-            </Wallet>
+            <SmartWalletButton className="!font-terminal !text-xl !px-6 !py-3 !h-auto !min-h-0 !bg-[var(--pixel-card-bg)] !border-2 !border-[var(--pixel-card-border)] hover:!border-[var(--pixel-blue)] !rounded-xl transition-all hover:scale-105 active:scale-95 shadow-md" />
           </div>
         </div>
       </header>

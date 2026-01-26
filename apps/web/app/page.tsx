@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { Zap, Shield, Trophy, Swords } from "lucide-react";
 import Hero3D from "./components/Hero3D";
-import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { Avatar, Name, Identity, Address, EthBalance } from '@coinbase/onchainkit/identity';
+import SmartWalletButton from "./components/SmartWalletButton";
 
 export default function LandingPage() {
   return (
@@ -31,24 +30,9 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Connect Wallet / Mobile Menu Placeholder */}
+            {/* Connect Wallet - Smart Wallet Only */}
             <div className="flex items-center">
-              <Wallet>
-                <ConnectWallet className="pixel-btn-connect !font-sans !font-bold !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black">
-                  <Avatar className="h-6 w-6" />
-                  <Name />
-                </ConnectWallet>
-                <WalletDropdown className="!font-sans">
-                  <Identity className="px-4 py-3" hasCopyAddressOnClick>
-                    <Avatar />
-                    <Name />
-                    <Address />
-                    <EthBalance />
-                  </Identity>
-                  <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-                  <WalletDropdownDisconnect />
-                </WalletDropdown>
-              </Wallet>
+              <SmartWalletButton className="pixel-btn-connect !font-sans !font-bold !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black !bg-white !border-2 !border-black !rounded-full !px-6 !py-2" />
             </div>
           </div>
         </nav>
