@@ -269,10 +269,10 @@ export default function TournamentPage() {
             <PlayerProfileModal walletAddress={selectedWallet} onClose={() => setSelectedWallet(null)} isTournamentContext={true} />
 
             {/* Header */}
-            <header className="w-full flex justify-center py-6 relative z-10">
-                <div className="flex items-center gap-4">
+            <header className="w-full flex justify-center py-6 relative z-10 px-4">
+                <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
                     {/* Back Pill */}
-                    <Link href="/play" className="group flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider hover:bg-white/10 hover:border-white/40 transition-all skew-x-[-10deg]">
+                    <Link href="/play" className="group flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider hover:bg-white/10 hover:border-white/40 transition-all skew-x-[-10deg] w-full md:w-auto">
                         <div className="skew-x-[10deg] flex items-center gap-2">
                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                             <span>BACK TO LOBBY</span>
@@ -280,7 +280,7 @@ export default function TournamentPage() {
                     </Link>
 
                     {/* Week Info Pill */}
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider skew-x-[-10deg]">
+                    <div className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider skew-x-[-10deg] w-full md:w-auto">
                         <div className="skew-x-[10deg] flex items-center gap-2">
                             <Trophy className="w-4 h-4 text-yellow-400" />
                             <span>WEEK #{tournamentWeek}</span>
@@ -288,7 +288,7 @@ export default function TournamentPage() {
                     </div>
 
                     {/* Wallet Pill */}
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider skew-x-[-10deg] hover:bg-white/10 hover:border-white/40 transition-all">
+                    <div className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider skew-x-[-10deg] hover:bg-white/10 hover:border-white/40 transition-all w-full md:w-auto">
                         <div className="skew-x-[10deg] flex items-center gap-2">
                             <Wallet>
                                 <ConnectWallet className="!font-sans !font-bold !text-sm !h-auto !min-h-0 !bg-transparent !text-white !p-0 hover:!bg-transparent !border-0 flex items-center gap-2">
@@ -379,7 +379,21 @@ export default function TournamentPage() {
                                         <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-blue-400" />
                                         <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-blue-400" />
 
-                                        <h2 className="text-3xl font-retro text-white mb-8 text-center drop-shadow-sm">QUALIFICATION</h2>
+                                        <h3 className="
+                                            text-sm 
+                                            sm:text-lg 
+                                            md:text-xl 
+                                            lg:text-2xl 
+                                            font-retro 
+                                            text-white 
+                                            mb-6 sm:mb-8 
+                                            text-center 
+                                            drop-shadow-sm
+                                            break-all
+                                            ">
+                                            QUALIFICATION
+                                        </h3>
+
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                             <div className="bg-white/5 p-6 text-center border border-white/10">
@@ -464,7 +478,10 @@ export default function TournamentPage() {
 
                         {activeTab === 'rooms' && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <h2 className="text-3xl font-retro text-white mb-6 drop-shadow-sm">ALL ROOMS ({roomsList.length})</h2>
+                                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-retro text-white mb-4 sm:mb-6 drop-shadow-sm">
+                                    ALL ROOMS ({roomsList.length})
+                                </h3>
+
                                 {roomsList.map(room => (
                                     <div key={room.roomId} className="bg-black/20 border border-white/10 backdrop-blur-sm rounded-sm transition-all hover:bg-white/5">
                                         <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => handleExpandRoom(room.roomId)}>
