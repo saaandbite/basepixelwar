@@ -269,37 +269,44 @@ export default function TournamentPage() {
             <PlayerProfileModal walletAddress={selectedWallet} onClose={() => setSelectedWallet(null)} isTournamentContext={true} />
 
             {/* Header */}
-            <header className="relative z-10 p-6 border-b border-white/10 bg-black/20 backdrop-blur-md">
-                <div className="container mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link href="/play" className="p-2 rounded-full hover:bg-white/10 transition-colors text-white">
-                            <ArrowLeft className="w-6 h-6" />
-                        </Link>
-                        <div className="flex items-center gap-3 font-retro text-2xl md:text-3xl text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.3)]">
-                            <Trophy className="w-7 h-7 text-yellow-400" />
-                            <h1 className="hidden sm:inline">TOURNAMENT</h1>
+            <header className="w-full flex justify-center py-6 relative z-10">
+                <div className="flex items-center gap-4">
+                    {/* Back Pill */}
+                    <Link href="/play" className="group flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider hover:bg-white/10 hover:border-white/40 transition-all skew-x-[-10deg]">
+                        <div className="skew-x-[10deg] flex items-center gap-2">
+                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                            <span>BACK TO LOBBY</span>
+                        </div>
+                    </Link>
+
+                    {/* Week Info Pill */}
+                    <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider skew-x-[-10deg]">
+                        <div className="skew-x-[10deg] flex items-center gap-2">
+                            <Trophy className="w-4 h-4 text-yellow-400" />
+                            <span>WEEK #{tournamentWeek}</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="px-4 py-1 text-sm bg-black/30 text-white font-bold border border-white/20 rounded font-sans tracking-widest">
-                            WEEK #{tournamentWeek}
-                        </div>
-                        <Wallet>
-                            <ConnectWallet className="!font-sans !font-bold !text-sm !h-10 !min-h-0 !bg-white !text-black hover:!scale-105 transition-transform !border-0 rounded-sm">
-                                <Avatar className="h-6 w-6" />
-                                <Name />
-                            </ConnectWallet>
-                            <WalletDropdown className="!font-sans">
-                                <Identity className="px-4 py-3" hasCopyAddressOnClick>
-                                    <Avatar />
+
+                    {/* Wallet Pill */}
+                    <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider skew-x-[-10deg] hover:bg-white/10 hover:border-white/40 transition-all">
+                        <div className="skew-x-[10deg] flex items-center gap-2">
+                            <Wallet>
+                                <ConnectWallet className="!font-sans !font-bold !text-sm !h-auto !min-h-0 !bg-transparent !text-white !p-0 hover:!bg-transparent !border-0 flex items-center gap-2">
+                                    <Avatar className="h-5 w-5" />
                                     <Name />
-                                    <Address />
-                                    <EthBalance />
-                                </Identity>
-                                <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-                                <WalletDropdownDisconnect />
-                            </WalletDropdown>
-                        </Wallet>
+                                </ConnectWallet>
+                                <WalletDropdown className="!font-sans">
+                                    <Identity className="px-4 py-3" hasCopyAddressOnClick>
+                                        <Avatar />
+                                        <Name />
+                                        <Address />
+                                        <EthBalance />
+                                    </Identity>
+                                    <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
+                                    <WalletDropdownDisconnect />
+                                </WalletDropdown>
+                            </Wallet>
+                        </div>
                     </div>
                 </div>
             </header>
