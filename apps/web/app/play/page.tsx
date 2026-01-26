@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { useWallet, formatAddress, isCorrectChain } from "../contexts/WalletContext";
+import { useEffect, useState } from "react";
+import { useWallet, isCorrectChain } from "../contexts/WalletContext";
 import { useMultiplayer } from "./game/hooks/useMultiplayer";
 import {
   ConnectWallet,
@@ -26,15 +26,112 @@ import {
   ChevronRight,
   Gamepad2,
   BookOpen,
-  Sword,
-  Zap,
-  Activity
+  Activity,
+  Zap
 } from "lucide-react";
 import HelpOverlay from "../components/HelpOverlay";
 
+// === ORNAMENT CARD COMPONENT ===
+interface PixelCardProps {
+  number: string;
+  title: string;
+  description: string;
+  color: string; // Hex color
+  icon: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+  className?: string;
+  statusText?: string; // Optional status text (e.g., "LIVE NOW")
+}
+
+const PixelCard = ({ number, title, description, color, icon, href, onClick, className = "", statusText }: PixelCardProps) => {
+  const CardContent = (
+    <div
+      className={`relative w-full h-[260px] overflow-hidden group transition-all duration-300 hover:-translate-y-2 backdrop-blur-sm ${className}`}
+      style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+      }}
+    >
+      {/* Corner Pixels */}
+      <div className="absolute -top-1 -left-1 w-2 h-2 bg-white z-20 transition-shadow duration-300 group-hover:shadow-[0_0_10px_var(--accent-color)]" style={{ '--accent-color': color, boxShadow: '0 0 5px var(--accent-color)' } as React.CSSProperties} />
+      <div className="absolute -top-1 -right-1 w-2 h-2 bg-white z-20 transition-shadow duration-300 group-hover:shadow-[0_0_10px_var(--accent-color)]" style={{ '--accent-color': color, boxShadow: '0 0 5px var(--accent-color)' } as React.CSSProperties} />
+      <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-white z-20 transition-shadow duration-300 group-hover:shadow-[0_0_10px_var(--accent-color)]" style={{ '--accent-color': color, boxShadow: '0 0 5px var(--accent-color)' } as React.CSSProperties} />
+      <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-white z-20 transition-shadow duration-300 group-hover:shadow-[0_0_10px_var(--accent-color)]" style={{ '--accent-color': color, boxShadow: '0 0 5px var(--accent-color)' } as React.CSSProperties} />
+
+      {/* Hover Border Glow */}
+      <div className="absolute inset-0 border border-transparent group-hover:border-[color:var(--accent-color)] transition-colors duration-300 pointer-events-none" style={{ '--accent-color': color } as React.CSSProperties} />
+
+      {/* Background Accent Gradient (Very subtle) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+      {/* Number Badge (Top Right) */}
+      <div className="absolute top-4 right-4 z-20 text-white font-retro text-2xl px-3 py-1 bg-black/40 border border-white/20">
+        {number}
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 w-full h-full flex flex-col justify-between p-8">
+
+        {/* Header Section */}
+        <div>
+          <h2 className="text-4xl md:text-5xl font-black font-retro text-white uppercase tracking-tight leading-[0.9] drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)]">
+            {title}
+          </h2>
+
+          {/* Status Badge */}
+          {statusText && (
+            <div className="inline-block mt-3 px-3 py-1 bg-[color:var(--accent-color)] bg-opacity-20 border border-[color:var(--accent-color)] text-white text-xs font-bold font-sans tracking-widest uppercase transition-colors"
+              style={{ '--accent-color': color } as React.CSSProperties}>
+              {statusText}
+            </div>
+          )}
+        </div>
+
+        {/* Center Icon (Faded in background normally, glows on hover) */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 group-hover:scale-110">
+          <div className="text-white/20 group-hover:text-white group-hover:drop-shadow-[0_0_15px_var(--accent-color)] transition-all duration-300"
+            style={{ '--accent-color': color } as React.CSSProperties}>
+            {/* Clone the icon with larger size if needed, but wrapper scale handles it */}
+            {icon}
+          </div>
+        </div>
+
+        {/* Footer Section */}
+        <div className="mt-auto relative z-30">
+          <p className="text-white/70 font-terminal text-sm leading-snug max-w-[90%] group-hover:text-white transition-colors">
+            {description}
+          </p>
+
+          {/* Action Arrow */}
+          <div className="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-[-10px] group-hover:translate-x-0">
+            <ChevronRight className="w-6 h-6 text-[color:var(--accent-color)]" style={{ '--accent-color': color } as React.CSSProperties} />
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className="block w-full focus:outline-none focus:ring-4 focus:ring-[color:var(--accent-color)] focus:ring-opacity-50 rounded-sm" style={{ '--accent-color': color } as React.CSSProperties}>
+        {CardContent}
+      </Link>
+    );
+  }
+
+  return (
+    <div onClick={onClick} className="block w-full cursor-pointer focus:outline-none focus:ring-4 focus:ring-[color:var(--accent-color)] focus:ring-opacity-50 rounded-sm" style={{ '--accent-color': color } as React.CSSProperties}>
+      {CardContent}
+    </div>
+  );
+};
+
+
 export default function PlayHub() {
   const {
-    address,
     isConnected,
     chainId,
     error,
@@ -55,289 +152,160 @@ export default function PlayHub() {
   const isOnCorrectChain = isCorrectChain(chainId);
   const isServerOnline = connectionStatus === 'connected';
 
-  // Base card class without background (we'll add varied bgs)
-  const cardBaseClass = "relative border border-white/10 p-6 md:p-8 group transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-xl";
-  const cornerBracketClass = "absolute w-6 h-6 transition-colors duration-300 z-20";
-  const iconContainerClass = "relative w-16 h-16 mb-4 flex items-center justify-center z-10";
-  const iconBgClass = "absolute inset-0 border border-white/30 skew-x-6 group-hover:skew-x-0 transition-transform duration-300 bg-black/20";
-  const iconFillClass = "absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity duration-300";
-
-  // CSS Pattern for Pixel Art Effect
-  const pixelPattern = {
-    backgroundImage: `
-        linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%), 
-        linear-gradient(-45deg, rgba(0,0,0,0.1) 25%, transparent 25%), 
-        linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.1) 75%), 
-        linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.1) 75%)
-    `,
-    backgroundSize: '20px 20px',
-    backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
-  };
-
   return (
-    <div className="min-h-screen relative flex flex-col font-terminal text-[var(--pixel-fg)] bg-[#ffe4e6] overflow-x-hidden">
+    <div className="min-h-screen relative flex flex-col font-terminal text-[var(--pixel-fg)] overflow-x-hidden"
+      style={{
+        background: 'linear-gradient(180deg, #ff8ba7 0%, #903749 100%)'
+      }}>
 
-      {/* Hero Section Container (Background + Nav + Hero Content) */}
-      <div className="relative w-full min-h-screen flex flex-col bg-gradient-to-b from-[#ffe4e6] to-[#ff8ba7]">
+      {/* Global Background Pattern */}
+      <div className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
+          `,
+          backgroundSize: '20px 20px'
+        }}
+      />
 
-        {/* Navbar */}
-        <nav className="relative z-10 w-full py-6 md:py-10">
-          <div className="container mx-auto px-4 flex items-center justify-between">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 select-none">
-              <div className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform duration-200">
-                <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-[#FFC6C7] drop-shadow-[3px_3px_0_#000000]">PIXEL</span>
-                <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-black drop-shadow-[3px_3px_0_rgba(255,255,255,0.8)]">WAR</span>
+      {/* Navbar moved to be cleaner */}
+      <nav className="relative z-10 w-full py-6">
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 select-none">
+            <div className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform duration-200">
+              <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-white drop-shadow-[4px_4px_0_#000]">PIXEL</span>
+              <span className="text-3xl md:text-4xl font-black font-retro tracking-tighter text-[var(--pixel-red)] drop-shadow-[4px_4px_0_#fff]">WAR</span>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-4">
+            {isConnected && isOnCorrectChain && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-green-500/20 rounded border border-green-500/40">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-xs font-bold text-green-400 tracking-wider">BASE MAINNET</span>
               </div>
-            </Link>
-
-            {/* Wallet Section */}
-            <div className="flex items-center gap-4">
-              {isConnected && isOnCorrectChain && (
-                <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full border border-white/40 backdrop-blur-sm">
-                  <span className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]" />
-                  <span className="text-xs font-bold text-[#903749] tracking-wider">BASE MAINNET</span>
-                </div>
-              )}
-
-              <Wallet>
-                <ConnectWallet className="pixel-btn-connect !font-sans !font-bold !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black">
-                  <Avatar className="h-6 w-6" />
+            )}
+            <Wallet>
+              <ConnectWallet className="!font-sans !font-bold !text-sm !h-10 !min-h-0 !bg-white !text-black hover:!scale-105 transition-transform border-b-4 border-gray-300">
+                <Avatar className="h-6 w-6" />
+                <Name />
+              </ConnectWallet>
+              <WalletDropdown className="!font-sans">
+                <Identity className="px-4 py-3" hasCopyAddressOnClick>
+                  <Avatar />
                   <Name />
-                </ConnectWallet>
-                <WalletDropdown className="!font-sans">
-                  <Identity className="px-4 py-3" hasCopyAddressOnClick>
-                    <Avatar />
-                    <Name />
-                    <Address />
-                    <EthBalance />
-                  </Identity>
-                  <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-                  <WalletDropdownDisconnect />
-                </WalletDropdown>
-              </Wallet>
-            </div>
+                  <Address />
+                  <EthBalance />
+                </Identity>
+                <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
+                <WalletDropdownDisconnect />
+              </WalletDropdown>
+            </Wallet>
           </div>
-        </nav>
+        </div>
+      </nav>
 
-        {/* Main Content */}
-        <main className="relative z-10 flex-1 container mx-auto px-4 py-8 flex flex-col items-center justify-center">
+      {/* MAIN CONTENT */}
+      <main className="relative z-10 container mx-auto px-4 py-8 flex flex-col items-center">
 
-          {/* Error Message */}
-          <div className="w-full max-w-5xl mx-auto mb-6">
-            {error && (
-              <div className="w-full p-4 mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 font-sans rounded shadow-sm flex items-center gap-3">
-                <AlertTriangle className="w-6 h-6 flex-shrink-0" />
-                <span className="font-bold">{error}</span>
-              </div>
-            )}
-            {isConnected && !isOnCorrectChain && (
-              <div className="w-full p-6 bg-yellow-50 border-4 border-yellow-400 rounded-xl shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-yellow-100 rounded-full text-yellow-600">
-                    <AlertTriangle className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-yellow-800 font-black text-xl mb-1">WRONG NETWORK</h3>
-                    <p className="text-yellow-700 font-sans">Please switch to Base Mainnet to play.</p>
-                  </div>
-                </div>
-                <button onClick={switchToBase} className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold rounded-full transition-all shadow-md active:scale-95 whitespace-nowrap">
-                  SWITCH NETWORK
-                </button>
-              </div>
-            )}
-          </div>
-
-
-          {/* 4-COLUMN BENTO GRID LAYOUT */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full mx-auto mb-10">
-
-            {/* HEADER CARD (Full Width) - Dark Tech Theme */}
-            <div className={`md:col-span-4 ${cardBaseClass} bg-[#2d1b2e] flex flex-col md:flex-row items-center justify-between gap-6`}>
-              <div className="absolute inset-0 opacity-10" style={pixelPattern}></div>
-
-              {/* Tech Corners */}
-              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
-              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
-              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
-              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white/50 group-hover:border-[#ff8ba7]`}></div>
-
-              <div className="relative z-10 text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-black/40 text-[#ff8ba7] border border-[#ff8ba7]/30 rounded text-base font-bold font-sans tracking-widest uppercase mb-4 shadow-sm backdrop-blur-md">
-                  <Gamepad2 className="w-5 h-5" />
-                  <span>Select Game Mode</span>
-                </div>
-                <h1 className="font-heading text-4xl md:text-6xl text-white font-retro tracking-wide drop-shadow-[4px_4px_0_#903749]">
-                  CHOOSE YOUR PATH
-                </h1>
-              </div>
-
-              <div className="relative z-10 flex gap-3 opacity-80">
-                <div className="w-3 h-3 bg-[#ff8ba7] animate-pulse"></div>
-                <div className="w-3 h-3 bg-[#903749] animate-pulse delay-75"></div>
-                <div className="w-3 h-3 bg-[#ff8ba7] animate-pulse delay-150"></div>
-              </div>
+        {/* Error Banners */}
+        <div className="w-full mx-auto mb-8 space-y-4">
+          {error && (
+            <div className="w-full p-4 bg-red-500 text-white font-bold font-sans flex items-center gap-3 shadow-[4px_4px_0_#000]">
+              <AlertTriangle className="w-6 h-6" /> {error}
             </div>
-
-
-            {/* 1. 1v1 DUEL (Left Half - 2x2) - RED THEME */}
-            <Link href="/room" className={`md:col-span-2 md:row-span-2 ${cardBaseClass} bg-[#903749] min-h-[340px] md:min-h-full flex flex-col justify-between hover:bg-[#a63d54]`}>
-              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
-
-              {/* Tech Corners */}
-              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
-
-              <div className="relative z-10 h-full flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                  <div className="px-4 py-1.5 bg-black/20 backdrop-blur-sm text-white text-sm font-bold font-sans tracking-widest border border-white/30 rounded-sm">CLASSIC</div>
-
-                  <div className={iconContainerClass}>
-                    <div className={iconBgClass}></div>
-                    <div className={`${iconFillClass} bg-white`}></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Swords className="w-10 h-10 text-white" />
-                    </div>
-                  </div>
-                </div>
-
+          )}
+          {isConnected && !isOnCorrectChain && (
+            <div className="w-full p-6 bg-yellow-400 text-black border-4 border-black shadow-[8px_8px_0_#000] flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <AlertTriangle className="w-10 h-10" />
                 <div>
-                  <h2 className="text-5xl md:text-7xl font-black font-retro text-white mb-4 drop-shadow-[5px_5px_0_rgba(0,0,0,0.3)]">
-                    1 VS 1
-                  </h2>
-                  <p className="font-sans text-white/90 text-2xl leading-relaxed mb-8 max-w-lg drop-shadow-md font-bold">
-                    High stakes duel. Winner takes all.
-                  </p>
-
-                  <div className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#903749] font-black font-sans text-xl uppercase tracking-wider group-hover:bg-[#ffc6c7] transition-colors border-b-4 border-black/20 shadow-lg rounded-sm">
-                    Start Battle <ChevronRight className="w-6 h-6" />
-                  </div>
+                  <h3 className="font-black text-2xl uppercase">Wrong Network</h3>
+                  <p className="font-sans font-bold">Switch to Base Mainnet to enter the arena.</p>
                 </div>
               </div>
-            </Link>
-
-
-            {/* 2. server status (1x1) - DYNAMIC GREEN/RED THEME */}
-            <div className={`md:col-span-1 ${cardBaseClass} ${isServerOnline ? 'bg-[#00b894] hover:bg-[#00ceb0]' : 'bg-[#d63031] hover:bg-[#ff4757]'} min-h-[190px] flex flex-col items-center justify-center text-center transition-colors`}>
-              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
-
-              {/* Tech Corners */}
-              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
-
-              <div className="relative z-10 w-full flex flex-col items-center">
-                <div className={`${iconContainerClass} mx-auto mb-4`}>
-                  <div className={iconBgClass}></div>
-                  <div className={`${iconFillClass} bg-white`}></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Activity className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-
-                <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                  STATUS
-                </h3>
-                <div className="font-bold font-sans text-base uppercase tracking-widest px-6 py-2 rounded border border-white/40 bg-black/10 text-white">
-                  {isServerOnline ? 'ONLINE' : 'OFFLINE'}
-                </div>
-              </div>
+              <button onClick={switchToBase} className="px-8 py-3 bg-black text-white font-retro text-xl hover:scale-105 transition-transform">
+                SWITCH NOW
+              </button>
             </div>
+          )}
+        </div>
 
-            {/* 3. TOURNAMENT (1x1) - GOLD/AMBER THEME */}
-            <Link href="/tournament" className={`md:col-span-1 ${cardBaseClass} bg-[#e1b12c] hover:bg-[#fbc531] min-h-[190px] flex flex-col items-center justify-center text-center`}>
-              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
+        {/* HERO TITLE */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl md:text-7xl font-black font-retro text-white mb-2 drop-shadow-[6px_6px_0_#903749]">
+            CHOOSE YOUR PATH
+          </h1>
+          <p className="text-gray-400 font-sans text-xl max-w-2xl mx-auto">
+            Select a game mode to begin your journey in the Pixel War universe.
+          </p>
+        </div>
 
-              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
+        {/* CARDS GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full mx-auto">
 
-              <div className="relative z-10 w-full flex flex-col items-center">
-                <div className={`${iconContainerClass} mx-auto mb-4`}>
-                  <div className={iconBgClass}></div>
-                  <div className={`${iconFillClass} bg-white`}></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Trophy className="w-8 h-8 text-white" />
-                  </div>
-                </div>
+          {/* CARD 01: BATTLE ARENA (Pink/Red) */}
+          <PixelCard
+            number="01"
+            title="BATTLE ARENA"
+            description="High stakes 1v1 duels. Fight for glory and rewards."
+            color="#ff4757" // Vibrant Red/Pink
+            icon={<Swords className="w-16 h-16" />}
+            href="/room"
+            statusText="POPULAR"
+          />
 
-                <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                  TOURNAMENT
-                </h3>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-[#e1b12c] text-sm font-bold font-sans uppercase rounded-sm border border-white/20 shadow-sm">
-                  <span>LIVE NOW</span>
-                </div>
-              </div>
-            </Link>
+          {/* CARD 02: TOURNAMENT (Green) */}
+          <PixelCard
+            number="02"
+            title="TOURNAMENT"
+            description="Weekly championships. Compete for the Golden Trophy."
+            color="#2ed573" // Vibrant Green
+            icon={<Trophy className="w-16 h-16" />}
+            href="/tournament"
+            statusText="LIVE WEEKLY"
+          />
 
+          {/* CARD 03: LEADERBOARD (Blue) */}
+          <PixelCard
+            number="03"
+            title="HALL OF FAME"
+            description="View top players and historical records."
+            color="#1e90ff" // Vibrant Blue
+            icon={<Medal className="w-16 h-16" />}
+            href="/leaderboard"
+          />
 
-            {/* 4. LEADERBOARD (1x1) - PURPLE THEME */}
-            <Link href="/leaderboard" className={`md:col-span-1 ${cardBaseClass} bg-[#6c5ce7] hover:bg-[#a29bfe] min-h-[190px] flex flex-col items-center justify-center text-center`}>
-              <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
+          {/* CARD 04: SERVER STATUS (Dark/Purple) */}
+          <div className="md:col-span-1 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+            <PixelCard
+              number="04"
+              title="SERVER STATUS"
+              description={isServerOnline ? "Systems operational. Ready for combat." : "Systems offline. Maintenance in progress."}
+              color={isServerOnline ? "#5352ed" : "#3742fa"}
+              icon={<Activity className="w-16 h-16" />}
+              statusText={isServerOnline ? "ONLINE" : "OFFLINE"}
+            />
 
-              <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
-              <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
-
-              <div className="relative z-10 w-full flex flex-col items-center">
-                <div className={`${iconContainerClass} mx-auto mb-4`}>
-                  <div className={iconBgClass}></div>
-                  <div className={`${iconFillClass} bg-white`}></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Medal className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-
-                <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                  HALL OF FAME
-                </h3>
-                <div className="font-sans font-bold text-base text-white/90 drop-shadow-sm bg-black/10 px-4 py-1.5 rounded border border-white/20">
-                  VIEW
-                </div>
-              </div>
-            </Link>
-
-            {/* 5. HELP / GUIDE (1x1) - BLUE THEME */}
-            <div className={`md:col-span-1 ${cardBaseClass} bg-[#0984e3] hover:bg-[#74b9ff] min-h-[190px] flex flex-col items-center justify-center text-center cursor-pointer p-0`}>
+            <div className="relative h-[260px]">
               <HelpOverlay customTrigger={
-                <div className="w-full h-full flex flex-col items-center justify-center">
-                  <div className="absolute inset-0 opacity-10 pointer-events-none" style={pixelPattern}></div>
-
-                  <div className={`${cornerBracketClass} top-0 left-0 border-t-2 border-l-2 border-white/50 group-hover:border-white`}></div>
-                  <div className={`${cornerBracketClass} top-0 right-0 border-t-2 border-r-2 border-white/20 group-hover:border-white`}></div>
-                  <div className={`${cornerBracketClass} bottom-0 left-0 border-b-2 border-l-2 border-white/20 group-hover:border-white`}></div>
-                  <div className={`${cornerBracketClass} bottom-0 right-0 border-b-2 border-r-2 border-white group-hover:scale-110`}></div>
-
-                  <div className={`${iconContainerClass} mx-auto mb-4`}>
-                    <div className={iconBgClass}></div>
-                    <div className={`${iconFillClass} bg-white`}></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <BookOpen className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-
-                  <h3 className="font-retro text-xl mb-4 text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-                    HOW TO PLAY
-                  </h3>
-                  <div className="px-5 py-2 bg-white/20 rounded text-sm font-bold font-sans text-white border border-white/30">
-                    MANUAL
-                  </div>
+                <div className="w-full h-full">
+                  <PixelCard
+                    number="05"
+                    title="GAME GUIDE"
+                    description="Master the controls and learn winning strategies."
+                    color="#ffa502" // Orange
+                    icon={<BookOpen className="w-16 h-16" />}
+                  />
                 </div>
               } />
             </div>
-
-
           </div>
 
-        </main>
-      </div>
+        </div>
 
+      </main>
     </div>
   );
 }
