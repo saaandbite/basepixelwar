@@ -169,7 +169,7 @@ export default function PlayHub() {
                   <span>Select Game Mode</span>
                 </div>
                 <h1 className="font-heading text-4xl md:text-6xl text-white font-retro tracking-wide drop-shadow-[4px_4px_0_#903749]">
-                  BATTLE ARENA
+                  CHOOSE YOUR PATH
                 </h1>
               </div>
 

@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther, formatEther } from 'viem';
+import { parseEther } from 'viem';
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Address, Avatar, Name, Identity, EthBalance } from '@coinbase/onchainkit/identity';
-import { Loader2, Trophy, Users, ArrowLeft, Crown, DoorOpen, Ticket } from 'lucide-react';
+import { Loader2, Trophy, Users, ArrowLeft, Crown, DoorOpen, Ticket, Swords } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
@@ -13,6 +13,7 @@ import { io, Socket } from 'socket.io-client';
 import { TOURNAMENT_ABI } from '@repo/contracts';
 import PlayerProfileModal from '../components/PlayerProfileModal';
 import { useClaimTrophy } from '../hooks/useClaimTrophy';
+import LivingBackground from '../components/LivingBackground'; // Import the new background
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
 
@@ -35,7 +36,7 @@ export default function TournamentPage() {
     // Tab State
     const [activeTab, setActiveTab] = useState<'lobby' | 'rooms'>('lobby');
 
-    // Contract Reads - used for claiming (needs on-chain week for claimReward validation)
+    // Contract Reads
     const { data: onChainWeek } = useReadContract({
         address: TOURNAMENT_ADDRESS,
         abi: TOURNAMENT_ABI,
@@ -43,18 +44,14 @@ export default function TournamentPage() {
         query: { refetchInterval: 10000 }
     });
 
-    const onChainWeekNum = onChainWeek ? Number(onChainWeek as any) : 0;
-
     // Local State
     const [joinedRoomId, setJoinedRoomId] = useState<number>(0);
     const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
 
-    // Lobby State
+    // Lobby & Room State
     const socketRef = useRef<Socket | null>(null);
     const [roomLeaderboard, setRoomLeaderboard] = useState<{ wallet: string; score: number }[]>([]);
     const [onlinePlayers, setOnlinePlayers] = useState<Set<string>>(new Set());
-
-    // Rooms List State
     const [roomsList, setRoomsList] = useState<{ roomId: number; playerCount: number }[]>([]);
     const [expandedRoom, setExpandedRoom] = useState<number | null>(null);
     const [expandedRoomPlayers, setExpandedRoomPlayers] = useState<{ wallet: string; score: number }[]>([]);
@@ -67,10 +64,7 @@ export default function TournamentPage() {
         week: number;
     } | null>(null);
 
-    // Use server's tournament week for display and room data (stays consistent even after startNewWeek)
-    // On-chain week is only needed for claim validation (weekNumber < currentWeek on-chain)
     const tournamentWeek = tournamentStatus?.week ?? 0;
-
     const isJoined = joinedRoomId > 0;
     const isRegistrationOpen = tournamentStatus?.phase === 'registration';
     const isPointCollectionActive = tournamentStatus?.phase === 'point_collection';
@@ -88,9 +82,7 @@ export default function TournamentPage() {
                 console.error('Failed to fetch tournament status:', err);
             }
         };
-
         fetchStatus();
-        // Refresh every second for countdown
         const interval = setInterval(fetchStatus, 1000);
         return () => clearInterval(interval);
     }, []);
@@ -100,10 +92,7 @@ export default function TournamentPage() {
         if (tournamentWeek === 0) return;
         try {
             const res = await fetch(`${getServerUrl()}/api/tournament/rooms?week=${tournamentWeek}`);
-            if (res.ok) {
-                const data = await res.json();
-                setRoomsList(data.rooms || []);
-            }
+            if (res.ok) setRoomsList((await res.json()).rooms || []);
         } catch (err) {
             console.error('Failed to fetch rooms list:', err);
         }
@@ -112,63 +101,30 @@ export default function TournamentPage() {
     useEffect(() => {
         if (tournamentWeek > 0) {
             fetchRoomsList();
-            // Refresh rooms list every 10 seconds
             const interval = setInterval(fetchRoomsList, 10000);
             return () => clearInterval(interval);
         }
     }, [tournamentWeek, fetchRoomsList]);
 
-    // Fetch Room Data (with auto-sync from chain if missing)
+    // Fetch Player's Room Data
     const fetchRoomData = useCallback(async () => {
         if (!address || tournamentWeek === 0) return;
-
         try {
-            const SERVER_URL = getServerUrl();
-            const res = await fetch(`${SERVER_URL}/api/tournament/room?wallet=${address}`);
+            const res = await fetch(`${getServerUrl()}/api/tournament/room?wallet=${address}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
             const data = await res.json();
-            // Use server's tournamentWeek for consistency (not on-chain week which increments after tournament ends)
+
             if (data.location && data.location.week === tournamentWeek) {
                 setJoinedRoomId(data.location.roomId);
                 if (data.players) {
-                    const initialLeaderboard = data.players.map((p: any) => ({
-                        wallet: p.walletAddress,
-                        score: 0
-                    }));
-                    setRoomLeaderboard(initialLeaderboard);
+                    setRoomLeaderboard(data.players.map((p: any) => ({ wallet: p.walletAddress, score: 0 })));
                 }
             } else {
-                // AUTO-SYNC: Try to recover data from smart contract (use server week)
-                console.log(`[Tournament] Data not in Redis for week ${tournamentWeek}, attempting sync from chain...`);
-                const syncRes = await fetch(`${SERVER_URL}/api/tournament/sync?wallet=${address}&week=${tournamentWeek}`);
-
-                if (syncRes.ok) {
-                    const syncData = await syncRes.json();
-                    if (syncData.success && syncData.roomId > 0) {
-                        console.log(`[Tournament] Sync successful! Room: ${syncData.roomId}`);
-                        setJoinedRoomId(syncData.roomId);
-                        // Fetch room players after sync
-                        const playersRes = await fetch(`${SERVER_URL}/api/tournament/room?wallet=${address}`);
-                        if (playersRes.ok) {
-                            const playersData = await playersRes.json();
-                            if (playersData.players) {
-                                const leaderboard = playersData.players.map((p: any) => ({
-                                    wallet: p.walletAddress,
-                                    score: 0
-                                }));
-                                setRoomLeaderboard(leaderboard);
-                            }
-                        }
-                    } else {
-                        setJoinedRoomId(0);
-                    }
-                } else {
-                    setJoinedRoomId(0);
-                }
+                setJoinedRoomId(0); // Not in a room for the current tournament week
             }
         } catch (err) {
             console.error("Failed to fetch room data:", err);
+            setJoinedRoomId(0);
         }
     }, [address, tournamentWeek]);
 
@@ -178,34 +134,26 @@ export default function TournamentPage() {
         }
     }, [address, tournamentWeek, fetchRoomData]);
 
-    // Fetch Expanded Room Players
+
+    // Fetch Players for an Expanded Room
     const fetchExpandedRoomPlayers = useCallback(async (roomId: number) => {
         if (tournamentWeek === 0) return;
         try {
             const res = await fetch(`${getServerUrl()}/api/tournament/room?week=${tournamentWeek}&roomId=${roomId}`);
             if (res.ok) {
                 const data = await res.json();
-                if (data.players) {
-                    setExpandedRoomPlayers(data.players.map((p: any) => ({
-                        wallet: p.walletAddress,
-                        score: 0
-                    })));
-                }
+                setExpandedRoomPlayers(data.players ? data.players.map((p: any) => ({ wallet: p.walletAddress, score: 0 })) : []);
             }
         } catch (err) {
             console.error('Failed to fetch room players:', err);
         }
     }, [tournamentWeek]);
 
-    // Socket Connection
+    // WebSocket Connection for Lobby
     useEffect(() => {
         if (!isJoined || !address || !joinedRoomId || !tournamentWeek) return;
 
-        const socket = io(getServerUrl(), {
-            transports: ['websocket', 'polling'],
-            reconnectionAttempts: 5,
-        });
-
+        const socket = io(getServerUrl(), { transports: ['websocket', 'polling'] });
         socketRef.current = socket;
 
         socket.on('connect', () => {
@@ -216,73 +164,50 @@ export default function TournamentPage() {
             });
         });
 
-        socket.on('lobby_state', (data: { onlinePlayers: string[]; leaderboard: { wallet: string; score: number }[] }) => {
+        const handleLobbyState = (data: { onlinePlayers: string[]; leaderboard: { wallet: string; score: number }[] }) => {
             setOnlinePlayers(new Set(data.onlinePlayers.map(w => w.toLowerCase())));
             if (data.leaderboard) {
                 const scoreMap = new Map(data.leaderboard.map(p => [p.wallet.toLowerCase(), p.score]));
                 setRoomLeaderboard(prev => {
-                    const updated = prev.map(p => ({
-                        ...p,
-                        score: scoreMap.get(p.wallet.toLowerCase()) || p.score || 0
-                    }));
+                    const updated = prev.map(p => ({ ...p, score: scoreMap.get(p.wallet.toLowerCase()) || p.score || 0 }));
                     data.leaderboard.forEach(lbPlayer => {
                         if (!updated.find(p => p.wallet.toLowerCase() === lbPlayer.wallet.toLowerCase())) {
                             updated.push(lbPlayer);
                         }
                     });
-                    return updated;
+                    return updated.sort((a, b) => b.score - a.score);
                 });
             }
-        });
+        };
 
-        socket.on('lobby_player_update', (data: { walletAddress: string; isOnline: boolean }) => {
-            setOnlinePlayers(prev => {
-                const next = new Set(prev);
-                const w = data.walletAddress.toLowerCase();
-                if (data.isOnline) next.add(w);
-                else next.delete(w);
-                return next;
-            });
-        });
-
+        socket.on('lobby_state', handleLobbyState);
         socket.on('lobby_leaderboard_update', (data: { wallet: string; score: number }[]) => {
             setRoomLeaderboard(prev => {
                 const scoreMap = new Map(data.map(p => [p.wallet.toLowerCase(), p.score]));
-                return prev.map(p => ({
-                    ...p,
-                    score: scoreMap.get(p.wallet.toLowerCase()) ?? p.score ?? 0
-                }));
+                return prev.map(p => ({ ...p, score: scoreMap.get(p.wallet.toLowerCase()) ?? p.score ?? 0 })).sort((a, b) => b.score - a.score);
             });
         });
 
         return () => {
             socket.disconnect();
         };
-    }, [isJoined, address, joinedRoomId, tournamentWeek, router]);
+    }, [isJoined, address, joinedRoomId, tournamentWeek]);
 
-
-
-    // Contract Write
+    // Contract Write for Joining
     const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
     const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
     useEffect(() => {
         if (isConfirmed && hash) {
             const notifyBackend = async () => {
-                const SERVER_URL = getServerUrl();
                 try {
-                    await fetch(`${SERVER_URL}/api/tournament/join`, {
+                    await fetch(`${getServerUrl()}/api/tournament/join`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            walletAddress: address,
-                            week: tournamentWeek,
-                            txHash: hash
-                        })
+                        body: JSON.stringify({ walletAddress: address, week: tournamentWeek, txHash: hash })
                     });
                     await fetchRoomData();
                     await fetchRoomsList();
-                    // Auto-switch to ROOMS tab after successful registration
                     setActiveTab('rooms');
                 } catch (e) {
                     console.error("Backend join notification failed:", e);
@@ -302,81 +227,57 @@ export default function TournamentPage() {
         });
     };
 
-    const truncateWallet = (wallet: string) =>
-        `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
-
-    // === TROPHY CLAIM LOGIC ===
-    const isTournamentEnded = tournamentStatus?.phase === 'ended';
-
-    // Determine player's rank in the room leaderboard
+    // Trophy Claim Logic
     const sortedLeaderboard = [...roomLeaderboard].sort((a, b) => b.score - a.score);
-    const myRank = address
-        ? sortedLeaderboard.findIndex(p => p.wallet.toLowerCase() === address.toLowerCase()) + 1
-        : 0;
+    const myRank = address ? sortedLeaderboard.findIndex(p => p.wallet.toLowerCase() === address.toLowerCase()) + 1 : 0;
     const isTop3 = myRank >= 1 && myRank <= 3;
-    const isRoomWinner = myRank === 1;
+    const { claim, isPending: isClaimPending, isConfirming: isClaimConfirming, isSuccess: isClaimSuccess, hasClaimed, error: claimError } = useClaimTrophy(tournamentStatus?.phase === 'ended' ? tournamentWeek : undefined);
+    const canShowClaimButton = tournamentStatus?.phase === 'ended' && isTop3 && !hasClaimed;
 
-    // Use Claim Hook (only enabled if tournament ended)
-    const {
-        claim,
-        isPending: isClaimPending,
-        isConfirming: isClaimConfirming,
-        isSuccess: isClaimSuccess,
-        hasClaimed,
-        error: claimError
-        // For claiming, we need the PREVIOUS week number since on-chain week has been incremented
-        // claimReward requires weekNumber < currentWeek, so we use (onChainWeekNum - 1) which equals tournamentWeek
-    } = useClaimTrophy(isTournamentEnded ? tournamentWeek : undefined);
-
-    // Show claim button for top 3 players (1st = NFT, 2nd/3rd = ETH)
-    const canShowClaimButton = isTournamentEnded && isTop3 && !hasClaimed;
-
-    // Handle room expansion and fetch players
     const handleExpandRoom = (roomId: number) => {
         if (expandedRoom === roomId) {
             setExpandedRoom(null);
-            setExpandedRoomPlayers([]);
         } else {
             setExpandedRoom(roomId);
             fetchExpandedRoomPlayers(roomId);
         }
     };
 
-    return (
-        <div className="min-h-screen relative flex flex-col font-terminal text-[24px]">
-            <div className="scanline" />
-            <div className="fixed inset-0 bg-[var(--pixel-bg)] z-0" />
+    const formatCountdown = (seconds: number) => {
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    };
 
-            <PlayerProfileModal
-                walletAddress={selectedWallet}
-                onClose={() => setSelectedWallet(null)}
-                isTournamentContext={true}
-            />
+    return (
+        <div className="min-h-screen relative flex flex-col font-sans text-white bg-gradient-to-b from-[#5c1a26] to-[#1a0005]">
+            <LivingBackground />
+            <PlayerProfileModal walletAddress={selectedWallet} onClose={() => setSelectedWallet(null)} isTournamentContext={true} />
 
             {/* Header */}
-            <header className="relative z-10 p-6 border-b-4 border-[var(--pixel-card-border)] bg-black/90">
+            <header className="relative z-10 p-4 md:p-6">
                 <div className="container mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href="/play" className="flex items-center gap-3 hover:text-[var(--pixel-red)] transition-colors">
-                            <ArrowLeft className="w-8 h-8" />
+                        <Link href="/" className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                            <ArrowLeft className="w-7 h-7" />
                         </Link>
-                        <div className="flex items-center gap-3 font-retro text-[var(--pixel-red)]">
-                            <Trophy className="w-6 h-6" />
-                            <span className="hidden sm:inline text-lg">TOURNAMENT</span>
-                        </div>
-                        <div className="pixel-badge bg-[var(--pixel-card-bg)] text-[var(--pixel-red)] text-base border-2 border-[var(--pixel-red)]">
-                            WEEK #{tournamentWeek}
+                        <div className="flex items-center gap-3 font-retro text-2xl md:text-3xl text-white">
+                            <Trophy className="w-7 h-7 text-[#ff8ba7]" />
+                            <h1 className="hidden sm:inline">TOURNAMENT</h1>
                         </div>
                     </div>
-
                     <div className="flex items-center gap-3">
+                        <div className="px-4 py-2 text-lg bg-black/20 text-white border-2 border-white/20 rounded-full">
+                            WEEK #{tournamentWeek}
+                        </div>
                         <Wallet>
-                            <ConnectWallet className="!font-terminal !text-base !h-10 !min-h-0 !bg-[var(--pixel-red)] !text-white !border-0 hover:!bg-white hover:!text-black">
+                            <ConnectWallet className="!font-sans !font-bold !text-base !h-12 !min-h-0 !bg-[#ff8ba7] !text-black !border-2 !border-transparent hover:!bg-white">
                                 <Avatar className="h-6 w-6" />
                                 <Name />
                             </ConnectWallet>
-                            <WalletDropdown className="!font-terminal">
-                                <Identity className="px-6 py-4" hasCopyAddressOnClick>
+                            <WalletDropdown className="!font-sans">
+                                <Identity className="px-4 py-3" hasCopyAddressOnClick>
                                     <Avatar />
                                     <Name />
                                     <Address />
@@ -390,348 +291,159 @@ export default function TournamentPage() {
                 </div>
             </header>
 
-            <main className="relative z-10 container mx-auto px-4 py-12 max-w-5xl">
+            <main className="relative z-10 container mx-auto px-4 py-8 md:py-12 max-w-4xl">
                 {!isConnected ? (
-                    /* Not Connected State */
-                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                        <div className="w-32 h-32 bg-[var(--pixel-red)] border-4 border-white flex items-center justify-center mb-8 animate-bounce shadow-xl">
-                            <Crown className="w-16 h-16 text-white" />
+                    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center bg-black/30 backdrop-blur-sm p-8 rounded-2xl border border-white/10">
+                        <div className="w-32 h-32 bg-[#ff8ba7] border-4 border-white flex items-center justify-center mb-8 animate-bounce rounded-full shadow-2xl shadow-[#ff8ba7]/30">
+                            <Crown className="w-16 h-16 text-black" />
                         </div>
-                        <h1 className="text-4xl md:text-6xl font-retro text-white mb-8 text-shadow-hard">
+                        <h1 className="text-4xl md:text-6xl font-retro text-white mb-4" style={{ textShadow: '3px 3px 0 #000' }}>
                             WEEKLY CHAMPIONSHIP
                         </h1>
-                        <p className="text-[var(--pixel-fg)] text-2xl max-w-2xl mb-12 leading-relaxed">
-                            Join the arena. Defeat 9 opponents. Win the <span className="text-[var(--pixel-yellow)] animate-blink">GOLDEN TROPHY</span>.
+                        <p className="text-white/80 text-xl md:text-2xl max-w-2xl mb-12 leading-relaxed">
+                            Join the arena. Defeat 9 opponents. Win the <span className="text-[#FFD700] animate-pulse font-bold">GOLDEN TROPHY</span>.
                         </p>
-                        <div className="pixel-box border-4 border-white text-xl">
+                        <div className="px-6 py-3 bg-black/50 border-2 border-white text-xl rounded-full">
                             PLEASE CONNECT WALLET TO ENTER
                         </div>
                     </div>
                 ) : (
-                    /* Connected State */
                     <div className="space-y-8">
-
-                        {/* Tab Navigation */}
-                        <div className="flex gap-4">
-                            <button
-                                onClick={() => setActiveTab('lobby')}
-                                className={`pixel-btn text-xl px-8 py-4 flex items-center gap-3 transition-all ${activeTab === 'lobby'
-                                    ? 'pixel-btn-danger border-4 border-white'
-                                    : 'pixel-btn-outline opacity-70 hover:opacity-100'
-                                    }`}
-                            >
-                                <Ticket className="w-6 h-6" />
-                                LOBBY
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('rooms')}
-                                className={`pixel-btn text-xl px-8 py-4 flex items-center gap-3 transition-all ${activeTab === 'rooms'
-                                    ? 'pixel-btn-danger border-4 border-white'
-                                    : 'pixel-btn-outline opacity-70 hover:opacity-100'
-                                    }`}
-                            >
-                                <DoorOpen className="w-6 h-6" />
-                                ROOMS
-                            </button>
+                        <div className="flex gap-2 p-2 bg-black/30 border border-white/10 rounded-full">
+                            {['lobby', 'rooms'].map(tab => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab as 'lobby' | 'rooms')}
+                                    className={`flex-1 font-bold text-lg md:text-xl px-6 py-3 flex items-center justify-center gap-3 transition-all rounded-full ${activeTab === tab ? 'bg-[#ff8ba7] text-black' : 'bg-transparent text-white/70 hover:bg-white/10 hover:text-white'}`}
+                                >
+                                    {tab === 'lobby' ? <Ticket className="w-6 h-6" /> : <DoorOpen className="w-6 h-6" />}
+                                    {tab.toUpperCase()}
+                                </button>
+                            ))}
                         </div>
 
-                        {/* ===== LOBBY TAB ===== */}
                         {activeTab === 'lobby' && (
                             <div className="space-y-8">
-                                {/* Tournament Phase Status */}
                                 {tournamentStatus && (
-                                    <div className={`p-4 border-4 text-center ${tournamentStatus.phase === 'registration'
-                                        ? 'bg-[var(--pixel-green)]/20 border-[var(--pixel-green)]'
-                                        : tournamentStatus.phase === 'point_collection'
-                                            ? 'bg-[var(--pixel-yellow)]/20 border-[var(--pixel-yellow)]'
-                                            : 'bg-gray-800 border-gray-600'
-                                        }`}>
-                                        <p className="text-sm mb-2 text-[var(--pixel-fg)]">CURRENT PHASE</p>
-                                        <p className={`font-retro text-2xl mb-2 ${tournamentStatus.phase === 'registration' ? 'text-[var(--pixel-green)]' :
-                                            tournamentStatus.phase === 'point_collection' ? 'text-[var(--pixel-yellow)]' :
-                                                'text-gray-400'
-                                            }`}>
+                                    <div className={`p-4 border-2 text-center rounded-2xl bg-black/30 backdrop-blur-sm ${tournamentStatus.phase === 'registration' ? 'border-green-500' : tournamentStatus.phase === 'point_collection' ? 'border-yellow-500' : 'border-gray-600'}`}>
+                                        <p className="text-sm mb-2 text-white/70">CURRENT PHASE</p>
+                                        <p className={`font-retro text-2xl mb-2 ${tournamentStatus.phase === 'registration' ? 'text-green-400' : tournamentStatus.phase === 'point_collection' ? 'text-yellow-400' : 'text-gray-400'}`}>
                                             {tournamentStatus.phase === 'registration' && '🎟️ REGISTRATION OPEN'}
                                             {tournamentStatus.phase === 'point_collection' && '⚔️ TOURNAMENT ACTIVE'}
                                             {tournamentStatus.phase === 'ended' && '🏁 TOURNAMENT ENDED'}
                                             {tournamentStatus.phase === 'upcoming' && '⏳ COMING SOON'}
                                         </p>
-                                        <p className="text-lg">
-                                            {tournamentStatus.nextPhaseName}: {' '}
-                                            <span className="font-mono text-white">
-                                                {Math.floor(tournamentStatus.countdown / 60)}:{String(tournamentStatus.countdown % 60).padStart(2, '0')}
-                                            </span>
+                                        <p className="text-lg text-white/90">
+                                            {tournamentStatus.nextPhaseName}: <span className="font-mono text-white">{formatCountdown(tournamentStatus.countdown)}</span>
                                         </p>
                                     </div>
                                 )}
 
-                                {/* Registration Form (if not joined) */}
-                                {!isJoined && (
-                                    <div className="pixel-card border-4 border-[var(--pixel-red)]">
-                                        <h2 className="text-3xl font-retro text-[var(--pixel-red)] mb-8 text-center text-shadow-hard">
-                                            QUALIFICATION STAGE
-                                        </h2>
-
-                                        <div className="bg-black border-4 border-[var(--pixel-fg)] p-8 mb-8 text-center">
-                                            <p className="text-[var(--pixel-red)] mb-3 text-lg font-bold">ENTRY FEE</p>
-                                            <p className="font-retro text-5xl text-white mb-6">0.001 ETH</p>
-                                            <p className="text-xl text-[var(--pixel-fg)]">
-                                                PRIZE POOL: 0.009 ETH + NFT
-                                            </p>
+                                {!isJoined ? (
+                                    <div className="p-8 bg-black/30 backdrop-blur-sm border-2 border-[#ff8ba7] rounded-2xl shadow-2xl shadow-[#ff8ba7]/10">
+                                        <h2 className="text-3xl font-retro text-white mb-6 text-center" style={{ textShadow: '2px 2px 0 #000' }}>QUALIFICATION</h2>
+                                        <div className="bg-black/50 border-2 border-white/10 rounded-lg p-6 mb-8 text-center">
+                                            <p className="text-white/70 mb-2 text-lg font-bold">ENTRY FEE</p>
+                                            <p className="font-retro text-5xl text-white mb-4">0.001 ETH</p>
+                                            <p className="text-lg text-white/80">PRIZE POOL: <span className="text-yellow-400 font-bold">0.009 ETH + NFT</span></p>
                                         </div>
-
                                         <button
                                             onClick={handleJoin}
                                             disabled={isPending || isConfirming || !isRegistrationOpen}
-                                            className={`pixel-btn w-full text-2xl py-6 border-4 border-black ${isRegistrationOpen
-                                                ? 'pixel-btn-danger'
-                                                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                                                }`}
+                                            className="w-full text-2xl py-5 rounded-full flex items-center justify-center gap-3 font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-[#ff8ba7] text-black hover:bg-white"
                                         >
-                                            {(isPending || isConfirming) ? (
-                                                <><Loader2 className="animate-spin inline w-6 h-6" /> PROCESSING TX...</>
-                                            ) : !isRegistrationOpen ? (
-                                                tournamentStatus?.phase === 'point_collection'
-                                                    ? "🔒 REGISTRATION CLOSED"
-                                                    : "🔒 REGISTRATION CLOSED"
-                                            ) : (
-                                                "JOIN TOURNAMENT"
-                                            )}
+                                            {isPending || isConfirming ? <><Loader2 className="animate-spin w-8 h-8" /> PROCESSING...</> : !isRegistrationOpen ? "REGISTRATION CLOSED" : <><Ticket className="w-8 h-8" /> JOIN TOURNAMENT</>}
                                         </button>
-                                        {writeError && (
-                                            <p className="text-[var(--pixel-red)] mt-6 text-center text-xl font-bold">{writeError.message}</p>
-                                        )}
+                                        {writeError && <p className="text-red-400 mt-4 text-center text-sm">Error: {writeError.message.split('Contract Call')[0]}</p>}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 bg-black/30 backdrop-blur-sm border-2 border-green-500 rounded-2xl text-center">
+                                        <p className="font-retro text-3xl text-green-400 mb-4">✅ REGISTERED</p>
+                                        <p className="text-xl text-white">You are in <span className="font-bold">Room #{joinedRoomId}</span></p>
+                                        <p className="text-base text-white/70 mt-2">Check the ROOMS tab to see your competition.</p>
                                     </div>
                                 )}
 
-                                {/* Registered Status (if joined) */}
                                 {isJoined && (
-                                    <div className="pixel-card border-4 border-[var(--pixel-green)]">
-                                        <div className="text-center py-6">
-                                            <p className="font-retro text-3xl text-[var(--pixel-green)] mb-4">✅ REGISTERED</p>
-                                            <p className="text-xl text-[var(--pixel-fg)]">
-                                                You are in <span className="text-white font-bold">Room #{joinedRoomId}</span>
-                                            </p>
-                                            <p className="text-base text-[var(--pixel-fg)] mt-2 opacity-70">
-                                                Check the ROOMS tab to see your competition
-                                            </p>
+                                    <div className="p-8 bg-black/30 backdrop-blur-sm border-2 border-white/10 rounded-2xl">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h2 className="text-3xl font-retro text-white" style={{ textShadow: '2px 2px 0 #000' }}>ROOM #{joinedRoomId} LOBBY</h2>
+                                            <p className="text-lg text-white/80">{onlinePlayers.size} / {roomLeaderboard.length} Players Online</p>
                                         </div>
-                                    </div>
-                                )}
 
-                                {/* CLAIM TROPHY SECTION (Only after Tournament End) */}
-                                {isTournamentEnded && isJoined && (
-                                    <div className="mt-8">
-                                        {canShowClaimButton ? (
-                                            <div className="animate-bounce-in">
-                                                <div className="text-center mb-4 text-[var(--pixel-yellow)] font-bold text-xl animate-pulse">
-                                                    {myRank === 1 && '🏆 CONGRATULATIONS! YOU ARE THE ROOM CHAMPION!'}
-                                                    {myRank === 2 && '🥈 CONGRATULATIONS! YOU PLACED 2ND!'}
-                                                    {myRank === 3 && '🥉 CONGRATULATIONS! YOU PLACED 3RD!'}
-                                                </div>
-                                                <button
-                                                    onClick={claim}
-                                                    disabled={isClaimPending || isClaimConfirming}
-                                                    className="pixel-btn bg-[var(--pixel-yellow)] text-black w-full text-2xl py-6 border-4 border-white text-center shadow-[0_0_20px_rgba(255,215,0,0.5)] hover:scale-[1.02] transition-transform"
-                                                >
-                                                    {isClaimPending || isClaimConfirming ? (
-                                                        <><Loader2 className="animate-spin inline w-6 h-6 mr-2" /> MINTING TROPHY...</>
-                                                    ) : (
-                                                        myRank === 1
-                                                            ? "🏆 CLAIM YOUR CHAMPION TROPHY"
-                                                            : `💰 CLAIM YOUR ${myRank === 2 ? '2ND' : '3RD'} PLACE PRIZE`
-                                                    )}
+                                        {canShowClaimButton && (
+                                            <div className="mb-6">
+                                                <button onClick={() => claim()} disabled={isClaimPending || isClaimConfirming} className="w-full text-2xl py-5 rounded-full flex items-center justify-center gap-3 font-bold transition-all bg-yellow-400 text-black hover:bg-yellow-300">
+                                                    {isClaimPending || isClaimConfirming ? <><Loader2 className="animate-spin w-8 h-8" /> CLAIMING...</> : <><Trophy className="w-8 h-8" /> CLAIM YOUR PRIZE (Rank #{myRank})</>}
                                                 </button>
-                                                {claimError && (
-                                                    <p className="text-[var(--pixel-red)] mt-3 text-center font-bold">
-                                                        {claimError.message.slice(0, 60)}...
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ) : hasClaimed ? (
-                                            <div className="pixel-box bg-[var(--pixel-green)]/20 border-[var(--pixel-green)] text-center py-6">
-                                                <div className="text-[var(--pixel-green)] text-2xl font-retro mb-2 flex items-center justify-center gap-3">
-                                                    <Trophy className="w-8 h-8" /> TROPHY CLAIMED
-                                                </div>
-                                                <p className="text-white">You have secured your legacy for Week #{tournamentWeek}!</p>
-                                            </div>
-                                        ) : isRoomWinner ? (
-                                            // Winner but maybe claim check failed or just checking
-                                            <div className="text-center text-gray-500 py-4">
-                                                Validating victory status...
-                                            </div>
-                                        ) : (
-                                            <div className="pixel-box bg-gray-800 border-gray-600 text-center py-6">
-                                                <p className="text-gray-400 text-xl font-retro">TOURNAMENT ENDED</p>
-                                                <p className="text-gray-500 mt-2">Better luck next week!</p>
+                                                {isClaimSuccess && <p className="text-green-400 mt-2 text-center">Prize claimed successfully!</p>}
+                                                {claimError && <p className="text-red-400 mt-2 text-center text-sm">Claim Error: {claimError.message.split('Contract Call')[0]}</p>}
                                             </div>
                                         )}
+
+                                        {isPointCollectionActive && (
+                                            <div className="bg-yellow-500/10 border-2 border-yellow-500 rounded-lg p-4 mb-6 text-center">
+                                                <p className="text-yellow-400 font-bold text-xl flex items-center justify-center gap-3"><Swords /> TOURNAMENT IS LIVE!</p>
+                                                <p className="text-white/80 mt-2">Go to the <Link href="/play" className="underline hover:text-white">Play</Link> page and win 1v1 matches to score points.</p>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {sortedLeaderboard.map((player, index) => (
+                                                <div key={player.wallet} className={`flex items-center justify-between p-3 rounded-lg border-2 ${address && player.wallet.toLowerCase() === address.toLowerCase() ? 'bg-[#ff8ba7]/20 border-[#ff8ba7]' : 'bg-black/30 border-transparent'}`}>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-xl font-mono w-8 text-white/70">#{index + 1}</span>
+                                                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setSelectedWallet(player.wallet)}>
+                                                            <div className={`w-3 h-3 rounded-full ${onlinePlayers.has(player.wallet.toLowerCase()) ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
+                                                            <Avatar address={player.wallet as `0x${string}`} className="w-8 h-8 rounded-full" />
+                                                            <Name address={player.wallet as `0x${string}`} className="text-lg" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-xl font-mono text-yellow-400">{player.score || 0} PTS</span>
+                                                        {index < 3 && <Trophy className={`w-6 h-6 ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-amber-600'}`} />}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* ===== ROOMS TAB ===== */}
                         {activeTab === 'rooms' && (
-                            <div className="space-y-8">
-                                {/* Room Stats Bar */}
-                                <div className="flex items-center justify-between pixel-box border-4 border-[var(--pixel-card-border)]">
-                                    <div className="flex items-center gap-4">
-                                        <Users className="w-6 h-6 text-[var(--pixel-fg)]" />
-                                        <span className="text-lg">
-                                            {roomsList.reduce((sum, r) => sum + r.playerCount, 0)} PLAYERS
-                                        </span>
-                                    </div>
-                                    <div className="pixel-badge bg-[var(--pixel-card-bg)] text-[var(--pixel-fg)] text-base">
-                                        {roomsList.length} ROOMS
-                                    </div>
-                                </div>
-
-                                {/* Room Grid */}
-                                {roomsList.length === 0 ? (
-                                    <div className="text-center py-16 text-[var(--pixel-fg)] opacity-50 text-2xl">
-                                        NO ROOMS YET - BE THE FIRST TO JOIN!
-                                    </div>
-                                ) : (
-                                    <div className="grid gap-4">
-                                        {roomsList.map((room) => {
-                                            const isMyRoom = room.roomId === joinedRoomId;
-                                            const isExpanded = expandedRoom === room.roomId;
-
-                                            return (
-                                                <div key={room.roomId}>
-                                                    {/* Room Card */}
-                                                    <div
-                                                        onClick={() => handleExpandRoom(room.roomId)}
-                                                        className={`pixel-card cursor-pointer transition-all hover:scale-[1.01] ${isMyRoom
-                                                            ? 'border-4 border-[var(--pixel-green)] bg-[var(--pixel-green)]/10'
-                                                            : 'border-4 border-[var(--pixel-card-border)]'
-                                                            } ${isExpanded ? 'rounded-b-none' : ''}`}
-                                                    >
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className={`w-16 h-16 flex items-center justify-center font-retro text-2xl ${isMyRoom
-                                                                    ? 'bg-[var(--pixel-green)] text-black'
-                                                                    : 'bg-[var(--pixel-card-bg)] text-white'
-                                                                    }`}>
-                                                                    #{room.roomId}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-xl font-bold">ROOM {room.roomId}</p>
-                                                                    <p className="text-base text-[var(--pixel-fg)]">
-                                                                        {room.playerCount}/10 PLAYERS
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="flex items-center gap-4">
-                                                                {isMyRoom && (
-                                                                    <div className="pixel-badge bg-[var(--pixel-green)] text-black text-sm animate-pulse border-2 border-white">
-                                                                        👤 YOU ARE HERE
-                                                                    </div>
-                                                                )}
-                                                                <div className="text-[var(--pixel-fg)] text-lg">
-                                                                    {isExpanded ? '▲' : '▼'}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Expanded Leaderboard */}
-                                                    {isExpanded && (
-                                                        <div className="pixel-card bg-black border-4 border-t-0 border-[var(--pixel-red)] rounded-t-none">
-                                                            <h3 className="text-[var(--pixel-fg)] mb-4 flex items-center gap-3 text-lg">
-                                                                <Trophy className="w-5 h-5 text-[var(--pixel-yellow)]" /> ROOM LEADERBOARD
-                                                            </h3>
-
-                                                            <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
-                                                                {expandedRoomPlayers.length === 0 ? (
-                                                                    <div className="text-center py-8 text-[var(--pixel-fg)] opacity-50">
-                                                                        <Loader2 className="animate-spin inline w-6 h-6 mr-2" /> Loading players...
-                                                                    </div>
-                                                                ) : (
-                                                                    expandedRoomPlayers
-                                                                        .sort((a, b) => b.score - a.score)
-                                                                        .map((p, i) => {
-                                                                            const isMe = p.wallet?.toLowerCase() === address?.toLowerCase();
-                                                                            const isOnline = onlinePlayers.has(p.wallet?.toLowerCase());
-
-                                                                            return (
-                                                                                <div
-                                                                                    key={p.wallet || i}
-                                                                                    onClick={() => setSelectedWallet(p.wallet)}
-                                                                                    className={`flex items-center justify-between p-3 border-2 cursor-pointer transition-colors ${isMe ? 'bg-[var(--pixel-red)]/20 border-[var(--pixel-red)]' : 'bg-[var(--pixel-bg)] border-[var(--pixel-card-border)] hover:border-[var(--pixel-red)]'
-                                                                                        }`}
-                                                                                >
-                                                                                    <div className="flex items-center gap-3">
-                                                                                        <div className={`w-8 h-8 flex items-center justify-center font-retro text-base ${i === 0 ? 'bg-[var(--pixel-yellow)] text-black' :
-                                                                                            i === 1 ? 'bg-gray-400 text-black' :
-                                                                                                i === 2 ? 'bg-orange-600 text-black' :
-                                                                                                    'bg-[var(--pixel-card-bg)] text-white'
-                                                                                            }`}>
-                                                                                            {i + 1}
-                                                                                        </div>
-                                                                                        <div>
-                                                                                            <div className="flex items-center gap-2">
-                                                                                                <span className={`font-mono text-lg ${isMe ? 'text-[var(--pixel-red)]' : 'text-white'}`}>
-                                                                                                    {truncateWallet(p.wallet)}
-                                                                                                </span>
-                                                                                                {isOnline && <span className="w-2 h-2 bg-[var(--pixel-green)] animate-blink rounded-none" />}
-                                                                                            </div>
-                                                                                            <p className="text-sm text-[var(--pixel-fg)]">{p.score} PTS</p>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    {isMe && (
-                                                                                        <span className="text-[var(--pixel-red)] text-sm font-bold">YOU</span>
-                                                                                    )}
-                                                                                </div>
-                                                                            );
-                                                                        })
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                            <div className="space-y-4">
+                                <h2 className="text-3xl font-retro text-white mb-6" style={{ textShadow: '2px 2px 0 #000' }}>ALL ROOMS ({roomsList.length})</h2>
+                                {roomsList.map(room => (
+                                    <div key={room.roomId} className="bg-black/30 backdrop-blur-sm border-2 border-white/10 rounded-2xl p-4">
+                                        <div className="flex items-center justify-between cursor-pointer" onClick={() => handleExpandRoom(room.roomId)}>
+                                            <div className="flex items-center gap-4">
+                                                <h3 className="text-2xl font-retro text-[#ff8ba7]">ROOM #{room.roomId}</h3>
+                                                <div className="flex items-center gap-2 text-white/80">
+                                                    <Users className="w-5 h-5" />
+                                                    <span>{room.playerCount} / 10</span>
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+                                            <button className="p-2 hover:bg-white/10 rounded-full font-bold">{expandedRoom === room.roomId ? 'Hide' : 'View'}</button>
+                                        </div>
+                                        {expandedRoom === room.roomId && (
+                                            <div className="mt-4 pt-4 border-t-2 border-white/10 space-y-2">
+                                                {expandedRoomPlayers.length > 0 ? (
+                                                    expandedRoomPlayers.map(player => (
+                                                        <div key={player.wallet} className="flex items-center gap-3 p-2 bg-black/30 rounded-md">
+                                                            <Avatar address={player.wallet as `0x${string}`} className="w-7 h-7 rounded-full" />
+                                                            <Name address={player.wallet as `0x${string}`} className="text-base" />
+                                                        </div>
+                                                    ))
+                                                ) : <p className="text-white/50 text-center p-4">Loading players...</p>}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-
-                                {/* Start Game Button (only if joined and point collection active) */}
-                                {isJoined && isPointCollectionActive && (
-                                    <button
-                                        onClick={() => {
-                                            sessionStorage.setItem('is_tournament', 'true');
-                                            sessionStorage.setItem('tournament_week', tournamentWeek.toString());
-                                            router.push('/room');
-                                        }}
-                                        className="pixel-btn pixel-btn-danger w-full text-2xl py-6 border-4 border-black text-center block animate-pulse"
-                                    >
-                                        🎮 START GAME
-                                    </button>
-                                )}
-
-                                {/* Not Joined Message */}
-                                {!isJoined && isRegistrationOpen && (
-                                    <div className="pixel-box bg-[var(--pixel-yellow)]/10 border-[var(--pixel-yellow)] text-center py-6">
-                                        <p className="text-[var(--pixel-yellow)] text-xl">
-                                            👉 Go to LOBBY tab to register and join a room!
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Spectator Mode Info */}
-                                {!isJoined && !isRegistrationOpen && (
-                                    <div className="pixel-box bg-gray-800 border-gray-600 text-center py-6">
-                                        <p className="text-gray-400 text-lg">👀 SPECTATOR MODE</p>
-                                        <p className="text-gray-500 text-base mt-2">You can view rooms but cannot play</p>
-                                    </div>
-                                )}
+                                ))}
                             </div>
                         )}
                     </div>
                 )}
-
             </main>
         </div>
     );
