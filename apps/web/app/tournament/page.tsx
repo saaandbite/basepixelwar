@@ -17,13 +17,11 @@ import { useClaimTrophy } from '../hooks/useClaimTrophy';
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
 
 const getServerUrl = () => {
+    // If we are on the client, use relative URL (proxy via Next.js rewrites)
     if (typeof window !== 'undefined') {
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol;
-        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-            return `${protocol}//${hostname}:3000`;
-        }
+        return '';
     }
+    // Server-side rendering fallback
     if (process.env.NEXT_PUBLIC_SERVER_URL) return process.env.NEXT_PUBLIC_SERVER_URL;
     return 'http://localhost:3000';
 };
@@ -269,7 +267,7 @@ export default function TournamentPage() {
             <PlayerProfileModal walletAddress={selectedWallet} onClose={() => setSelectedWallet(null)} isTournamentContext={true} />
 
             {/* Header */}
-            <header className="w-full flex justify-center py-6 relative z-10 px-4">
+            <header className="w-full flex justify-center py-6 relative z-50 px-4">
                 <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
                     {/* Back Pill */}
                     <Link href="/play" className="group flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider hover:bg-white/10 hover:border-white/40 transition-all skew-x-[-10deg] w-full md:w-auto">

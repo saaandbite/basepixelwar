@@ -201,6 +201,11 @@ export function useGameVault(): UseGameVaultReturn {
 
                 setLastTxHash(txHash);
                 console.log("[GameVault] Game joined, tx:", txHash);
+
+                // Wait for receipt to ensure it's on-chain before server verification
+                await waitForReceipt(txHash);
+                console.log("[GameVault] Join Game Receipt confirmed");
+
                 return txHash;
             } catch (err: any) {
                 console.error("[GameVault] joinGame error:", err);
@@ -211,7 +216,7 @@ export function useGameVault(): UseGameVaultReturn {
                 setIsLoading(false);
             }
         },
-        [address, ensureCorrectChain, sendTransaction]
+        [address, ensureCorrectChain, sendTransaction, waitForReceipt]
     );
 
     // Get bid amount as formatted string

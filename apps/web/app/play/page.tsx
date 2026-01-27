@@ -154,7 +154,7 @@ export default function PlayHub() {
       />
 
       {/* Navbar moved to be cleaner */}
-      <nav className="relative z-10 w-full py-6">
+      <nav className="relative z-50 w-full py-6">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 select-none">
             <div className="flex items-center gap-2 group cursor-pointer hover:scale-105 transition-transform duration-200">
@@ -167,7 +167,7 @@ export default function PlayHub() {
             {isConnected && isOnCorrectChain && (
               <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-green-500/20 rounded border border-green-500/40">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-xs font-bold text-green-400 tracking-wider">BASE MAINNET</span>
+                <span className="text-xs font-bold text-green-400 tracking-wider">BASE SEPOLIA</span>
               </div>
             )}
 
@@ -192,7 +192,7 @@ export default function PlayHub() {
                 <AlertTriangle className="w-10 h-10" />
                 <div>
                   <h3 className="font-black text-2xl uppercase">Wrong Network</h3>
-                  <p className="font-sans font-bold">Switch to Base Mainnet to enter the arena.</p>
+                  <p className="font-sans font-bold">Switch to Base Sepolia to enter the arena.</p>
                 </div>
               </div>
               <button onClick={switchToBase} className="px-8 py-3 bg-black text-white font-retro text-xl hover:scale-105 transition-transform">

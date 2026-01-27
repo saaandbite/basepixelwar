@@ -19,6 +19,19 @@ const nextConfig = {
         NEXT_PUBLIC_TOURNAMENT_ADDRESS: process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS,
         NEXT_PUBLIC_GAME_VAULT_ADDRESS: process.env.NEXT_PUBLIC_GAME_VAULT_ADDRESS,
         NEXT_PUBLIC_PIXEL_TROPHY_ADDRESS: process.env.NEXT_PUBLIC_PIXEL_TROPHY_ADDRESS,
+        NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
+    },
+    async rewrites() {
+        return [
+            {
+                source: '/api/:path*',
+                destination: 'http://localhost:3000/api/:path*',
+            },
+            {
+                source: '/socket.io/:path*',
+                destination: 'http://localhost:3000/socket.io/:path*',
+            }
+        ];
     }
 };
 

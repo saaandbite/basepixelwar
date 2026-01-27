@@ -27,19 +27,32 @@ export interface TournamentSchedule {
 // ============================================
 
 // Testing: 26 January 2026
-const TESTING_DATE = '2026-01-26';
+// Testing: 27 January 2026
+const TESTING_DATE = '2026-01-27';
 
-export const CURRENT_TOURNAMENT_SCHEDULE: TournamentSchedule = {
+const SCHEDULE_1: TournamentSchedule = {
     week: 10,
-    // Registration: 10:35 - 12:05 WIB
-    registrationStart: new Date(`${TESTING_DATE}T10:35:00+07:00`),
-    registrationEnd: new Date(`${TESTING_DATE}T12:05:00+07:00`),
-    // Point Collection: 12:05 - 12:08 WIB (Claim reward after this)
-    pointCollectionStart: new Date(`${TESTING_DATE}T12:05:00+07:00`),
-    pointCollectionEnd: new Date(`${TESTING_DATE}T12:08:00+07:00`),
+    // Registration: 16:55 - 16:58 WIB
+    registrationStart: new Date(`${TESTING_DATE}T16:55:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T16:58:00+07:00`),
+    // Point Collection: 16:58 - 17:01 WIB
+    pointCollectionStart: new Date(`${TESTING_DATE}T16:58:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T17:01:00+07:00`),
 };
 
-const TESTING_SCHEDULES = [CURRENT_TOURNAMENT_SCHEDULE];
+const SCHEDULE_2: TournamentSchedule = {
+    week: 11,
+    // Registration: 17:01 - 17:04 WIB
+    registrationStart: new Date(`${TESTING_DATE}T17:01:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T17:04:00+07:00`),
+    // Point Collection: 17:04 - 17:07 WIB
+    pointCollectionStart: new Date(`${TESTING_DATE}T17:04:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T17:07:00+07:00`),
+};
+
+export const CURRENT_TOURNAMENT_SCHEDULE = SCHEDULE_1;
+
+const TESTING_SCHEDULES = [SCHEDULE_1, SCHEDULE_2];
 
 /**
  * Get the current tournament schedule based on time

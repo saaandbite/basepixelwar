@@ -116,20 +116,35 @@ export function useNFTInventory(address: string | undefined): UseNFTInventoryRes
                 const userNfts: NFTItem[] = [];
 
                 // 3. Iterate through all tokens to find user's tokens
-                // We'll batch these calls for efficiency
-                const ownerPromises = [];
-                for (let i = 0; i < totalTokens; i++) {
-                    ownerPromises.push(
-                        publicClient.readContract({
-                            address: PIXEL_TROPHY_ADDRESS,
-                            abi: PIXEL_TROPHY_ABI,
-                            functionName: 'ownerOf',
-                            args: [BigInt(i)],
-                        }).catch(() => null) // Handle burned/non-existent tokens
-                    );
-                }
+                // Batch calls to avoid 429 Rate Limit on public RPC
+                const owners: (string | null)[] = [];
+                const BATCH_SIZE = 10;
 
-                const owners = await Promise.all(ownerPromises);
+                for (let i = 0; i < totalTokens; i += BATCH_SIZE) {
+                    const batchPromises = [];
+                    const end = Math.min(i + BATCH_SIZE, totalTokens);
+
+                    for (let j = i; j < end; j++) {
+                        batchPromises.push(
+                            publicClient.readContract({
+                                address: PIXEL_TROPHY_ADDRESS,
+                                abi: PIXEL_TROPHY_ABI,
+                                functionName: 'ownerOf',
+                                args: [BigInt(j)],
+                            }).catch((err) => {
+                                console.warn(`[useNFTInventory] Failed to fetch owner for token ${j}`, err);
+                                return null;
+                            })
+                        );
+                    }
+
+                    // Wait for the batch
+                    const batchResults = await Promise.all(batchPromises);
+                    owners.push(...batchResults as (string | null)[]);
+
+                    // Small delay between batches
+                    if (end < totalTokens) await new Promise(resolve => setTimeout(resolve, 100));
+                }
 
                 // 4. Get tokenURI for user's tokens
                 const userTokenIds: number[] = [];
@@ -207,6 +222,17 @@ export function useNFTInventory(address: string | undefined): UseNFTInventoryRes
 
         fetchInventory();
     }, [address, publicClient, refreshKey]);
+
+    // Listen for global inventory update events (e.g. from claiming trophy)
+    useEffect(() => {
+        const handleUpdate = () => {
+            console.log('[useNFTInventory] Received inventory update event, refetching...');
+            refetch();
+        };
+
+        window.addEventListener('pixelwar:inventory-update', handleUpdate);
+        return () => window.removeEventListener('pixelwar:inventory-update', handleUpdate);
+    }, []);
 
     return {
         nfts,
