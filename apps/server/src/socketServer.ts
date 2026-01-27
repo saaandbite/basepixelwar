@@ -881,18 +881,21 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
     const playerRoom = await getPlayerRoom(normalizedWallet);
 
     if (!playerRoom) {
-        console.warn(`[SocketServer] REJECTED: Wallet ${normalizedWallet} NOT registered in tournament (no payment found)`);
-        socket.emit('lobby_join_failed', { reason: 'NOT_REGISTERED' });
-        return;
-    }
+        // [MODIFIED] Allow joining as spectator instead of rejecting
+        console.log(`[SocketServer] Wallet ${normalizedWallet} NOT registered in tournament (Spectator Mode)`);
+        // socket.emit('lobby_join_failed', { reason: 'NOT_REGISTERED' }); // REMOVED
 
-    if (playerRoom.roomId.toString() !== roomId || playerRoom.week !== week) {
-        console.warn(`[SocketServer] REJECTED: Wallet ${normalizedWallet} room mismatch. Registered: Room ${playerRoom.roomId} Week ${playerRoom.week}, Requested: Room ${roomId} Week ${week}`);
-        socket.emit('lobby_join_failed', { reason: 'ROOM_MISMATCH' });
-        return;
+        // Treat as spectator - Join the requested room (likely room 1 for default public lobby)
+        // We do NOT return here, we proceed to join the socket room
+    } else {
+        // Only check room mismatch if they ARE a registered player
+        if (playerRoom.roomId.toString() !== roomId || playerRoom.week !== week) {
+            console.warn(`[SocketServer] REJECTED: Wallet ${normalizedWallet} room mismatch. Registered: Room ${playerRoom.roomId} Week ${playerRoom.week}, Requested: Room ${roomId} Week ${week}`);
+            socket.emit('lobby_join_failed', { reason: 'ROOM_MISMATCH' });
+            return;
+        }
+        console.log(`[SocketServer] VERIFIED: Wallet ${normalizedWallet} confirmed for Room ${roomId} Week ${week}`);
     }
-
-    console.log(`[SocketServer] VERIFIED: Wallet ${normalizedWallet} confirmed for Room ${roomId} Week ${week}`);
 
     // GRACEFUL DISCONNECT: Clear any pending timeout for this wallet
     if (lobbyDisconnectTimeouts.has(normalizedWallet)) {
@@ -907,11 +910,16 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
     socket.data.tournamentRoomId = roomId;
     socket.data.week = week;
 
-    // Mark as online in Redis
-    const { setTournamentLobbyPresence, getTournamentLobbyOnlinePlayers, getTournamentLeaderboard } = await import('./redis.js');
-    await setTournamentLobbyPresence(week, roomId, normalizedWallet, true);
+    // Mark as online in Redis ONLY if they are actually a participant (known by playerRoom)
+    // Spectators don't need to be tracked as "online players" in the lobby list usually, or maybe they do?
+    // For now, let's only mark them if they are registered players to keep the "Online Players" count relevant to competitors.
+    if (playerRoom) {
+        const { setTournamentLobbyPresence } = await import('./redis.js');
+        await setTournamentLobbyPresence(week, roomId, normalizedWallet, true);
+    }
 
     // Fetch initial state
+    const { getTournamentLobbyOnlinePlayers, getTournamentLeaderboard } = await import('./redis.js');
     const onlinePlayers = await getTournamentLobbyOnlinePlayers(week, roomId);
     const leaderboard = await getTournamentLeaderboard(week, roomId);
 
@@ -922,11 +930,13 @@ async function handleJoinTournamentLobby(socket: GameSocket, data: { week: numbe
         leaderboard
     });
 
-    // Notify OTHERS that I joined
-    socket.to(`tournament_lobby_${roomId}`).emit('lobby_player_update', {
-        walletAddress: normalizedWallet,
-        isOnline: true
-    });
+    // Notify OTHERS that I joined (Only if I am a participant)
+    if (playerRoom) {
+        socket.to(`tournament_lobby_${roomId}`).emit('lobby_player_update', {
+            walletAddress: normalizedWallet,
+            isOnline: true
+        });
+    }
 }
 
 // This should be part of the socket.on('disconnect') handler

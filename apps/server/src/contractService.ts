@@ -1,4 +1,3 @@
-
 import { createWalletClient, http, publicActions, getContract, Hash } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, baseSepolia } from 'viem/chains';
@@ -242,6 +241,9 @@ export class ContractService {
 
         try {
             const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+            const currentWeekOnChain = await this.getCurrentWeekFromChain(); // Added log
+            console.log(`[ContractService] Starting new week. Current Chain Week: ${currentWeekOnChain}`); // Added log
+
             console.log(`[ContractService] Starting new week on Tournament contract ${tournamentAddress}...`);
 
             const tournamentContract = getContract({
@@ -264,6 +266,72 @@ export class ContractService {
             return hash;
         } catch (error: any) {
             console.error(`[ContractService] Failed to start new week:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
+
+    /**
+     * Batch update player scores on-chain when tournament ends
+     * @param players Array of player wallet addresses
+     * @param scores Array of score values (must match players array length)
+     */
+    async setPlayerScoreBatch(players: string[], scores: number[]): Promise<string | null> {
+        if (!this.isConfigured) {
+            console.error('[ContractService] Cannot set scores: ContractService not configured');
+            return null;
+        }
+
+        if (!process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS) {
+            console.log('[ContractService] Tournament Address not set.');
+            return null;
+        }
+
+        if (players.length !== scores.length) {
+            console.error('[ContractService] Players and scores arrays must have same length');
+            return null;
+        }
+
+        if (players.length === 0) {
+            console.log('[ContractService] No players to update scores for');
+            return null;
+        }
+
+        try {
+            const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+
+            // Add current on-chain week check for debugging
+            const currentChainWeek = await this.getCurrentWeekFromChain();
+
+            console.log(`[ContractService] ========================================`);
+            console.log(`[ContractService] Setting scores for ${players.length} players on Tournament contract...`);
+            console.log(`[ContractService] Debug: Chain Week=${currentChainWeek}`);
+            console.log(`[ContractService] Debug: First few scores: ${scores.slice(0, 5).join(', ')}...`);
+
+            const tournamentContract = getContract({
+                address: tournamentAddress,
+                abi: TOURNAMENT_ABI,
+                client: this.client
+            }) as any;
+
+            // Convert addresses and scores to proper format
+            const playerAddresses = players.map(p => p as `0x${string}`);
+            const scoresBigInt = scores.map(s => BigInt(s));
+
+            const hash = await tournamentContract.write.setPlayerScoreBatch([playerAddresses, scoresBigInt]);
+            console.log(`[ContractService] setPlayerScoreBatch tx sent: ${hash}`);
+
+            // Wait for confirmation
+            const result = await this.waitForTransaction(hash);
+
+            if (!result.success) {
+                console.error(`[ContractService] setPlayerScoreBatch tx failed: ${result.error}`);
+                return null;
+            }
+
+            console.log(`[ContractService] ✅ Scores updated for ${players.length} players!`);
+            return hash;
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to set player scores:`, error?.shortMessage || error?.message || error);
             return null;
         }
     }
@@ -340,6 +408,67 @@ export class ContractService {
             return Number(week);
         } catch (error: any) {
             console.error(`[ContractService] Failed to get current week:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
+
+    /**
+     * Send ETH to a wallet address
+     * Used for auto-funding new users with testnet ETH
+     * @param toAddress Recipient wallet address
+     * @param amountEth Amount of ETH to send (as string, e.g. "0.03")
+     */
+    async sendEth(toAddress: string, amountEth: string = "0.03"): Promise<string | null> {
+        if (!this.isConfigured) {
+            console.error('[ContractService] Cannot send ETH: ContractService not configured');
+            return null;
+        }
+
+        try {
+            // Parse the ETH amount to wei
+            const { parseEther } = await import('viem');
+            const valueInWei = parseEther(amountEth);
+
+            console.log(`[ContractService] Sending ${amountEth} ETH to ${toAddress}...`);
+
+            // Send the transaction
+            const hash = await this.client.sendTransaction({
+                to: toAddress as `0x${string}`,
+                value: valueInWei,
+            });
+
+            console.log(`[ContractService] ETH transfer tx sent: ${hash}`);
+
+            // Wait for confirmation
+            const result = await this.waitForTransaction(hash);
+            if (!result.success) {
+                console.error(`[ContractService] ETH transfer FAILED: ${result.error}`);
+                return null;
+            }
+
+            console.log(`[ContractService] ✅ Successfully sent ${amountEth} ETH to ${toAddress}`);
+            return hash;
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to send ETH:`, error?.shortMessage || error?.message || error);
+            return null;
+        }
+    }
+
+    /**
+     * Get ETH balance of a wallet
+     */
+    async getBalance(address: string): Promise<bigint | null> {
+        if (!this.isConfigured) {
+            return null;
+        }
+
+        try {
+            const balance = await this.client.getBalance({
+                address: address as `0x${string}`,
+            });
+            return balance;
+        } catch (error: any) {
+            console.error(`[ContractService] Failed to get balance:`, error?.message || error);
             return null;
         }
     }

@@ -56,6 +56,24 @@ contract TournamentMCL is ReentrancyGuard, Ownable {
         totalPlayersThisWeek = 0;
     }
 
+    /**
+     * Batch update player scores when tournament ends
+     * Can only be called by owner (backend)
+     * @param players Array of player addresses
+     * @param scores Array of score values to SET (not add)
+     */
+    function setPlayerScoreBatch(address[] calldata players, uint256[] calldata scores) external onlyOwner {
+        require(players.length == scores.length, "Array length mismatch");
+        require(players.length <= 100, "Max 100 players per batch");
+        
+        for (uint256 i = 0; i < players.length; i++) {
+            PlayerStats storage stats = playerInfo[currentWeek][players[i]];
+            if (stats.roomId != 0) {
+                stats.score = scores[i];
+            }
+        }
+    }
+
     // =================================================
     // JOIN
     // =================================================

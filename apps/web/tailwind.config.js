@@ -30,6 +30,14 @@ export default {
                 "saweria-coral": "#FFE5E5",
                 "saweria-accent": "#FFCDD2",
                 "saweria-white": "#FFFFFF",
+                // Pixel Theme - Pink Retro
+                "pixel-primary": "#ff8ba7",
+                "pixel-primary-light": "#ffc6c7",
+                "pixel-primary-lighter": "#ffe4e6",
+                "pixel-primary-dark": "#c44569",
+                "pixel-primary-darker": "#903749",
+                "pixel-fg": "#FFFFFF",
+                "pixel-bg": "#ff8ba7",
                 // Surface & Text
                 "surface-light": "#FFFFFF",
                 "card-bg": "#FFFFFF",
@@ -45,8 +53,9 @@ export default {
                 "powerup-orange": "#FF9800",
             },
             fontFamily: {
-                display: ['"Fredoka"', 'cursive'],
-                sans: ['"Nunito"', 'sans-serif'],
+                sans: ['var(--font-sans)', 'sans-serif'],
+                retro: ['var(--font-retro)', 'cursive'],
+                terminal: ['var(--font-terminal)', 'monospace'],
             },
             boxShadow: {
                 game: "0 20px 40px -5px rgba(76, 201, 240, 0.35)",

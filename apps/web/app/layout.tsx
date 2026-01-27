@@ -1,20 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { Press_Start_2P, VT323, Outfit } from "next/font/google";
 import "./globals.css";
 import "@coinbase/onchainkit/styles.css";
 import { Providers } from "./providers";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
 });
 
-const fredoka = { variable: "font-fredoka" };
-const nunito = { variable: "font-nunito" };
+const pressStart2P = Press_Start_2P({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-retro",
+  display: "swap",
+});
+
+const vt323 = VT323({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-terminal",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "PixelWar - Territory Conquest Game",
@@ -39,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${fredoka.variable} ${nunito.variable}`}>
+      <body className={`${outfit.variable} ${pressStart2P.variable} ${vt323.variable} font-sans antialiased`}>
         <Providers>
           {children}
         </Providers>

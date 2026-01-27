@@ -459,13 +459,13 @@ export async function clearAllPendingPaymentDisconnects(roomId: string): Promise
     const pattern = `${KEYS.PENDING_PAYMENT_DISCONNECT}${roomId}:*`;
     let cursor = '0';
     const keysToDelete: string[] = [];
-    
+
     do {
         const [nextCursor, keys] = await r.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
         cursor = nextCursor;
         keysToDelete.push(...keys);
     } while (cursor !== '0');
-    
+
     if (keysToDelete.length > 0) {
         await r.del(...keysToDelete);
         console.log(`[Redis] Cleared ${keysToDelete.length} pending payment disconnects for room ${roomId}`);
@@ -772,3 +772,97 @@ export async function clearAllGameData(): Promise<void> {
 
     console.log('[Redis] Cleared all game data');
 }
+
+// ============================================
+// USER NFT WINS (For User Profile)
+// ============================================
+
+/**
+ * Record NFT Win to User's Redis Profile
+ * Called when a player wins a tournament and gets an NFT trophy
+ */
+export async function recordUserNFTWin(
+    walletAddress: string,
+    week: number,
+    roomId: number
+): Promise<void> {
+    const r = getRedis();
+    const normalizedWallet = walletAddress.toLowerCase();
+    const mask = `${normalizedWallet.slice(0, 6)}...${normalizedWallet.slice(-4)}`;
+
+    const USER_KEY = `user:${normalizedWallet}`;
+    const USER_NFTS_KEY = `user:${normalizedWallet}:nfts`;
+
+    // NFT record
+    const nftRecord = {
+        week,
+        roomId,
+        wonAt: Date.now(),
+        wonAtISO: new Date().toISOString(),
+        type: 'tournament_trophy',
+    };
+
+    // 1. Add to user's NFT list
+    await r.rpush(USER_NFTS_KEY, JSON.stringify(nftRecord));
+
+    // 2. Update user profile with NFT count
+    const nftCount = await r.llen(USER_NFTS_KEY);
+    await r.hset(USER_KEY, {
+        nftCount: nftCount.toString(),
+        lastNftWonAt: Date.now(),
+        lastNftWeek: week,
+    });
+
+    console.log(`[Redis] ✅ NFT Win recorded for ${mask} - Week ${week}, Room ${roomId}. Total NFTs: ${nftCount}`);
+}
+
+/**
+ * Get User's NFT Wins History
+ */
+export async function getUserNFTWins(walletAddress: string): Promise<{
+    week: number;
+    roomId: number;
+    wonAt: number;
+    wonAtISO: string;
+    type: string;
+}[]> {
+    const r = getRedis();
+    const normalizedWallet = walletAddress.toLowerCase();
+    const USER_NFTS_KEY = `user:${normalizedWallet}:nfts`;
+
+    const nftsData = await r.lrange(USER_NFTS_KEY, 0, -1);
+    return nftsData.map(data => JSON.parse(data));
+}
+
+/**
+ * Get User Profile with NFT Info
+ */
+export async function getUserProfileWithNFTs(walletAddress: string): Promise<{
+    wallet: string;
+    nftCount: number;
+    nfts: any[];
+    funded: boolean;
+    createdAt: number | null;
+} | null> {
+    const r = getRedis();
+    const normalizedWallet = walletAddress.toLowerCase();
+
+    const USER_KEY = `user:${normalizedWallet}`;
+    const exists = await r.exists(USER_KEY);
+
+    if (!exists) {
+        return null;
+    }
+
+    const userData = await r.hgetall(USER_KEY);
+    const nfts = await getUserNFTWins(normalizedWallet);
+
+    return {
+        wallet: normalizedWallet,
+        nftCount: nfts.length,
+        nfts,
+        funded: userData.funded === 'true',
+        createdAt: userData.createdAt ? parseInt(userData.createdAt, 10) : null,
+    };
+}
+

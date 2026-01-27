@@ -77,7 +77,7 @@ async function main() {
 
   // Initialize tournament scheduler for automatic week transitions
   // This enables players to claim rewards after tournament ends
-  initTournamentScheduler();
+  await initTournamentScheduler();
 
   const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 
@@ -267,6 +267,52 @@ async function main() {
       return;
     }
 
+    // Tournament Rooms List Endpoint - Get all rooms for a week
+    if (req.method === 'GET' && req.url && req.url.startsWith('/api/tournament/rooms')) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const weekParam = url.searchParams.get('week');
+
+      try {
+        const { getTournamentStatus } = await import('./tournamentConfig.js');
+        const { getRedis } = await import('./redis.js');
+        const r = getRedis();
+
+        // Use week from param or from current tournament
+        const week = weekParam ? Number(weekParam) : getTournamentStatus().week;
+
+        // Get total player count for the week
+        const playerCountKey = `tournament:${week}:player_count`;
+        const totalPlayers = Number(await r.get(playerCountKey) || 0);
+        const totalRooms = totalPlayers > 0 ? Math.ceil(totalPlayers / 10) : 0;
+
+        // Build room list with player counts
+        const rooms: { roomId: number; playerCount: number }[] = [];
+        for (let roomId = 1; roomId <= totalRooms; roomId++) {
+          const roomKey = `tournament:${week}:room:${roomId}`;
+          const playerCount = await r.llen(roomKey);
+          rooms.push({ roomId, playerCount });
+        }
+
+        console.log(`[Server] Tournament Rooms: Week ${week}, ${totalRooms} rooms, ${totalPlayers} players`);
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify({
+          week,
+          totalPlayers,
+          totalRooms,
+          rooms
+        }));
+      } catch (error: any) {
+        console.error('[Server] Tournament rooms error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
     // Tournament Status Endpoint
     if (req.method === 'GET' && req.url === '/api/tournament/status') {
       try {
@@ -379,6 +425,161 @@ async function main() {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: error.message }));
       }
+      return;
+    }
+
+    // Manual Score Sync Endpoint - Force sync tournament scores to blockchain
+    // POST /api/tournament/force-sync?week=1
+    if (req.method === 'POST' && req.url && req.url.startsWith('/api/tournament/force-sync')) {
+      const urlObj = new URL(req.url, `http://${req.headers.host}`);
+      const weekParam = urlObj.searchParams.get('week');
+
+      if (!weekParam) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing week parameter' }));
+        return;
+      }
+
+      const week = Number(weekParam);
+      console.log(`[Server] Manual score sync requested for Week ${week}`);
+
+      try {
+        const { syncAllScoresToChain } = await import('./tournamentScheduler.js');
+        const success = await syncAllScoresToChain(week);
+
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(JSON.stringify({
+          success,
+          week,
+          message: success ? 'Scores synced to blockchain successfully!' : 'No scores to sync or sync failed'
+        }));
+      } catch (error: any) {
+        console.error('[Server] Force sync error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
+    // ============================================
+    // AUTO-FUND NEW USERS ENDPOINT
+    // ============================================
+    // POST /api/user/fund
+    // Body: { walletAddress: string }
+    // Auto-funds new users with 0.03 ETH on Base Sepolia
+    // Also registers the user account in Redis
+    if (req.method === 'POST' && req.url === '/api/user/fund') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          const { walletAddress } = JSON.parse(body);
+
+          if (!walletAddress || typeof walletAddress !== 'string' || !walletAddress.startsWith('0x')) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid wallet address' }));
+            return;
+          }
+
+          const normalizedWallet = walletAddress.toLowerCase();
+          const maskWallet = `${normalizedWallet.slice(0, 6)}...${normalizedWallet.slice(-4)}`;
+
+          console.log(`[Server] New user registration request for: ${maskWallet}`);
+
+          const { getRedis } = await import('./redis.js');
+          const r = getRedis();
+
+          // ============ User Account Registration ============
+          // Store user account data in Redis
+          const USER_KEY = `user:${normalizedWallet}`;
+          const existingUser = await r.exists(USER_KEY);
+
+          if (!existingUser) {
+            // New user - save account data
+            const userData = {
+              walletAddress: normalizedWallet,
+              createdAt: Date.now(),
+              firstConnectAt: new Date().toISOString(),
+              funded: false,
+              fundedAt: null,
+              fundTxHash: null,
+            };
+            await r.hset(USER_KEY, userData);
+            console.log(`[Server] ✅ New user registered: ${maskWallet}`);
+
+            // Also add to global users set for easy enumeration
+            await r.sadd('users:all', normalizedWallet);
+          } else {
+            console.log(`[Server] User ${maskWallet} already registered`);
+          }
+
+          // ============ Auto-Fund Logic ============
+          // Check if wallet has already been funded
+          const FUNDED_WALLETS_KEY = 'funded_wallets';
+          const alreadyFunded = await r.sismember(FUNDED_WALLETS_KEY, normalizedWallet);
+
+          if (alreadyFunded) {
+            console.log(`[Server] Wallet ${maskWallet} already funded, skipping`);
+            res.writeHead(200, {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify({
+              success: false,
+              reason: 'already_funded',
+              message: 'This wallet has already been funded',
+              isNewUser: !existingUser
+            }));
+            return;
+          }
+
+          // Fund the wallet with 0.03 ETH
+          const { contractService } = await import('./contractService.js');
+          const txHash = await contractService.sendEth(normalizedWallet, '0.03');
+
+          if (txHash) {
+            // Mark wallet as funded
+            await r.sadd(FUNDED_WALLETS_KEY, normalizedWallet);
+
+            // Update user data with funding info
+            await r.hset(USER_KEY, {
+              funded: 'true',
+              fundedAt: Date.now(),
+              fundTxHash: txHash,
+            });
+
+            console.log(`[Server] ✅ Successfully funded ${maskWallet} with 0.03 ETH. TX: ${txHash}`);
+
+            res.writeHead(200, {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify({
+              success: true,
+              txHash,
+              amount: '0.03',
+              wallet: normalizedWallet,
+              isNewUser: !existingUser
+            }));
+          } else {
+            console.error(`[Server] ❌ Failed to fund ${maskWallet}`);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: false,
+              reason: 'transfer_failed',
+              message: 'ETH transfer failed. Server wallet may have insufficient funds.'
+            }));
+          }
+
+        } catch (error: any) {
+          console.error('[Server] Auto-fund error:', error);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: error.message || 'Server error' }));
+        }
+      });
       return;
     }
 
