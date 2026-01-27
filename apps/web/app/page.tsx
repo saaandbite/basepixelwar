@@ -5,6 +5,10 @@ import Link from "next/link";
 import { Zap, Shield, Trophy, Swords } from "lucide-react";
 import Hero3D from "./components/Hero3D";
 import SmartWalletButton from "./components/SmartWalletButton";
+import GameFeatures from "./components/GameFeatures";
+import HowItWorks from "./components/HowItWorks";
+import Footer from "./components/Footer";
+import ScrollReveal from "./components/ScrollReveal";
 
 export default function LandingPage() {
   const [windowWidth, setWindowWidth] = useState(0);
@@ -36,7 +40,7 @@ export default function LandingPage() {
           </div>
 
           {/* Mobile Navbar */}
-          <nav className="relative z-10 w-full py-4">
+          <nav className="relative z-50 w-full py-4">
             <div className="container mx-auto px-4 flex items-center justify-between">
               {/* Mobile Logo */}
               <div className="flex items-center gap-2 select-none">
@@ -48,22 +52,7 @@ export default function LandingPage() {
 
               {/* Mobile Wallet - Compact */}
               <div className="flex items-center">
-                <Wallet>
-                  <ConnectWallet className="pixel-btn-connect !font-sans !font-bold !text-sm !px-3 !py-1 !min-h-0 hover:!bg-gray-100 transition-transform !text-black">
-                    <Avatar className="h-5 w-5" />
-                    <Name />
-                  </ConnectWallet>
-                  <WalletDropdown className="!font-sans">
-                    <Identity className="px-4 py-3" hasCopyAddressOnClick>
-                      <Avatar />
-                      <Name />
-                      <Address />
-                      <EthBalance />
-                    </Identity>
-                    <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-                    <WalletDropdownDisconnect />
-                  </WalletDropdown>
-                </Wallet>
+                <SmartWalletButton className="pixel-btn-connect !font-sans !font-bold !text-sm !px-3 !py-1 !min-h-0 hover:!bg-gray-100 transition-transform !text-black !bg-white !border-2 !border-black !rounded-full" showBalance={false} />
               </div>
             </div>
           </nav>
@@ -92,7 +81,7 @@ export default function LandingPage() {
             <ScrollReveal delay={400}>
               <p
                 className={`${isSmallMobile ? 'text-[22px]' : 'text-xl font-bold'} font-terminal text-white mb-6 max-w-sm leading-relaxed px-4 text-center mx-auto`}
-                style={{ textShadow: '0 1px 2px rgba(92, 26, 38, 0.5), 0 0 5px rgba(92, 26, 38, 0.4)' }}
+                style={{ textShadow: '0 1pox 2px rgba(92, 26, 38, 0.5), 0 0 5px rgba(92, 26, 38, 0.4)' }}
               >
                 PvP Battle Arena on Base L2
               </p>
@@ -133,7 +122,7 @@ export default function LandingPage() {
           </div>
 
           {/* Desktop Navbar */}
-          <nav className="relative z-10 w-full py-10">
+          <nav className="relative z-50 w-full py-10">
             <div className="container mx-auto px-4 flex items-center justify-between">
               {/* Logo */}
               <div className="flex items-center gap-3 select-none">
@@ -143,12 +132,12 @@ export default function LandingPage() {
                 </div>
               </div>
 
-            {/* Connect Wallet - Smart Wallet Only */}
-            <div className="flex items-center">
-              <SmartWalletButton className="pixel-btn-connect !font-sans !font-bold !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black !bg-white !border-2 !border-black !rounded-full !px-6 !py-2" />
+              {/* Connect Wallet - Smart Wallet Only */}
+              <div className="flex items-center">
+                <SmartWalletButton className="pixel-btn-connect !font-sans !font-bold !text-lg !h-auto !min-h-0 hover:!bg-gray-100 transition-transform !text-black !bg-white !border-2 !border-black !rounded-full !px-6 !py-2" />
+              </div>
             </div>
-          </div>
-        </nav>
+          </nav>
 
           {/* Desktop Hero Content */}
           <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 py-32 max-w-5xl mx-auto">

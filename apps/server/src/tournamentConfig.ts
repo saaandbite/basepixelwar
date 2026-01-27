@@ -39,6 +39,8 @@ export const CURRENT_TOURNAMENT_SCHEDULE: TournamentSchedule = {
     pointCollectionEnd: new Date(`${TESTING_DATE}T12:08:00+07:00`),
 };
 
+const TESTING_SCHEDULES = [CURRENT_TOURNAMENT_SCHEDULE];
+
 /**
  * Get the current tournament schedule based on time
  * Automatically finds the correct week
@@ -58,8 +60,8 @@ export function getCurrentSchedule(): TournamentSchedule {
     return TESTING_SCHEDULES[TESTING_SCHEDULES.length - 1];
 }
 
-// Legacy export for compatibility
-export const CURRENT_TOURNAMENT_SCHEDULE = getCurrentSchedule();
+// Legacy export removed to fix duplicate declaration error
+// export const CURRENT_TOURNAMENT_SCHEDULE = getCurrentSchedule();
 
 /**
  * Get the current tournament phase
