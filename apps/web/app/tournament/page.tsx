@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther } from 'viem';
-import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownLink, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { Address, Avatar, Name, Identity, EthBalance } from '@coinbase/onchainkit/identity';
-import { Loader2, Trophy, Users, ArrowLeft, Crown, DoorOpen, Ticket, Swords } from 'lucide-react';
+import { parseEther, formatEther } from 'viem';
+import SmartWalletButton from '../components/SmartWalletButton';
+import { Loader2, Trophy, Users, ArrowLeft, Crown, DoorOpen, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
@@ -287,26 +286,8 @@ export default function TournamentPage() {
                         </div>
                     </div>
 
-                    {/* Wallet Pill */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/20 backdrop-blur-sm text-white font-sans text-sm font-bold tracking-wider skew-x-[-10deg] hover:bg-white/10 hover:border-white/40 transition-all w-full md:w-auto">
-                        <div className="skew-x-[10deg] flex items-center gap-2">
-                            <Wallet>
-                                <ConnectWallet className="!font-sans !font-bold !text-sm !h-auto !min-h-0 !bg-transparent !text-white !p-0 hover:!bg-transparent !border-0 flex items-center gap-2">
-                                    <Avatar className="h-5 w-5" />
-                                    <Name />
-                                </ConnectWallet>
-                                <WalletDropdown className="!font-sans">
-                                    <Identity className="px-4 py-3" hasCopyAddressOnClick>
-                                        <Avatar />
-                                        <Name />
-                                        <Address />
-                                        <EthBalance />
-                                    </Identity>
-                                    <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-                                    <WalletDropdownDisconnect />
-                                </WalletDropdown>
-                            </Wallet>
-                        </div>
+                    <div className="flex items-center gap-3">
+                        <SmartWalletButton className="!font-terminal !text-base !h-10 !min-h-0 !bg-[var(--pixel-red)] !text-white !border-0 hover:!bg-white hover:!text-black !rounded-lg !px-4" />
                     </div>
                 </div>
             </header>

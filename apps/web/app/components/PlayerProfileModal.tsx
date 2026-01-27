@@ -1,6 +1,9 @@
-import { X, Trophy, Wallet, Crosshair } from 'lucide-react';
+import { X, Trophy, Wallet, Crosshair, Gift, Loader2 } from 'lucide-react';
 import { formatEther } from 'viem';
 import { usePlayerProfile } from '../hooks/usePlayerProfile';
+import { useUnclaimedRewards } from '../hooks/useUnclaimedRewards';
+import { useClaimTrophy } from '../hooks/useClaimTrophy';
+import { useAccount } from 'wagmi';
 
 interface PlayerProfileModalProps {
     walletAddress: string | null;
@@ -8,8 +11,42 @@ interface PlayerProfileModalProps {
     isTournamentContext?: boolean;
 }
 
+// Sub-component for claim button
+function ClaimRewardButton({ week, onSuccess }: { week: number; onSuccess: () => void }) {
+    const { claim, isPending, isConfirming, isSuccess, hasClaimed, error } = useClaimTrophy(week);
+
+    if (isSuccess || hasClaimed) {
+        onSuccess();
+        return (
+            <div className="text-[var(--pixel-green)] text-sm font-bold">✓ CLAIMED</div>
+        );
+    }
+
+    return (
+        <div>
+            <button
+                onClick={claim}
+                disabled={isPending || isConfirming}
+                className="pixel-btn bg-[var(--pixel-yellow)] text-black text-sm py-2 px-4 rounded-lg hover:scale-105 transition-transform disabled:opacity-50"
+            >
+                {isPending || isConfirming ? (
+                    <><Loader2 className="animate-spin inline w-4 h-4 mr-1" /> CLAIMING...</>
+                ) : (
+                    '🎁 CLAIM'
+                )}
+            </button>
+            {error && <p className="text-[var(--pixel-red)] text-xs mt-1">{error.message.slice(0, 40)}...</p>}
+        </div>
+    );
+}
+
 export default function PlayerProfileModal({ walletAddress, onClose, isTournamentContext = false }: PlayerProfileModalProps) {
+    const { address } = useAccount();
     const { profile, loading, error } = usePlayerProfile(walletAddress, isTournamentContext ? 'tournament' : 'global');
+    const { unclaimedRewards, isLoading: isLoadingRewards, refetch: refetchRewards } = useUnclaimedRewards();
+
+    // Only show unclaimed rewards for the user's own profile
+    const isOwnProfile = address?.toLowerCase() === walletAddress?.toLowerCase();
 
     if (!walletAddress) return null;
 
@@ -83,6 +120,35 @@ export default function PlayerProfileModal({ walletAddress, onClose, isTournamen
                                     <div className="text-xs text-[var(--pixel-fg)] opacity-50 mt-1">ETH</div>
                                 </div>
                             </div>
+
+                            {/* Unclaimed Rewards Section - Only for own profile */}
+                            {isOwnProfile && unclaimedRewards.length > 0 && (
+                                <div className="bg-[var(--pixel-yellow)]/10 rounded-2xl p-4 border-2 border-[var(--pixel-yellow)] animate-pulse-slow">
+                                    <h3 className="text-sm font-bold text-[var(--pixel-yellow)] mb-3 flex items-center gap-2 uppercase tracking-wider">
+                                        <Gift className="w-4 h-4" />
+                                        UNCLAIMED REWARDS
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {unclaimedRewards.map((reward) => (
+                                            <div
+                                                key={reward.week}
+                                                className="bg-black/30 rounded-xl p-3 flex items-center justify-between border border-white/10"
+                                            >
+                                                <div>
+                                                    <div className="font-retro text-white text-sm">WEEK #{reward.week}</div>
+                                                    <div className="text-xs text-[var(--pixel-fg)] opacity-70">
+                                                        Room #{reward.roomId} • {reward.score} pts
+                                                    </div>
+                                                </div>
+                                                <ClaimRewardButton
+                                                    week={reward.week}
+                                                    onSuccess={() => refetchRewards()}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Trophy Showcase */}
                             <div className="bg-black/20 rounded-2xl p-6 border-2 border-white/10">

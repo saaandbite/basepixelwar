@@ -4,9 +4,10 @@
  * This file defines the time-based phases for tournaments.
  * 
  * Phases:
- * 1. REGISTRATION: Players can buy tickets to join the tournament
- * 2. POINT_COLLECTION: Tournament is active, 1vs1 game wins count towards tournament leaderboard
- * 3. ENDED: Tournament has ended, waiting for next week
+ * 1. UPCOMING: Before registration starts
+ * 2. REGISTRATION: Players can buy tickets to join the tournament
+ * 3. POINT_COLLECTION: Tournament is active, 1vs1 game wins count towards tournament leaderboard
+ * 4. ENDED: Tournament has ended, scheduler will call startNewWeek() on contract
  */
 
 export type TournamentPhase = 'registration' | 'point_collection' | 'ended' | 'upcoming';
@@ -20,8 +21,9 @@ export interface TournamentSchedule {
 }
 
 // ============================================
-// TESTING CONFIGURATION (Week 1)
-// Change these values for production
+// TESTING CONFIGURATION - Multiple Weeks
+// 22 January 2026, starting at 14:00 WIB
+// Each cycle: 10 min registration + 10 min point collection
 // ============================================
 
 // Testing: 26 January 2026
@@ -37,13 +39,34 @@ export const CURRENT_TOURNAMENT_SCHEDULE: TournamentSchedule = {
     pointCollectionEnd: new Date(`${TESTING_DATE}T12:08:00+07:00`),
 };
 
+/**
+ * Get the current tournament schedule based on time
+ * Automatically finds the correct week
+ */
+export function getCurrentSchedule(): TournamentSchedule {
+    const now = new Date();
+
+    // Find schedule where we are within or before it ends
+    for (const schedule of TESTING_SCHEDULES) {
+        // If current time is before this schedule ends, use it
+        if (now < schedule.pointCollectionEnd) {
+            return schedule;
+        }
+    }
+
+    // All schedules have passed - return the last one as "ended"
+    return TESTING_SCHEDULES[TESTING_SCHEDULES.length - 1];
+}
+
+// Legacy export for compatibility
+export const CURRENT_TOURNAMENT_SCHEDULE = getCurrentSchedule();
 
 /**
  * Get the current tournament phase
  */
 export function getCurrentPhase(): TournamentPhase {
     const now = new Date();
-    const schedule = CURRENT_TOURNAMENT_SCHEDULE;
+    const schedule = getCurrentSchedule();
 
     // Before registration starts
     if (now < schedule.registrationStart) {
@@ -84,7 +107,7 @@ export function isPointCollectionActive(): boolean {
 export function getTournamentStatus() {
     const now = new Date();
     const phase = getCurrentPhase();
-    const schedule = CURRENT_TOURNAMENT_SCHEDULE;
+    const schedule = getCurrentSchedule();
 
     let nextPhaseTime: Date | null = null;
     let nextPhaseName: string = '';
@@ -104,7 +127,14 @@ export function getTournamentStatus() {
             nextPhaseName = 'Tournament Ends';
             break;
         case 'ended':
-            nextPhaseName = 'Next Week';
+            // Check if there's a next week schedule
+            const nextSchedule = TESTING_SCHEDULES.find(s => s.week === schedule.week + 1);
+            if (nextSchedule && now < nextSchedule.registrationStart) {
+                nextPhaseTime = nextSchedule.registrationStart;
+                nextPhaseName = `Week ${nextSchedule.week} Registration`;
+            } else {
+                nextPhaseName = 'All Weeks Complete';
+            }
             break;
     }
 

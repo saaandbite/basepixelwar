@@ -51,14 +51,26 @@ export async function processMatchResult(
 }
 
 /**
- * Distribute Prizes for a Room
- * Called when a room is finished or week ends.
+ * @deprecated This function is NO LONGER USED.
+ * 
+ * Prize distribution is now handled DIRECTLY by the TournamentMCL smart contract
+ * when players call `claimReward(weekNumber)`. The contract:
+ * - Calculates Top 3 based on on-chain score
+ * - Rank 1: Mints NFT via trophyContract.mintTrophy()
+ * - Rank 2: Pays 60% of room prizePool
+ * - Rank 3: Pays 40% of room prizePool
+ * 
+ * This function was originally designed for server-side distribution but
+ * has been replaced by user-initiated on-chain claims.
+ * 
+ * Keeping this code for reference only. DO NOT USE.
  */
 export async function distributeRoomPrizes(
     week: number,
     roomId: number,
     force: boolean = false
 ): Promise<void> {
+    // Legacy code below - kept for reference only
     console.log(`[TournamentService] Distributing prizes for Week ${week} Room ${roomId}...`);
 
     // 1. Get Final Leaderboard
@@ -84,6 +96,10 @@ export async function distributeRoomPrizes(
         const { recordNFTWin, transferPrizeFromVault } = await import('./db.js');
 
         await recordNFTWin(winner.wallet, week);
+
+        // ============ SAVE NFT WIN TO USER PROFILE IN REDIS ============
+        // Store NFT win details in the user's Redis profile
+        await Redis.recordUserNFTWin(winner.wallet, week, roomId);
 
         // 3. Award ETH Prizes to Runner-ups
         // Prize Structure:

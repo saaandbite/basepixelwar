@@ -4,20 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWallet, isCorrectChain } from "../contexts/WalletContext";
 import { useMultiplayer } from "./game/hooks/useMultiplayer";
-import {
-  ConnectWallet,
-  Wallet,
-  WalletDropdown,
-  WalletDropdownDisconnect,
-  WalletDropdownLink,
-} from "@coinbase/onchainkit/wallet";
-import {
-  Address,
-  Avatar,
-  Name,
-  Identity,
-  EthBalance,
-} from "@coinbase/onchainkit/identity";
+import SmartWalletButton from "../components/SmartWalletButton";
 import {
   Trophy,
   AlertTriangle,
@@ -183,22 +170,8 @@ export default function PlayHub() {
                 <span className="text-xs font-bold text-green-400 tracking-wider">BASE MAINNET</span>
               </div>
             )}
-            <Wallet>
-              <ConnectWallet className="!font-sans !font-bold !text-sm !h-10 !min-h-0 !bg-white !text-black hover:!scale-105 transition-transform border-b-4 border-gray-300">
-                <Avatar className="h-6 w-6" />
-                <Name />
-              </ConnectWallet>
-              <WalletDropdown className="!font-sans">
-                <Identity className="px-4 py-3" hasCopyAddressOnClick>
-                  <Avatar />
-                  <Name />
-                  <Address />
-                  <EthBalance />
-                </Identity>
-                <WalletDropdownLink icon="wallet" href="https://keys.coinbase.com">Wallet</WalletDropdownLink>
-                <WalletDropdownDisconnect />
-              </WalletDropdown>
-            </Wallet>
+
+            <SmartWalletButton className="!font-terminal !text-xl !px-6 !py-3 !h-auto !min-h-0 !bg-[var(--pixel-card-bg)] !border-2 !border-[var(--pixel-card-border)] hover:!border-[var(--pixel-blue)] !rounded-xl transition-all hover:scale-105 active:scale-95 shadow-md" />
           </div>
         </div>
       </nav>

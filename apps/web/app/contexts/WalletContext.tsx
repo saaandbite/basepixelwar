@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useCallback } from "react";
+import React, { createContext, useContext, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAccount, useConnect, useDisconnect, useSwitchChain, useSendTransaction } from "wagmi";
 import { baseSepolia, base } from "wagmi/chains";
 import { parseEther } from "viem";
@@ -61,59 +61,96 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         chainId
     });
 
-    // Connect wallet - auto-detect best connector
+    // ============ Auto-Fund New Users ============
+    // When a wallet connects, automatically fund it with 0.03 ETH if it's a new user
+    const hasFundedRef = useRef(false);
+
+    useEffect(() => {
+        // Only trigger if wallet is connected and we have an address
+        if (!isConnected || !address) {
+            hasFundedRef.current = false;
+            return;
+        }
+
+        // Prevent multiple calls for the same connection
+        if (hasFundedRef.current) return;
+        hasFundedRef.current = true;
+
+        // Check if we've already attempted to fund this wallet in this session
+        const fundedKey = `funded_${address.toLowerCase()}`;
+        if (typeof window !== 'undefined' && sessionStorage.getItem(fundedKey)) {
+            console.log('[Wallet] Already attempted funding this session, skipping');
+            return;
+        }
+
+        // Call the auto-fund API
+        const fundNewUser = async () => {
+            try {
+                // Determine server URL
+                const serverUrl = typeof window !== 'undefined'
+                    ? (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+                        ? `${window.location.protocol}//${window.location.hostname}:3000`
+                        : process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000')
+                    : 'http://localhost:3000';
+
+                console.log('[Wallet] Checking if new user needs funding...', address);
+
+                const response = await fetch(`${serverUrl}/api/user/fund`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress: address }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('[Wallet] ✅ Auto-funded new user with 0.03 ETH!', result.txHash);
+                } else if (result.reason === 'already_funded') {
+                    console.log('[Wallet] User already funded previously');
+                } else {
+                    console.log('[Wallet] Funding skipped:', result.message || result.reason);
+                }
+
+                // Mark as attempted in session storage
+                if (typeof window !== 'undefined') {
+                    sessionStorage.setItem(fundedKey, 'true');
+                }
+            } catch (err) {
+                console.error('[Wallet] Auto-fund API error:', err);
+            }
+        };
+
+        fundNewUser();
+    }, [isConnected, address]);
+
+    // Connect wallet - Smart Wallet only (passkey/biometrics)
     const connect = useCallback(async () => {
         try {
-            // Check if we're in a wallet's in-app browser (MetaMask, Coinbase, etc.)
-            const ethereum = typeof window !== 'undefined' ? (window as any).ethereum : null;
+            console.log('[Wallet] Connecting with Smart Wallet (passkey)...');
+            console.log('[Wallet] Available connectors:', connectors.map(c => ({ id: c.id, name: c.name, ready: c.ready })));
 
-            let selectedConnector = connectors[0]; // Default fallback
+            // Find the Coinbase Smart Wallet connector
+            const smartWalletConnector = connectors.find(c =>
+                c.id === 'coinbaseWalletSDK' || c.name?.toLowerCase().includes('coinbase')
+            ) || connectors[0];
 
-            // Check if we're on mobile
-            const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (smartWalletConnector) {
+                console.log('[Wallet] Using connector:', smartWalletConnector.id, smartWalletConnector.name);
 
-            console.log('[Wallet] Detecting environment:', {
-                isMobile,
-                hasEthereum: !!ethereum,
-                connectors: connectors.map(c => ({ id: c.id, name: c.name }))
-            });
-
-            if (ethereum) {
-                // Detect which wallet we're in
-                const isMetaMask = ethereum.isMetaMask && !ethereum.isCoinbaseWallet;
-                const isCoinbaseWallet = ethereum.isCoinbaseWallet;
-
-                console.log('[Wallet] In-app browser detected:', { isMetaMask, isCoinbaseWallet });
-
-                if (isMetaMask) {
-                    // Find MetaMask or injected connector
-                    selectedConnector = connectors.find(c =>
-                        c.id === 'metaMask' || c.id === 'injected'
-                    ) || connectors[0];
-                } else if (isCoinbaseWallet) {
-                    // Find Coinbase Wallet connector
-                    selectedConnector = connectors.find(c =>
-                        c.id === 'coinbaseWalletSDK' || c.name.toLowerCase().includes('coinbase')
-                    ) || connectors[0];
-                } else {
-                    // Use injected connector for other wallets
-                    selectedConnector = connectors.find(c => c.id === 'injected') || connectors[0];
-                }
-            } else if (isMobile) {
-                // Mobile browser WITHOUT injected wallet - use WalletConnect
-                // This will show QR code on desktop or deep link to wallet apps on mobile
-                console.log('[Wallet] Mobile browser detected, using WalletConnect for deep linking');
-                selectedConnector = connectors.find(c => c.id === 'walletConnect') || connectors[0];
+                // Connect with the Smart Wallet connector
+                wagmiConnect(
+                    { connector: smartWalletConnector },
+                    {
+                        onSuccess: (data) => {
+                            console.log('[Wallet] Connected successfully:', data);
+                        },
+                        onError: (error) => {
+                            console.error('[Wallet] Connection error:', error);
+                        },
+                    }
+                );
             } else {
-                // Desktop browser without extension - use WalletConnect QR
-                console.log('[Wallet] Desktop browser without wallet, using WalletConnect QR');
-                selectedConnector = connectors.find(c => c.id === 'walletConnect') || connectors[0];
-            }
-
-            console.log('[Wallet] Using connector:', selectedConnector?.name, selectedConnector?.id);
-
-            if (selectedConnector) {
-                wagmiConnect({ connector: selectedConnector });
+                console.error('[Wallet] No Smart Wallet connector available. Connectors:', connectors);
             }
         } catch (err) {
             console.error("Failed to connect wallet:", err);
