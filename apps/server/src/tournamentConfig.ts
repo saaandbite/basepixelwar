@@ -26,28 +26,27 @@ export interface TournamentSchedule {
 // Each cycle: 10 min registration + 10 min point collection
 // ============================================
 
-// Testing: 26 January 2026
-// Testing: 27 January 2026
-const TESTING_DATE = '2026-01-27';
+// Testing: 28 January 2026
+const TESTING_DATE = '2026-01-28';
 
 const SCHEDULE_1: TournamentSchedule = {
-    week: 10,
-    // Registration: 16:55 - 16:58 WIB
-    registrationStart: new Date(`${TESTING_DATE}T16:55:00+07:00`),
-    registrationEnd: new Date(`${TESTING_DATE}T16:58:00+07:00`),
-    // Point Collection: 16:58 - 17:01 WIB
-    pointCollectionStart: new Date(`${TESTING_DATE}T16:58:00+07:00`),
-    pointCollectionEnd: new Date(`${TESTING_DATE}T17:01:00+07:00`),
+    week: 12,
+    // Registration: 10:45 - 10:47 WIB
+    registrationStart: new Date(`${TESTING_DATE}T10:45:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T10:47:00+07:00`),
+    // Point Collection: 10:47 - 10:50 WIB
+    pointCollectionStart: new Date(`${TESTING_DATE}T10:47:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T10:50:00+07:00`),
 };
 
 const SCHEDULE_2: TournamentSchedule = {
-    week: 11,
-    // Registration: 17:01 - 17:04 WIB
-    registrationStart: new Date(`${TESTING_DATE}T17:01:00+07:00`),
-    registrationEnd: new Date(`${TESTING_DATE}T17:04:00+07:00`),
-    // Point Collection: 17:04 - 17:07 WIB
-    pointCollectionStart: new Date(`${TESTING_DATE}T17:04:00+07:00`),
-    pointCollectionEnd: new Date(`${TESTING_DATE}T17:07:00+07:00`),
+    week: 13,
+    // Registration: 10:50 - 10:52 WIB
+    registrationStart: new Date(`${TESTING_DATE}T10:50:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T10:52:00+07:00`),
+    // Point Collection: 10:52 - 10:55 WIB
+    pointCollectionStart: new Date(`${TESTING_DATE}T10:52:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T10:55:00+07:00`),
 };
 
 export const CURRENT_TOURNAMENT_SCHEDULE = SCHEDULE_1;
