@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import SmartWalletButton from '../components/SmartWalletButton';
-import { Loader2, Trophy, Users, ArrowLeft, Crown, DoorOpen, Ticket, Swords } from 'lucide-react';
+import { Loader2, Trophy, Users, ArrowLeft, Crown, Map as MapIcon, Ticket, Swords } from 'lucide-react';
 import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,8 @@ import { io, Socket } from 'socket.io-client';
 import { TOURNAMENT_ABI } from '@repo/contracts';
 import PlayerProfileModal from '../components/PlayerProfileModal';
 import { useClaimTrophy } from '../hooks/useClaimTrophy';
+import TerritoryCard from '../components/TerritoryCard';
+import { getTerritoryName } from '../utils/formatTerritory';
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
 
@@ -31,7 +33,7 @@ export default function TournamentPage() {
     const router = useRouter();
 
     // Tab State
-    const [activeTab, setActiveTab] = useState<'lobby' | 'rooms'>('lobby');
+    const [activeTab, setActiveTab] = useState<'lobby' | 'territory'>('lobby');
 
     // Contract Reads
     const { data: onChainWeek } = useReadContract({
@@ -211,7 +213,7 @@ export default function TournamentPage() {
                     });
                     await fetchRoomData();
                     await fetchRoomsList();
-                    setActiveTab('rooms');
+                    setActiveTab('territory');
                 } catch (e) {
                     console.error("Backend join notification failed:", e);
                 }
@@ -323,16 +325,16 @@ export default function TournamentPage() {
                     <div className="space-y-8">
                         {/* Tab Switcher */}
                         <div className="flex gap-4 p-1">
-                            {['lobby', 'rooms'].map(tab => (
+                            {['lobby', 'territory'].map(tab => (
                                 <button
                                     key={tab}
-                                    onClick={() => setActiveTab(tab as 'lobby' | 'rooms')}
+                                    onClick={() => setActiveTab(tab as 'lobby' | 'territory')}
                                     className={`flex-1 font-bold font-retro text-lg md:text-xl px-6 py-4 flex items-center justify-center gap-3 transition-all clip-path-polygon ${activeTab === tab
                                         ? 'bg-white text-black drop-shadow-[4px_4px_0_rgba(0,0,0,0.3)]'
                                         : 'bg-black/20 text-white/50 hover:bg-black/40 hover:text-white'}`}
                                     style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
                                 >
-                                    {tab === 'lobby' ? <Ticket className="w-5 h-5" /> : <DoorOpen className="w-5 h-5" />}
+                                    {tab === 'lobby' ? <Ticket className="w-5 h-5" /> : <MapIcon className="w-5 h-5" />}
                                     {tab.toUpperCase()}
                                 </button>
                             ))}
@@ -405,15 +407,19 @@ export default function TournamentPage() {
                                     <div className="p-8 bg-green-900/20 border border-green-500/30 backdrop-blur-sm rounded-sm text-center relative">
                                         <div className="absolute inset-0 bg-green-500/5 animate-pulse" />
                                         <p className="font-retro text-3xl text-green-400 mb-2 drop-shadow-sm">REGISTERED</p>
-                                        <p className="text-xl text-white">You are in <span className="font-bold text-green-300">Room #{joinedRoomId}</span></p>
-                                        <p className="text-sm text-white/50 mt-2 font-mono">Check the ROOMS tab to see your competition.</p>
+                                        <p className="text-xl text-white">You are in <span className="font-bold text-green-300">{joinedRoomId ? getTerritoryName(joinedRoomId) : `Room #${joinedRoomId}`}</span></p>
+                                        <p className="text-sm text-white/50 mt-2 font-mono">Go to <button onClick={() => setActiveTab('territory')} className="underline hover:text-white font-bold">TERRITORY TAB</button> to see your lobby.</p>
                                     </div>
                                 )}
+                            </div>
+                        )}
 
-                                {isJoined && (
+                        {activeTab === 'territory' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                {isJoined ? (
                                     <div className="bg-black/20 border border-white/10 backdrop-blur-md rounded-sm overflow-hidden">
                                         <div className="p-6 border-b border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 bg-black/20">
-                                            <h2 className="text-2xl font-retro text-white">ROOM #{joinedRoomId} LOBBY</h2>
+                                            <h2 className="text-2xl font-retro text-white">{joinedRoomId ? getTerritoryName(joinedRoomId) : `ROOM #${joinedRoomId}`} LOBBY</h2>
                                             <div className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-sm">
                                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                                                 <span className="text-white/80">{onlinePlayers.size} Online</span>
@@ -458,46 +464,56 @@ export default function TournamentPage() {
                                             </div>
                                         </div>
                                     </div>
-                                )}
-                            </div>
-                        )}
+                                ) : (
+                                    <>
+                                        <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-retro text-white mb-4 sm:mb-6 drop-shadow-sm">
+                                            TERRITORY MAP ({roomsList.length})
+                                        </h3>
 
-                        {activeTab === 'rooms' && (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-retro text-white mb-4 sm:mb-6 drop-shadow-sm">
-                                    ALL ROOMS ({roomsList.length})
-                                </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {roomsList.map(room => (
+                                                <div key={room.roomId} className="contents">
+                                                    <div className="flex flex-col gap-2">
+                                                        <TerritoryCard
+                                                            roomId={room.roomId}
+                                                            playerCount={room.playerCount}
+                                                            onDeploy={() => handleExpandRoom(room.roomId)}
+                                                        />
 
-                                {roomsList.map(room => (
-                                    <div key={room.roomId} className="bg-black/20 border border-white/10 backdrop-blur-sm rounded-sm transition-all hover:bg-white/5">
-                                        <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => handleExpandRoom(room.roomId)}>
-                                            <div className="flex items-center gap-4">
-                                                <h3 className="text-xl font-retro text-blue-400">ROOM #{room.roomId}</h3>
-                                                <div className="flex items-center gap-2 text-white/50 text-sm font-mono">
-                                                    <Users className="w-4 h-4" />
-                                                    <span>{room.playerCount} / 10</span>
-                                                </div>
-                                            </div>
-                                            <button className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded uppercase tracking-wider transition-colors">
-                                                {expandedRoom === room.roomId ? 'Close' : 'View'}
-                                            </button>
-                                        </div>
-                                        {expandedRoom === room.roomId && (
-                                            <div className="p-4 border-t border-white/10 bg-black/20">
-                                                {expandedRoomPlayers.length > 0 ? (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {expandedRoomPlayers.map(player => (
-                                                            <div key={player.wallet} className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/5">
-                                                                <Avatar address={player.wallet as `0x${string}`} className="w-6 h-6 rounded-full" />
-                                                                <Name address={player.wallet as `0x${string}`} className="text-sm text-white/80" />
+                                                        {expandedRoom === room.roomId && (
+                                                            <div className="animate-in fade-in slide-in-from-top-2 duration-300 p-4 border border-white/10 bg-black/40 rounded-sm mb-4">
+                                                                <div className="flex justify-between items-center mb-4">
+                                                                    <h4 className="text-white/70 font-mono text-sm">SECTOR MANIFEST</h4>
+                                                                    <button
+                                                                        onClick={() => setExpandedRoom(null)}
+                                                                        className="text-xs text-red-400 hover:text-red-300 underline"
+                                                                    >
+                                                                        CLOSE INTEL
+                                                                    </button>
+                                                                </div>
+
+                                                                {expandedRoomPlayers.length > 0 ? (
+                                                                    <div className="grid grid-cols-1 gap-2">
+                                                                        {expandedRoomPlayers.map(player => (
+                                                                            <div key={player.wallet} className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/5 hover:bg-white/10 transition-colors">
+                                                                                <Avatar address={player.wallet as `0x${string}`} className="w-6 h-6 rounded-full" />
+                                                                                <div className="flex flex-col">
+                                                                                    <Name address={player.wallet as `0x${string}`} className="text-sm text-white/90 font-bold" />
+                                                                                    <span className="text-[10px] text-white/40 font-mono">{player.wallet.slice(0, 6)}...{player.wallet.slice(-4)}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : <p className="text-white/30 text-center py-4 text-xs font-mono animate-pulse">SCANNING SECTOR DATA...</p>}
                                                             </div>
-                                                        ))}
+                                                        )}
                                                     </div>
-                                                ) : <p className="text-white/30 text-center py-2 text-sm italic">Accessing database...</p>}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
