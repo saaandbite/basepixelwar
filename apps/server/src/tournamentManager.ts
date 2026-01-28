@@ -68,11 +68,33 @@ export async function joinTournament(
     });
 
     if (!isValid) {
-        console.error(`[Tournament] PAYMENT FAILED: On-chain verification failed for ${mask}`);
-        console.error(`[Tournament] TxHash: ${txHash}`);
-        throw new Error('Invalid Transaction: Verification failed on-chain');
+        console.warn(`[Tournament] Log verification failed for ${mask}. Checking on-chain state directly...`);
+        // Fallback: Check if player is actually registered on-chain
+        // This is necessary for Smart Wallets if the contract doesn't emit standard events
+        const { contractService } = await import('./contractService.js');
+
+        // CHECK FOR WEEK MISMATCH: Get current chain week
+        // If the backend is ahead (testing), we must check the actual chain week for the user's registration
+        const chainWeek = await contractService.getCurrentWeekFromChain();
+        const checkWeek = chainWeek || week;
+
+        if (chainWeek && chainWeek !== week) {
+            console.warn(`[Tournament] Week Mismatch Detected! Backend=${week}, Chain=${chainWeek}. Verifying for Chain Week...`);
+        }
+
+        const onChainInfo = await contractService.getPlayerInfoFromChain(walletAddress, checkWeek);
+
+        if (onChainInfo && onChainInfo.roomId > 0) {
+            console.log(`[Tournament] On-chain state confirmed (Fallback): ${mask} is in Room ${onChainInfo.roomId} (Week ${checkWeek})`);
+            // Proceed to register in backend
+        } else {
+            console.error(`[Tournament] PAYMENT FAILED: On-chain verification failed for ${mask} (Checked Week ${checkWeek})`);
+            console.error(`[Tournament] TxHash: ${txHash}`);
+            throw new Error('Invalid Transaction: Verification failed on-chain');
+        }
+    } else {
+        console.log(`[Tournament] Step 1/5: On-chain verification PASSED`);
     }
-    console.log(`[Tournament] Step 1/5: On-chain verification PASSED`);
 
     const r = getRedis();
 

@@ -236,14 +236,30 @@ async function main() {
 
         // Scenario 1: Get specific room
         if (week && roomId) {
-          resultData.players = await getRoomPlayers(Number(week), Number(roomId));
+          const players = await getRoomPlayers(Number(week), Number(roomId));
+          const { getTournamentLeaderboard } = await import('./redis.js');
+          const leaderboard = await getTournamentLeaderboard(Number(week), roomId);
+          const scoreMap = new Map(leaderboard.map(p => [p.wallet.toLowerCase(), p.score]));
+
+          resultData.players = players.map(p => ({
+            ...p,
+            score: scoreMap.get(p.walletAddress.toLowerCase()) || 0
+          }));
         }
         // Scenario 2: Get room by wallet
         else if (wallet) {
           const location = await getPlayerRoom(wallet);
           if (location) {
             resultData.location = location;
-            resultData.players = await getRoomPlayers(location.week, location.roomId);
+            const players = await getRoomPlayers(location.week, location.roomId);
+            const { getTournamentLeaderboard } = await import('./redis.js');
+            const leaderboard = await getTournamentLeaderboard(location.week, location.roomId.toString());
+            const scoreMap = new Map(leaderboard.map(p => [p.wallet.toLowerCase(), p.score]));
+
+            resultData.players = players.map(p => ({
+              ...p,
+              score: scoreMap.get(p.walletAddress.toLowerCase()) || 0
+            }));
           } else {
             resultData.location = null;
           }

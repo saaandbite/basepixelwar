@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Zap, Shield, Trophy, Swords } from "lucide-react";
-import Hero3D from "./components/Hero3D";
+import dynamic from "next/dynamic";
+const Hero3D = dynamic(() => import("./components/Hero3D"), { ssr: false });
 import SmartWalletButton from "./components/SmartWalletButton";
 import GameFeatures from "./components/GameFeatures";
 import HowItWorks from "./components/HowItWorks";

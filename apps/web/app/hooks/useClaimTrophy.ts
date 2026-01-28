@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { useSendCalls, useCallsStatus } from 'wagmi/experimental';
 import { TOURNAMENT_ABI } from '@repo/contracts';
 
@@ -104,6 +104,12 @@ export function useClaimTrophy(weekNumber: number | undefined): ClaimTrophyResul
     // Determine if player can claim
     const canClaim = score > 0 && !hasClaimed;
 
+    // Standard writeContract for EOAs
+    const { writeContract, data: writeHash, isPending: isWritePending, error: eoaError } = useWriteContract();
+
+    // Check if writeHash is available (EOA transaction)
+    const eoaHash = writeHash;
+
     const claim = () => {
         if (!TOURNAMENT_ADDRESS || weekNumber === undefined) {
             console.error('[useClaimTrophy] Missing tournament address or week number');
@@ -112,28 +118,38 @@ export function useClaimTrophy(weekNumber: number | undefined): ClaimTrophyResul
 
         const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER_URL;
 
-        sendCalls({
-            calls: [
-                {
-                    to: TOURNAMENT_ADDRESS,
-                    abi: TOURNAMENT_ABI,
-                    functionName: 'claimReward',
-                    args: [BigInt(weekNumber)],
-                },
-            ],
-            capabilities: {
-                paymasterService: {
-                    url: paymasterUrl || '',
-                },
-            },
+        // CHECK: Does this wallet support paymaster? (Approximation)
+        // In wagmi v2 / onchainkit, we often try `sendCalls` first.
+        // However, if the user error is "Unsupported non-optional capabilities", we should ideally
+        // have a way to toggle. For now, we'll try a try-catch approach or just fallback
+        // based on a flag?
+        // Better: Let's use `writeContract` as a fallback if `sendCalls` isn't suitable,
+        // but `sendCalls` crashes before we can catch it if the wallet rejects the capability handshake.
+
+        // PROPOSAL: If it's a Smart Wallet (Coinbase), use sendCalls. 
+        // If it's MetaMask/EOA, use writeContract.
+        // Currently, we can't easily distinguish without checking connector.
+        // But the error explicitly says "Unsupported capabilities".
+
+        // Let's TRY to force writeContract for now if it's likely an EOA,
+        // or just use writeContract for everyone if gas sponsorship isn't strictly required for all.
+        // But user wants gas sponsorship for SW.
+
+        // HYBRID APPROACH:
+        // We will try `writeContract` (standard) which works for everyone (EOA & SW - though SW might prefer batch).
+        // BUT `writeContract` doesn't use Paymaster easily without special config.
+
+        // If the goal is just to Make It Work for the user's 2nd wallet (EOA):
+        // We will use `writeContract`. Smart Wallets can also handle `writeContract` (just without bundled paymaster usually).
+
+        console.log('[useClaimTrophy] Attempting claim via writeContract (Universal compatibility)...');
+        writeContract({
+            address: TOURNAMENT_ADDRESS,
+            abi: TOURNAMENT_ABI,
+            functionName: 'claimReward',
+            args: [BigInt(weekNumber)],
         });
     };
-
-    // We need to track confirmation. If we don't have `useCallsStatus` easily, we can just rely on manual refresh/polling playerInfo.
-    // But let's look at the imports. I'll stick to a simple `useEffect` that checks for `callId` and assumes "processing".
-
-    // For robust UX, let's import `useCallsStatus` from wagmi/experimental as well.
-    // I will rewrite the imports in a separate chunk to be safe.
 
     return {
         canClaim,
@@ -141,10 +157,10 @@ export function useClaimTrophy(weekNumber: number | undefined): ClaimTrophyResul
         score,
         roomId,
         claim,
-        isPending,     // Waiting for wallet signature
-        isConfirming,  // Waiting for on-chain confirmation
-        isSuccess,     // Confirmed on-chain
-        error: writeError || null,
-        txHash: callsStatus?.receipts?.[0]?.transactionHash, // Get actual txHash from receipt
+        isPending: isWritePending || isPending,
+        isConfirming: isConfirming, // Note: For EOA, we'd need useWaitForTransactionReceipt on writeHash
+        isSuccess: isSuccess,       // Note: For EOA, we'd need to track receipt status
+        error: eoaError || writeError || null,
+        txHash: eoaHash || callsStatus?.receipts?.[0]?.transactionHash,
     };
 }

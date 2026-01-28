@@ -1178,6 +1178,11 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
                         p1Points = 1; // Loss: +1 point (participation)
                     }
 
+                    console.log(`[Tournament-Debug] P1 Wallet: ${player1Wallet}`);
+                    console.log(`[Tournament-Debug] P1 Team: ${p1Team}, Winner: ${winner}`);
+                    console.log(`[Tournament-Debug] P1 Points Validated: ${p1Points}`);
+                    console.log(`[Tournament-Debug] P1 Data: Week=${tData.week} Room=${tData.roomId}`);
+
                     console.log(`[Tournament] Player 1 (${player1Wallet.slice(0, 8)}...) is in Tournament Week ${tData.week} Room ${tData.roomId}`);
                     console.log(`[Tournament] Awarding +${p1Points} points (${winner === p1Team ? 'WIN' : winner === 'draw' ? 'DRAW' : 'LOSS'})`);
 
@@ -1193,10 +1198,11 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
                     if (winner === p1Team) {
                         await Redis.updateTournamentStats('wins', player1Wallet, 1);
                         // CRITICAL: Update contract score for claim eligibility
-                        console.log(`[Tournament] Syncing score to contract for ${player1Wallet.slice(0, 8)}...`);
-                        contractService.addTournamentScore(player1Wallet).catch((e: Error) => {
-                            console.error(`[Tournament] Contract score update failed for P1:`, e);
-                        });
+                        // REMOVED: Immediate on-chain sync. 
+                        // Scores are now synced in BATCH at the end of the tournament week by TournamentScheduler.
+                        // contractService.addTournamentScore(player1Wallet).catch((e: Error) => {
+                        //     console.error(`[Tournament] Contract score update failed for P1:`, e);
+                        // });
                     }
 
                     // Broadcast leaderboard update to tournament lobby
@@ -1227,6 +1233,11 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
                         p2Points = 1; // Loss: +1 point (participation)
                     }
 
+                    console.log(`[Tournament-Debug] P2 Wallet: ${player2Wallet}`);
+                    console.log(`[Tournament-Debug] P2 Team: ${p2Team}, Winner: ${winner}`);
+                    console.log(`[Tournament-Debug] P2 Points Validated: ${p2Points}`);
+                    console.log(`[Tournament-Debug] P2 Data: Week=${tData.week} Room=${tData.roomId}`);
+
                     console.log(`[Tournament] Player 2 (${player2Wallet.slice(0, 8)}...) is in Tournament Week ${tData.week} Room ${tData.roomId}`);
                     console.log(`[Tournament] Awarding +${p2Points} points (${winner === p2Team ? 'WIN' : winner === 'draw' ? 'DRAW' : 'LOSS'})`);
 
@@ -1242,10 +1253,11 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
                     if (winner === p2Team) {
                         await Redis.updateTournamentStats('wins', player2Wallet, 1);
                         // CRITICAL: Update contract score for claim eligibility
-                        console.log(`[Tournament] Syncing score to contract for ${player2Wallet.slice(0, 8)}...`);
-                        contractService.addTournamentScore(player2Wallet).catch((e: Error) => {
-                            console.error(`[Tournament] Contract score update failed for P2:`, e);
-                        });
+                        // REMOVED: Immediate on-chain sync.
+                        // Scores are now synced in BATCH at the end of the tournament week by TournamentScheduler.
+                        // contractService.addTournamentScore(player2Wallet).catch((e: Error) => {
+                        //     console.error(`[Tournament] Contract score update failed for P2:`, e);
+                        // });
                     }
 
                     // Broadcast leaderboard update to tournament lobby

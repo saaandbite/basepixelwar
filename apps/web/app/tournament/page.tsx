@@ -114,7 +114,13 @@ export default function TournamentPage() {
             if (data.location && data.location.week === tournamentWeek) {
                 setJoinedRoomId(data.location.roomId);
                 if (data.players) {
-                    setRoomLeaderboard(data.players.map((p: any) => ({ wallet: p.walletAddress, score: 0 })));
+                    setRoomLeaderboard(prev => {
+                        const existingScores = new Map(prev.map(p => [p.wallet.toLowerCase(), p.score]));
+                        return data.players.map((p: any) => ({
+                            wallet: p.walletAddress,
+                            score: existingScores.get(p.walletAddress.toLowerCase()) ?? p.score ?? 0
+                        }));
+                    });
                 }
             } else {
                 setJoinedRoomId(0); // Not in a room for the current tournament week

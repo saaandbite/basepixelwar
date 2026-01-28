@@ -3,6 +3,7 @@ import { formatEther } from 'viem';
 import { usePlayerProfile } from '../hooks/usePlayerProfile';
 import { useUnclaimedRewards } from '../hooks/useUnclaimedRewards';
 import { useClaimTrophy } from '../hooks/useClaimTrophy';
+import { useNFTInventory } from '../hooks/useNFTInventory';
 import { useAccount } from 'wagmi';
 
 interface PlayerProfileModalProps {
@@ -157,26 +158,46 @@ export default function PlayerProfileModal({ walletAddress, onClose, isTournamen
                                     TROPHY CASE
                                 </h3>
 
-                                {profile.hasTrophy ? (
-                                    <div className="bg-[var(--pixel-yellow)]/10 border-2 border-[var(--pixel-yellow)] rounded-xl p-4 flex items-center gap-4 animate-pulse">
-                                        <div className="w-16 h-16 bg-[var(--pixel-yellow)] rounded-lg flex items-center justify-center shrink-0 border-2 border-black">
-                                            <Trophy className="w-8 h-8 text-black" />
-                                        </div>
-                                        <div>
-                                            <div className="font-retro text-[var(--pixel-yellow)] text-sm mb-1">CHAMPION</div>
-                                            <div className="text-xs text-white/80">Weekly Winner</div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-6 text-[var(--pixel-fg)] text-lg opacity-50 border-2 border-dashed border-white/20 rounded-xl">
-                                        NO TROPHIES YET
-                                    </div>
-                                )}
+                                <TrophyGrid walletAddress={walletAddress} />
                             </div>
                         </div>
                     ) : null}
                 </div>
             </div>
+        </div>
+    );
+}
+
+function TrophyGrid({ walletAddress }: { walletAddress: string }) {
+    const { nfts, loading, error } = useNFTInventory(walletAddress);
+
+    if (loading) return <div className="text-center text-xs opacity-50">Loading trophies...</div>;
+    if (error) return <div className="text-center text-red-500 text-xs">Failed load trophies</div>;
+    if (nfts.length === 0) {
+        return (
+            <div className="text-center py-6 text-[var(--pixel-fg)] text-lg opacity-50 border-2 border-dashed border-white/20 rounded-xl">
+                NO TROPHIES YET
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-2 gap-3">
+            {nfts.map((nft) => (
+                <a
+                    key={nft.tokenId}
+                    href={nft.openSeaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group bg-black/40 border border-white/10 rounded-xl p-2 flex flex-col items-center hover:border-[var(--pixel-yellow)] transition-colors"
+                >
+                    <div className="w-full aspect-square bg-black/50 rounded-lg mb-2 overflow-hidden relative">
+                        <img src={nft.image} alt={nft.name} className="object-contain w-full h-full" />
+                    </div>
+                    <div className="text-[10px] text-[var(--pixel-yellow)] font-bold mb-0.5">WEEK {nft.attributes.week}</div>
+                    <div className="text-[9px] text-white/60">Room #{nft.attributes.roomSerial}</div>
+                </a>
+            ))}
         </div>
     );
 }

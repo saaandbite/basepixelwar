@@ -191,9 +191,9 @@ export function useNFTInventory(address: string | undefined): UseNFTInventoryRes
                         const weekAttr = metadata.attributes?.find((a: any) => a.trait_type === 'Week');
                         const roomAttr = metadata.attributes?.find((a: any) => a.trait_type === 'Room Serial');
 
-                        // OpenSea URL for Base Sepolia
-                        // Format: https://testnets.opensea.io/assets/base-sepolia/{contract}/{tokenId}
-                        const openSeaUrl = `https://testnets.opensea.io/assets/base-sepolia/${PIXEL_TROPHY_ADDRESS}/${tokenId}`;
+                        // Official In-App Verification URL
+                        // Solves the issue of missing Testnet market support.
+                        const openSeaUrl = `/verify-trophy/${tokenId}`;
 
                         userNfts.push({
                             tokenId,
@@ -204,7 +204,7 @@ export function useNFTInventory(address: string | undefined): UseNFTInventoryRes
                                 week: weekAttr ? Number(weekAttr.value) : 0,
                                 roomSerial: roomAttr ? Number(roomAttr.value) : 0,
                             },
-                            openSeaUrl,
+                            openSeaUrl, // Used as "View on Explorer" link
                         });
                     } catch (parseError) {
                         console.error(`[useNFTInventory] Failed to parse token ${userTokenIds[i]}:`, parseError);

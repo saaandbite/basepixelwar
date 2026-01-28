@@ -49,9 +49,59 @@ const SCHEDULE_2: TournamentSchedule = {
     pointCollectionEnd: new Date(`${TESTING_DATE}T10:55:00+07:00`),
 };
 
+const SCHEDULE_3: TournamentSchedule = {
+    week: 14,
+    // Registration: 11:28 - 11:31 WIB (3 mins)
+    registrationStart: new Date(`${TESTING_DATE}T11:28:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T11:31:00+07:00`),
+    // Point Collection: 11:31 - 11:36 WIB (5 mins)
+    pointCollectionStart: new Date(`${TESTING_DATE}T11:31:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T11:36:00+07:00`),
+};
+
+const SCHEDULE_4: TournamentSchedule = {
+    week: 15,
+    // Registration: 11:52 - 12:00 WIB (8 mins)
+    registrationStart: new Date(`${TESTING_DATE}T11:52:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T12:00:00+07:00`),
+    // Point Collection: 12:00 - 12:08 WIB (8 mins)
+    pointCollectionStart: new Date(`${TESTING_DATE}T12:00:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T12:08:00+07:00`),
+};
+
+const SCHEDULE_5: TournamentSchedule = {
+    week: 16,
+    // Registration: 12:30 - 12:35 WIB (5 mins)
+    registrationStart: new Date(`${TESTING_DATE}T12:30:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T12:35:00+07:00`),
+    // Point Collection: 12:35 - 12:40 WIB (5 mins)
+    pointCollectionStart: new Date(`${TESTING_DATE}T12:35:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T12:40:00+07:00`),
+};
+
+const SCHEDULE_6: TournamentSchedule = {
+    week: 17,
+    // Registration: 12:46 - 12:51 WIB (5 mins)
+    registrationStart: new Date(`${TESTING_DATE}T12:46:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T12:51:00+07:00`),
+    // Point Collection: 12:51 - 12:56 WIB (5 mins)
+    pointCollectionStart: new Date(`${TESTING_DATE}T12:51:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T12:56:00+07:00`),
+};
+
+const SCHEDULE_7: TournamentSchedule = {
+    week: 18,
+    // Registration: 13:04 - 13:07 WIB (3 mins)
+    registrationStart: new Date(`${TESTING_DATE}T13:04:00+07:00`),
+    registrationEnd: new Date(`${TESTING_DATE}T13:07:00+07:00`),
+    // Point Collection: 13:07 - 13:25 WIB (Shortened for claim testing)
+    pointCollectionStart: new Date(`${TESTING_DATE}T13:07:00+07:00`),
+    pointCollectionEnd: new Date(`${TESTING_DATE}T13:25:00+07:00`),
+};
+
 export const CURRENT_TOURNAMENT_SCHEDULE = SCHEDULE_1;
 
-const TESTING_SCHEDULES = [SCHEDULE_1, SCHEDULE_2];
+const TESTING_SCHEDULES = [SCHEDULE_1, SCHEDULE_2, SCHEDULE_3, SCHEDULE_4, SCHEDULE_5, SCHEDULE_6, SCHEDULE_7];
 
 /**
  * Get the current tournament schedule based on time

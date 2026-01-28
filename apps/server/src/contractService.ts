@@ -203,6 +203,10 @@ export class ContractService {
 
         try {
             const tournamentAddress = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
+
+            // AUTO-FIX: Check permissions before adding score
+            await this.ensureTournamentPermissions(tournamentAddress);
+
             console.log(`[ContractService] Adding score for ${playerAddress} to Tournament ${tournamentAddress}...`);
 
             // Imported ABI
@@ -470,6 +474,48 @@ export class ContractService {
         } catch (error: any) {
             console.error(`[ContractService] Failed to get balance:`, error?.message || error);
             return null;
+        }
+    }
+
+    /**
+     * AUTO-FIX: Ensure Backend Wallet is set as 'gameVault' on Tournament Contract
+     * This is required to call addScore()
+     */
+    private async ensureTournamentPermissions(tournamentAddress: `0x${string}`) {
+        try {
+            const tournamentContract = getContract({
+                address: tournamentAddress,
+                abi: TOURNAMENT_ABI,
+                client: this.client
+            }) as any;
+
+            // Check current gameVault
+            const currentGameVault = await tournamentContract.read.gameVault();
+            const backendAddress = this.account.address;
+
+            if (typeof currentGameVault === 'string' && currentGameVault.toLowerCase() !== backendAddress.toLowerCase()) {
+                console.warn(`[ContractService] PERMISSION MISMATCH: Contract gameVault (${currentGameVault}) != Backend (${backendAddress})`);
+
+                // Check if we are owner
+                const owner = await tournamentContract.read.owner();
+                if (typeof owner === 'string' && owner.toLowerCase() === backendAddress.toLowerCase()) {
+                    console.log(`[ContractService] AUTO-FIX: Backend is Owner. Updating gameVault address...`);
+                    try {
+                        const hash = await tournamentContract.write.setGameVault([backendAddress]);
+                        console.log(`[ContractService] setGameVault tx sent: ${hash}. Waiting for confirmation...`);
+                        await this.waitForTransaction(hash);
+                        console.log(`[ContractService] ✅ PERMISSIONS FIXED: Backend is now gameVault.`);
+                    } catch (err) {
+                        console.error(`[ContractService] FAILED to auto-fix permissions:`, err);
+                    }
+                } else {
+                    console.error(`[ContractService] CRITICAL: Backend is NOT Owner. Cannot fix permissions. addScore WILL FAIL.`);
+                }
+            } else {
+                // console.log(`[ContractService] Permissions OK (Backend is gameVault)`);
+            }
+        } catch (error) {
+            console.error(`[ContractService] Error checking permissions:`, error);
         }
     }
 }
