@@ -15,6 +15,7 @@ import PlayerProfileModal from '../components/PlayerProfileModal';
 import { useClaimTrophy } from '../hooks/useClaimTrophy';
 import TerritoryCard from '../components/TerritoryCard';
 import { getTerritoryName } from '../utils/formatTerritory';
+import VictoryPopup from '../components/VictoryPopup';
 
 const TOURNAMENT_ADDRESS = process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS as `0x${string}`;
 
@@ -135,6 +136,7 @@ export default function TournamentPage() {
 
     useEffect(() => {
         if (address && tournamentWeek > 0) {
+            setRoomLeaderboard([]); // Reset leaderboard when week/address changes
             fetchRoomData();
         }
     }, [address, tournamentWeek, fetchRoomData]);
@@ -256,10 +258,11 @@ export default function TournamentPage() {
     };
 
     return (
-        <div className="min-h-screen relative flex flex-col font-terminal text-white overflow-x-hidden"
-            style={{
-                background: 'linear-gradient(180deg, #ff8ba7 0%, #903749 100%)'
-            }}>
+        <div className="min-h-screen bg-[var(--pixel-bg)] font-terminal text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/grid.png')] opacity-20 pointer-events-none" />
+
+            {/* Victory Popup - Shows automatically if user has unclaimed rewards */}
+            <VictoryPopup />
 
             {/* Background Pattern Overlay */}
             <div className="fixed inset-0 z-0 pointer-events-none"

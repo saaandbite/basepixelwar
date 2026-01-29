@@ -39,7 +39,7 @@ export async function syncAllScoresToChain(week: number): Promise<boolean> {
 
         if (playerCount === 0) {
             console.log(`[TournamentScheduler] No players joined tournament Week ${week} (Redis key: ${playerCountKey} is empty/0)`);
-            
+
             // EMERGENCY FALLBACK: Check leaderboard directly if counter is broken
             console.log(`[TournamentScheduler] Checking room leaderboards directly as fallback...`);
             const leaderboard = await getTournamentLeaderboard(week, "1"); // Try room 1
@@ -73,7 +73,7 @@ export async function syncAllScoresToChain(week: number): Promise<boolean> {
                     allScores.push(entry.score);
                 }
             } else {
-                 console.log(`[TournamentScheduler] Room ${roomId} is empty or no scores recorded.`);
+                console.log(`[TournamentScheduler] Room ${roomId} is empty or no scores recorded.`);
             }
         }
 
@@ -137,24 +137,76 @@ export async function initTournamentScheduler(): Promise<void> {
 
     // Check on-chain week to determine if transition already happened
     // This prevents duplicate startNewWeek() calls after server restart
-    try {
-        const onChainWeek = await contractService.getCurrentWeekFromChain();
-        console.log(`[TournamentScheduler] On-chain Week: ${onChainWeek}`);
+    // Check on-chain week to determine if transition already happened
+    // This prevents duplicate startNewWeek() calls after server restart
+    // Initial Sync
+    await ensureChainSync();
 
-        if (onChainWeek !== null && onChainWeek > status.week) {
-            // On-chain week is already ahead - transition was done in a previous run
-            console.log(`[TournamentScheduler] On-chain week (${onChainWeek}) > config week (${status.week})`);
-            console.log(`[TournamentScheduler] Setting weekTransitionDone = true (already transitioned)`);
-            weekTransitionDone = true;
-        }
-    } catch (error) {
-        console.error('[TournamentScheduler] Failed to check on-chain week:', error);
-    }
-
-    // Check every 5 seconds
+    // Check every 5 seconds for phase transitions
     setInterval(async () => {
         await checkAndTransition();
     }, 5000);
+
+    // Check every 60 seconds for Chain Sync (Self-Healing)
+    setInterval(async () => {
+        await ensureChainSync();
+    }, 60000);
+}
+
+/**
+ * Ensures the On-Chain week matches the Server Config week.
+ * If Chain is behind, it auto-advances (with score sync).
+ */
+async function ensureChainSync() {
+    try {
+        const { getTournamentStatus } = await import('./tournamentConfig.js'); // Re-import to get fresh status
+        const status = getTournamentStatus();
+        const onChainWeek = await contractService.getCurrentWeekFromChain();
+
+        if (onChainWeek !== null) {
+            if (onChainWeek < status.week) {
+                console.log(`[TournamentScheduler] ⚠️ DRIFT DETECTED: Chain (${onChainWeek}) is BEHIND Config (${status.week})`);
+                console.log(`[TournamentScheduler] Initiating AUTO-HEAL sequence...`);
+
+                const diff = status.week - onChainWeek;
+
+                for (let i = 0; i < diff; i++) {
+                    const currentStep = i + 1;
+                    const weekToSync = onChainWeek + i;
+
+                    try {
+                        console.log(`[TournamentScheduler] Auto-Heal: Syncing scores for Week ${weekToSync}...`);
+                        await syncAllScoresToChain(weekToSync);
+                    } catch (err: any) {
+                        console.error(`[TournamentScheduler] Auto-Heal: Failed to sync scores for Week ${weekToSync} (Non-fatal):`, err?.message || err);
+                    }
+
+                    console.log(`[TournamentScheduler] Auto-Heal: Advancing week (${currentStep}/${diff})...`);
+                    const txHash = await contractService.startNewWeek();
+
+                    if (txHash) {
+                        console.log(`[TournamentScheduler] Auto-Heal: Week advanced! TX: ${txHash}`);
+                    } else {
+                        console.error(`[TournamentScheduler] Auto-Heal: Failed to advance week at step ${currentStep}`);
+                        // Don't break, keep trying? Or break to retry next minute?
+                        // Break is safer to avoid spamming if network is down
+                        break;
+                    }
+
+                    // Wait 5s
+                    if (i < diff - 1) await new Promise(r => setTimeout(r, 5000));
+                }
+            } else if (onChainWeek > status.week) {
+                // On-chain ahead (rare, maybe manual intervention)
+                if (!weekTransitionDone) {
+                    console.log(`[TournamentScheduler] Chain is ahead (${onChainWeek} > ${status.week}). Marking transition done.`);
+                    weekTransitionDone = true;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('[TournamentScheduler] ensureChainSync failed:', error);
+    }
 }
 
 /**

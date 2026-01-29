@@ -6,7 +6,7 @@ import * as Redis from './redis';
 import { transferPrizeFromVault } from './db';
 import * as TournamentService from './tournamentService';
 import * as GlobalLeaderboardService from './services/globalLeaderboardService';
-import { isPointCollectionActive } from './tournamentConfig.js';
+import { isPointCollectionActive, getTournamentStatus } from './tournamentConfig.js';
 
 // PvP Cannon state
 export interface PvPCannon {
@@ -1162,7 +1162,8 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
 
         // Check Player 1 (Blue team)
         if (player1Wallet) {
-            const p1TournamentData = await r.get(`tournament:player:${player1Wallet.toLowerCase()}`);
+            const currentWeek = getTournamentStatus().week;
+            const p1TournamentData = await r.get(`tournament:player:${player1Wallet.toLowerCase()}:week:${currentWeek}`);
             if (p1TournamentData) {
                 try {
                     const tData = JSON.parse(p1TournamentData);
@@ -1217,7 +1218,8 @@ async function handleStandardEnd(roomId: string, state: PvPGameState, winner: 'b
 
         // Check Player 2 (Red team)
         if (player2Wallet) {
-            const p2TournamentData = await r.get(`tournament:player:${player2Wallet.toLowerCase()}`);
+            const currentWeek = getTournamentStatus().week;
+            const p2TournamentData = await r.get(`tournament:player:${player2Wallet.toLowerCase()}:week:${currentWeek}`);
             if (p2TournamentData) {
                 try {
                     const tData = JSON.parse(p2TournamentData);

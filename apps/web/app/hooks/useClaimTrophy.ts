@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useSendCalls, useCallsStatus } from 'wagmi/experimental';
 import { TOURNAMENT_ABI } from '@repo/contracts';
 
@@ -151,6 +151,14 @@ export function useClaimTrophy(weekNumber: number | undefined): ClaimTrophyResul
         });
     };
 
+    // EOA Transaction Tracking
+    const { data: eoaReceipt, isLoading: isEoaConfirming, isSuccess: isEoaSuccess } = useWaitForTransactionReceipt({
+        hash: writeHash,
+        query: {
+            enabled: !!writeHash
+        }
+    });
+
     return {
         canClaim,
         hasClaimed,
@@ -158,8 +166,8 @@ export function useClaimTrophy(weekNumber: number | undefined): ClaimTrophyResul
         roomId,
         claim,
         isPending: isWritePending || isPending,
-        isConfirming: isConfirming, // Note: For EOA, we'd need useWaitForTransactionReceipt on writeHash
-        isSuccess: isSuccess,       // Note: For EOA, we'd need to track receipt status
+        isConfirming: isConfirming || isEoaConfirming,
+        isSuccess: isSuccess || isEoaSuccess,
         error: eoaError || writeError || null,
         txHash: eoaHash || callsStatus?.receipts?.[0]?.transactionHash,
     };

@@ -283,6 +283,53 @@ async function main() {
       return;
     }
 
+    // DEBUG ENDPOINT
+    if (req.method === 'GET' && req.url && req.url.startsWith('/api/debug/chain')) {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const wallet = url.searchParams.get('wallet');
+
+      try {
+        const { contractService } = await import('./contractService.js');
+        const { getTournamentStatus } = await import('./tournamentConfig.js');
+
+        const onChainWeek = await contractService.getCurrentWeekFromChain();
+        const status = getTournamentStatus();
+
+        let playerInfo29, playerInfo30;
+        if (wallet) {
+          playerInfo29 = await contractService.getPlayerInfoFromChain(wallet, 29);
+          playerInfo30 = await contractService.getPlayerInfoFromChain(wallet, 30);
+        }
+
+        const data = {
+          env: {
+            TOURNAMENT_ADDRESS: process.env.NEXT_PUBLIC_TOURNAMENT_ADDRESS,
+            RPC_URL: process.env.BASE_SEPOLIA_RPC_URL
+          },
+          server: {
+            configWeek: status.week,
+            phase: status.phase
+          },
+          chain: {
+            currentWeek: onChainWeek
+          },
+          player: {
+            wallet: wallet,
+            week29: playerInfo29,
+            week30: playerInfo30
+          }
+        };
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data, null, 2));
+
+      } catch (error: any) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
+
     // Tournament Rooms List Endpoint - Get all rooms for a week
     if (req.method === 'GET' && req.url && req.url.startsWith('/api/tournament/rooms')) {
       const url = new URL(req.url, `http://${req.headers.host}`);
@@ -395,9 +442,9 @@ async function main() {
           return;
         }
 
-        // Save to Redis
+        // Save to Redis (Week-Scoped)
         const r = getRedis();
-        const TOURNAMENT_PLAYER_KEY = `tournament:player:${wallet.toLowerCase()}`;
+        const TOURNAMENT_PLAYER_KEY = `tournament:player:${wallet.toLowerCase()}:week:${week}`;
         const location = { week, roomId: playerInfo.roomId };
         await r.set(TOURNAMENT_PLAYER_KEY, JSON.stringify(location));
 
